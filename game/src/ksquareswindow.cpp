@@ -32,6 +32,7 @@
 //ui
 #include "newgamedialog.h"
 #include "scoresdialog.h"
+#include "rlbridge.h" // RL bridge
 
 KSquaresWindow::KSquaresWindow() : KXmlGuiWindow(), m_view(new GameBoardView(this)), m_scene(nullptr)
 {
@@ -59,7 +60,10 @@ void KSquaresWindow::initObject()
     statusBar()->show();
     setAutoSaveSettings();
 
-    gameNew();
+    m_rl = RLBridge::start(this, sGame); // RL bridge
+    if (!m_rl) { // RL bridge
+        gameNew();
+    }
 }
 
 void KSquaresWindow::showHighscores()
@@ -193,6 +197,10 @@ void KSquaresWindow::gameReset()
 
 void KSquaresWindow::gameOver(const QVector<KSquaresPlayer> &_playerList)
 {
+    if (m_rl) { // RL bridge: no score dialogs
+        m_rl->gameOver();
+        return;
+    }
     QVector<KSquaresPlayer> playerList = _playerList;
     std::sort(playerList.begin(), playerList.end(), std::greater<KSquaresPlayer>());
     //m_scene->displayScoreTable(playerList);
@@ -262,12 +270,15 @@ void KSquaresWindow::playerTakeTurn(KSquaresPlayer *currentPlayer)
 
         setCursor(Qt::ArrowCursor);
         m_scene->enableEvents();
+        if (m_rl) { // RL bridge
+            m_rl->awaitMove();
+        }
     } else { //AI
         //lock the view to let the AI do it's magic
         setCursor(Qt::WaitCursor);
         m_scene->disableEvents();
 
-        QTimer::singleShot(200, this, &KSquaresWindow::aiChooseLine);
+        QTimer::singleShot(m_rl ? 0 : 200, this, &KSquaresWindow::aiChooseLine); // RL bridge: no delay
         setCursor(Qt::ArrowCursor);
     }
 }

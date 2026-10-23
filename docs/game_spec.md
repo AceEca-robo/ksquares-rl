@@ -1,9 +1,8 @@
 # KSquares 21.12.3 — game specification (source reconnaissance)
 
-All references are to `game/src/` (pristine upstream sources). The game has
-not been built yet in this environment (KF5 development packages missing),
-so everything below comes from reading the code; points that need a running
-binary to confirm are marked **(to verify)**.
+All references are to `game/src/` (upstream sources; the only changes are
+the RL bridge, §7). Everything below comes from reading the code and was
+confirmed on the built binary where noted (2026-10-23).
 
 ## 1. Rules as implemented
 
@@ -71,7 +70,8 @@ KSquaresGame::addLineToIndex → drawLine → checkForNewSquares →
   driver and must be bypassed by a bridge.
 - Settings: KConfig `ksquaresrc` (`ksquares.kcfg`), generated `Settings`
   singleton. AI difficulty is one global value `Settings::difficulty()`
-  (0 Easy, 1 Medium, 2 Hard) shared by all computer seats.
+  (0 Easy, 1 Medium, 2 Hard) shared by all computer seats; the kcfg
+  default is **0 (Easy)**. Default seats: all human (`HumanList` 2,2,2,2).
 
 ## 4. Built-in AI (`aicontroller.cpp`, `aiController::chooseLine`)
 
@@ -126,20 +126,40 @@ the 3-lines/4-boxes special case.
 Implementation quirks that matter for reproduction:
 
 - Random choice everywhere is
-  `idx = (short)(rand()/(RAND_MAX+1.0) * (n-1))`, so with n ≥ 2 the **last
-  candidate is never chosen** (with n = 2 it is always the first). Candidate
+  `float f = ((float)rand() / (RAND_MAX + 1.0)) * (n - 1); idx = (short)f`,
+  so with n ≥ 2 the **last candidate is practically never chosen** (with
+  n = 2 it is almost always the first). Exactly: `(float)rand()` rounds to
+  2^31 for rand() ≥ 2^31−64, and the product is rounded to float again, so
+  the last index comes out with probability ≈ 3·10⁻⁸ per call. Candidate
   lists are in increasing line order, so the AI is biased away from the
-  highest-indexed line. Capture candidate lists may contain duplicates (a line
-  next to two 3-sided boxes is appended twice).
-- QMultiMap `values(key)` returns the most recently inserted value first,
-  i.e. Hard's `choices.at(0)` prefers the highest-indexed equally-good line.
+  highest-indexed line. Candidate lists may contain duplicates: phase 1 and
+  phase 3 append a line once per adjacent box with 3 (resp. 2) sides, and
+  duplicates are kept through `chooseLeastDamaging`.
+- `rand()` is called even when there is one candidate (Hard phase 3 always
+  draws from `goodChoiceList`), which matters for reproducing the sequence;
+  Hard's phase 1 (`choices.at(0)`) does not call it.
+- QMultiMap `values(key)` and `begin()` return the most recently inserted
+  value first, i.e. Hard's `choices.at(0)` prefers the highest-indexed
+  equally-good line.
+- `squaresFromLine` returns (box below, box above) for horizontal lines and
+  (box right, box left) for vertical ones; the Hard chain walk keeps the
+  *last* adjacent box with two sides, so this order decides where it goes.
+- In the damage count, a line that would complete a second box is checked
+  against `myLines`, not the current copy `linesCopy` (counts can be off).
+- The hard-hearted handout iterates `QSet<int>::values()`, whose order is
+  the QHash bucket order. Qt 5 seeds QHash randomly per process unless
+  `QT_HASH_SEED` is set, so if several lines qualify the choice is not
+  reproducible across processes. In 1200 verification games (§7) no such
+  tie occurred; the bridge runs the game with `QT_HASH_SEED=0` anyway and the
+  port emulates the Qt 5.15 bucket order for that seed.
 
 ## 5. Determinism
 
 - `chooseLine()` uses only `rand()`; **`srand()` is never called** anywhere
-  in KSquares. With glibc an unseeded `rand()` behaves as `srand(1)`, so a
-  fresh process playing the same human moves gets the same AI replies —
-  unless a linked KDE/Qt library calls `srand` at startup **(to verify)**.
+  in KSquares, and **no linked library calls it either** (verified with an
+  `LD_PRELOAD` shim logging `srand`/`srandom`/`rand` over whole games: no
+  seeding call, the first `rand()` returns 1804289383 = glibc `srand(1)`).
+  So a fresh process playing the same human moves gets the same AI replies.
   Across games in one process the sequence continues, so the AI is
   reproducible only per process, not per game.
 - Quick start uses `QRandomGenerator::global()` (non-deterministic).
@@ -160,9 +180,37 @@ sudo apt-get install build-essential cmake extra-cmake-modules gettext \
   libkf5completion-dev
 cmake -S game -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build -j
-./build/bin/ksquares          # headless: QT_QPA_PLATFORM=offscreen
+./build/src/ksquares          # headless: QT_QPA_PLATFORM=offscreen
 ```
 
 CMake ≥ 3.16, Qt ≥ 5.15, KF5 ≥ 5.85, KF5KDEGames ≥ 7.3 (all satisfied by
-22.04). The XMLGUI file is compiled in (`ksquares.qrc`), so the binary
-should run from the build tree without `make install` **(to verify)**.
+22.04; built here with Qt 5.15.3). The binary lands in `build/src/` and
+runs from the build tree without `make install` (the XMLGUI file is
+compiled in via `ksquares.qrc`); confirmed, also with
+`QT_QPA_PLATFORM=offscreen` and no X display.
+
+## 7. RL bridge
+
+`game/src/rlbridge.{h,cpp}` plus a few lines in `ksquareswindow.{h,cpp}`
+and `CMakeLists.txt`, all marked `// RL bridge`. Active only when
+`KSQUARES_RL_SOCKET` names a Unix socket; then the game connects to it as
+a client instead of opening the new-game dialog, and speaks one JSON object
+per line (protocol in `rlbridge.h`): `reset` (board size, which players are
+computer players, difficulty, optional `srand` seed) and `step` (line for
+an external player). Replies are `state` messages sent whenever an
+external player is to move or the game is over, listing every line drawn
+since the last message with its player and completed boxes. Computer
+players move on a 0 ms timer instead of 200 ms; the score dialogs are
+skipped. External players are KSquares "human" seats, and their lines go
+through `KSquaresGame::addLineToIndex` exactly like a mouse click.
+
+Python side: `env/bridge.py` (`KSquaresBridge`) starts the game offscreen
+with a private `XDG_CONFIG_HOME` (the user's `ksquaresrc` is never
+touched) and `QT_HASH_SEED=0`, and replays every reported move in a
+`sim.board.Board`, raising `BridgeMismatch` on the first difference in
+mover, completed boxes, lines, owners, scores or side to move.
+
+The AI port `sim/ksquares_ai.py` was checked against the game with
+`scripts/verify_port.py`: every game is played in the simulator and through
+the bridge with the same seeds and the move lists must be identical
+(results in `docs/results.md`).

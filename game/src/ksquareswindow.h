@@ -24,6 +24,8 @@ class QLabel;
  * @author Matt Williams <matt@milliams.com>
  */
 
+class RLBridge; // RL bridge
+
 class KSquaresWindow : public KXmlGuiWindow
 {
     Q_OBJECT
@@ -63,6 +65,7 @@ private:
     // Remember last network move
     int m_lastx1, m_lasty1, m_lastx2, m_lasty2;
     QLabel *m_player;
+    RLBridge *m_rl = nullptr; // RL bridge
 };
 
 #endif // KSQUARESWINDOW_H

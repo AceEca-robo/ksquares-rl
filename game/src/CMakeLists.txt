@@ -17,6 +17,7 @@ target_sources(ksquares PRIVATE
     themegraphicsitems.cpp
     highlightanimation.cpp
     scoresdialog.cpp
+    rlbridge.cpp # RL bridge
 
     ksquares.qrc
 )
