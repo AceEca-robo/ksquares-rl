@@ -64,7 +64,11 @@ def _selfplay_task(args):
     from agents.az_play import selfplay
     path, n_games, seed = args
     cfg = _W["cfg"]
-    return selfplay(_evaluator(path), cfg, n_games, cfg["selfplay"]["games_per_worker"], seed)
+
+    def progress(k, sec):
+        print(f"[{time.strftime('%H:%M:%S')}]   worker {os.getpid()}: {k}/{n_games} games, {sec:.0f} s", flush=True)
+
+    return selfplay(_evaluator(path), cfg, n_games, cfg["selfplay"]["games_per_worker"], seed, progress)
 
 
 def _match_task(args):
@@ -304,7 +308,8 @@ class Run:
             save_atomic(self.net.state_dict(), cand)
         t0 = time.time()
         tasks, off = [], 0
-        for n in split(g["games"], self.cfg["selfplay"]["workers"]):
+        # few large batches: under GPU time slicing the cost is per call
+        for n in split(g["games"], g["tasks"]):
             if n:
                 tasks.append((str(cand), str(self.run / "best.pt"), n, int(self.rng.integers(2**31)), off % 2))
                 off += n

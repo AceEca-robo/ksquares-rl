@@ -29,8 +29,9 @@ def make_mcts(evaluate, mcfg: dict, rng, leaves_per_tree: int = 1, noise: bool =
                 leaves_per_tree=leaves_per_tree, virtual_loss=mcfg["virtual_loss"], rng=rng)
 
 
-def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int):
-    """Play ``n_games`` self-play games; returns (samples dict, stats dict)."""
+def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, progress=None):
+    """Play ``n_games`` self-play games; returns (samples dict, stats dict).
+    ``progress(finished games, seconds)`` is called after every quarter."""
     w, h = cfg["board"]
     sp = cfg["selfplay"]
     rng = np.random.default_rng(seed)
@@ -63,6 +64,8 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int):
             winner = board.player if res > 0 else board.player ^ 1 if res < 0 else -1
             first_wins += winner == 0
             lengths.append(g[2])
+            if progress and len(lengths) % max(1, n_games // 4) == 0:
+                progress(len(lengths), time.perf_counter() - t0)
             for (lines, sides, owner, diff, first), pi, player in recs:
                 cols["lines"].append(lines)
                 cols["sides"].append(sides)

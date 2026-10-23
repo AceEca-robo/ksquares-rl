@@ -17,10 +17,11 @@ mcts:
   leaves_per_tree: 8     # for single-game search (az agent); self-play uses 1
 
 selfplay:
-  workers: 4             # processes, each with its own CUDA context (~160 MB)
-  games_per_worker: 128  # concurrent games per worker = GPU batch size;
+  workers: 3             # processes, each with its own CUDA context (~160 MB)
+  games_per_worker: 192  # concurrent games per worker = GPU batch size;
                          # lower it if the GPU runs out of memory
-  games_per_gen: 6000    # ~18 min at ~58k evaluations/s (smoke test)
+  games_per_gen: 2500    # ~10.4k evaluations per game; ~25 min at ~17k/s
+                         # with the GPU shared (6000 games took 65 min)
   sims: 200
   temp_moves: 10         # temperature 1 for the first 10 lines, then 0
 
@@ -28,7 +29,7 @@ buffer_size: 500000      # positions (the last ones)
 
 train:
   batch_size: 512
-  steps_per_gen: 2500   # ~4 samples per new position
+  steps_per_gen: 1100   # ~4 samples per new position
   lr: 0.02
   momentum: 0.9
   weight_decay: 0.0001   # L2
@@ -39,6 +40,7 @@ gating:
   games: 100
   sims: 200
   temp_moves: 4          # some opening variety; no noise
+  tasks: 2               # games split over this many worker tasks
   threshold: 0.55
 
 eval:

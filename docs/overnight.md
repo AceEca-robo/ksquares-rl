@@ -217,3 +217,25 @@ Decisions:
 - Safe stop: `touch runs/az5/STOP`; the loop finishes the current phase
   (self-play, train or gating), checkpoints, stops the evaluator and exits,
   which closes the tmux session. Resume = start the same command.
+
+Overnight notes (az5):
+- 23:53: the pacman distillation (`distill-collect`, 6 processes, ~4.7 GB)
+  started on the same GPU; GPU at 100% from then on. Our self-play fell
+  from 58k (smoke test, GPU free) to 40k evaluations/s in gen 1 and 16k
+  in gen 2 (6000 games took 65 min instead of ~18). Training 2500 steps
+  took 420–440 s instead of ~100 s. Memory was never the problem (6.2 of
+  8 GB used), so the self-play batch was not reduced; the neighbour was
+  left alone. The worker processes sit at 100% CPU while waiting for
+  their GPU time slice.
+- 01:29: safe stop after gen 2 training (stop → checkpoint → tmux closed,
+  works as intended) and resume with 3 x 192 games per worker (fewer,
+  larger GPU calls), 2500 games and 1100 steps per generation to get back
+  to ~30 min, gating in 2 tasks of 50 games instead of 4 x 25, progress
+  lines per quarter of each worker's games.
+- Gen 1: accepted 100-0 vs the random initial net. Eval: raw net beats
+  only random; with MCTS 200 random 100%, greedy 21%, medium 10%, hard 3%,
+  strong 0%.
+- Value check after gen 2 training (6000 buffer positions): MSE 0.99 for
+  the first 30 lines (self-play outcome is barely predictable there with
+  temperature-1 openings), 0.79 at 40–50 lines, 0.40 at 50+ (corr 0.67).
+  So the overall value loss of ~0.90 is not a bug.
