@@ -5,4 +5,7 @@ boards:
   - [3, 3]
   - [5, 5]
   - [10, 7]
-agents: [random, greedy]
+agents: [random, greedy, easy, medium, hard, strong]
+params:
+  strong:
+    time_limit: 0.5  # seconds per move
