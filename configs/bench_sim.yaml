@@ -1,0 +1,8 @@
+# Simulator speed benchmark for scripts/bench_sim.py.
+seed: 0
+seconds: 3.0     # wall time per (board, agent) cell
+boards:
+  - [3, 3]
+  - [5, 5]
+  - [10, 7]
+agents: [random, greedy]

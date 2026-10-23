@@ -1,0 +1,13 @@
+# Baseline matchups for scripts/eval_baselines.py.
+# Each matchup plays `games` games; seats alternate (the first agent moves
+# first in even-numbered games), so both agents start equally often.
+seed: 12345
+games: 1000
+boards:          # [width, height] in boxes; 10x7 is the KSquares default
+  - [3, 3]
+  - [5, 5]
+  - [10, 7]
+matchups:
+  - [random, random]
+  - [greedy, random]
+  - [greedy, greedy]
