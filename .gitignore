@@ -1,0 +1,10 @@
+build/
+game/build/
+runs/
+*.pt
+*.onnx
+__pycache__/
+.venv/
+*.egg-info/
+.pytest_cache/
+_src/

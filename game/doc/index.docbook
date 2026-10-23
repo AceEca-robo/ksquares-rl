@@ -1,0 +1,298 @@
+<?xml version="1.0" ?>
+<!--IMPORTANT: please note that'do not change this!' notice does not apply to translators -->
+<!DOCTYPE book PUBLIC "-//KDE//DTD DocBook XML V4.5-Based Variant V1.1//EN" "dtd/kdedbx45.dtd" [
+  <!ENTITY % English "INCLUDE" > <!-- change language only here -->
+  <!ENTITY % addindex "IGNORE"> <!-- do not change this! -->
+]>
+
+<book id="ksquares" lang="&language;"> <!-- do not change this! -->
+<bookinfo>
+	<title>The &ksquares; Handbook</title> <!-- This is the title of the docbook. Leave as is unless change is necessary.-->
+<!-- List of immidiate authors begins here. -->
+<!--INPORTANT! - All other contributors: [to be determined] -->
+<authorgroup>
+  <author>
+    <personname>
+      <firstname>Matt</firstname>
+      <surname>Williams</surname>
+    </personname>
+    <email>matt@milliams.com</email>
+  </author>
+
+  <othercredit role="reviewer">
+    <firstname>Eugene</firstname>
+    <surname>Trounev</surname>
+    <contrib>Reviewer</contrib>
+    <affiliation><address>eugene.trounev@gmail.com</address></affiliation>
+  </othercredit>
+  <!-- TRANS:ROLES_OF_TRANSLATORS -->
+</authorgroup>
+
+<copyright>
+  <year>2006</year>
+  <holder>Matt Williams</holder>
+</copyright>
+
+<legalnotice>&FDLNotice;</legalnotice>
+<date>2021-10-03</date>
+<releaseinfo>0.6 (KDE Gear 21.08)</releaseinfo>
+
+<!--Short description of this document. Do not change unless necessary!-->
+<abstract>
+	<para>This documentation describes the game of &ksquares; version 0.6</para>
+</abstract>
+
+<!--List of relevan keywords-->
+<keywordset>
+	<keyword>KDE</keyword> <!-- do not change this! -->
+	<keyword>kdegames</keyword> <!-- do not change this! -->
+	<keyword>game</keyword> <!-- do not change this! -->
+	<keyword>Ksquares</keyword><!--Application name goes here-->
+<!-- Game genre. Use as many as necessary. Available game types are: Arcade, Board, Card, Dice, Toys, Logic, Strategy.-->
+	<keyword>board</keyword>
+	<keyword>Dots and Boxes</keyword>
+	<keyword>Boxes</keyword>
+	<keyword>Squares</keyword>
+<!--Number of possible players. It can be: One, Two,..., Multiplayer-->
+	<keyword>four players</keyword>
+<!--All other relevant keywords-->
+	<keyword>Paddocks</keyword>
+	<keyword>Square-it</keyword>
+	<keyword>Dots and Dashes</keyword>
+	<keyword>Dot Game</keyword>
+</keywordset>
+</bookinfo>
+<!--Content begins here: -->
+<chapter id="introduction"><title>Introduction</title> <!-- do not change this! -->
+	<note><title>Gametype:</title><para>Board</para></note><!-- Game genre. Use as many as necessary. Available game types are: Arcade, Board, Card, Dice, Toys, Logic, Strategy.-->
+	<note><title>Number of possible players:</title><para>Four</para></note>
+	<para>&ksquares; is a fun and exciting game. &ksquares; is modeled after the well known pen and paper based game of Dots and Boxes.</para>
+<para>The idea behind &ksquares; is to construct squares by interconnecting the dots on the grid. Up to four players can play this game together, taking turns. The trick is – regardless of who has constructed most of the square, it is the player who completes the square that gets the point for it.</para>
+<para>To win the game round player has to collect the most points by covering the most area with the squares of player's own color.</para>
+</chapter>
+
+<chapter id="howto"><title>How to Play</title> <!-- do not change this! -->
+<!--IMPORTANT: If the game has no defined objective, please remove the below line.-->
+	<note><title>Objective:</title><para>Complete more squares than any of your opponents.</para></note><!--Describe the objective of the game.-->
+<!--How to play description. Don't be to specific on rules as they have a separate section in this document-->
+	<para>
+  At the start of the game, the game board is empty. There is simply a grid of dots showing where lines can be drawn.
+</para>
+
+<screenshot>
+<mediaobject>
+<imageobject>
+<imagedata fileref="gameboard.png" format="PNG"/>
+</imageobject>
+<textobject>
+<phrase>&ksquares; Game Board</phrase>
+</textobject>
+</mediaobject>
+</screenshot>
+
+  <para>Each player takes it in turns to draw a line between two adjacent dots on the board. By hovering the mouse over the game board, a yellow indicator line will show you where your line will be placed when you click.
+  Once you have decided where you want to draw your line, click - and the line will be drawn.
+  If by drawing a line, you completed a square then this square now belongs to you and earns you a point. Each time you complete a square, you must draw another line. If your line did not complete a square then the next player(s) take their turn.
+  The game will continue until every square on the board is owned by one of the players.
+  </para>
+  <para>
+  To start a new game with custom settings (number of players, player names, board size) click on the <guibutton>New</guibutton> toolbar button or go to <menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>N</keycap></keycombo></shortcut> <guimenu>Game</guimenu> <guimenuitem>New</guimenuitem></menuchoice> menu item. To start a new game with the same settings as the current game, click on <guibutton>Restart Game</guibutton> button on the toolbar.
+  </para>
+</chapter>
+
+<chapter id="rules_and_tips"><title>Game Rules, Strategies and Tips</title> <!-- do not change this! -->
+	<!--This section has to do with game rules. Please give a detailed description of those using lists or paragraphs.-->
+<sect1 id="rules">
+  <title>Game Rules</title>
+    <para>There is very little to be said when it come to the rules, as the game concept in itself is rather a simple one. Nevertheless, here are the game regulations you, as a player will defiantly face while playing &ksquares;:</para>
+    <itemizedlist>
+	<listitem><para>You may only connect the dots on the grid if they are not previously connected by you, your opponent, or the computer.</para></listitem>
+	<listitem><para>To gain the points you have to connect the dots to form a square.</para></listitem>
+	<listitem><para>The square can be no larger than the four adjacent dots on the grid allow for.</para></listitem>
+	<listitem><para>Once a square is complete the player who draws the last line of that square is granted the right of possession over it. The square then is colored and the player is given a point.</para></listitem>
+	<listitem><para>The player who completes the square is given an extra turn which the player cannot forfeit.</para></listitem>
+    </itemizedlist>
+</sect1>
+<sect1 id="strategies">
+  <title>Strategies and Tips</title>
+  <itemizedlist>
+	<listitem><para>Try not to play at random. Such game practice will most certainly result in loss.</para></listitem>
+	<listitem><para>Construct long chains of lines over the gameboard. Once one such chain is complete start to build another one going parallel to the first.</para></listitem>
+	<listitem><para>Try not to build contraptions where only one line remains undone. Your opponent will almost certainly take an advantage of it.</para></listitem>
+	<listitem><para>If you are to let the opponent get a square or more, try to select the combination resulting in the least damage.</para></listitem>
+	<listitem><para>Try to push your opponent into the situation where he/she(it) will have no choice but to let you get the square.</para></listitem>
+	<listitem><para>If you are to get a chance to start completing a whole chain of squares, remember that by leaving two squares at the end of such chain incomplete you are pushing your opponent into completing them, thus giving you the opportunity to continue onto yet another chain. Such a situation is called the double-cross.</para></listitem>
+    </itemizedlist>
+</sect1>
+</chapter>
+
+<chapter id="menu-items">
+  <title>Menu Items</title>
+  <para>
+    <variablelist>
+      <varlistentry>
+        <term><menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>N</keycap></keycombo></shortcut>
+        <guimenu>Game</guimenu>
+        <guimenuitem>New</guimenuitem></menuchoice></term>
+        <listitem><para><action>Start a new game.</action></para></listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><menuchoice><shortcut><keycap>F5</keycap></shortcut>
+        <guimenu>Game</guimenu>
+        <guimenuitem>Restart Game</guimenuitem></menuchoice></term>
+        <listitem><para>Starts a new game with the same settings as the current game.</para></listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>H</keycap></keycombo></shortcut>
+        <guimenu>Game</guimenu>
+        <guimenuitem>Show High Scores...</guimenuitem></menuchoice></term>
+        <listitem><para><action>Displays</action> the high score table.</para></listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><menuchoice><shortcut><keycombo action="simul">&Ctrl;<keycap>Q</keycap></keycombo></shortcut>
+        <guimenu>Game</guimenu>
+        <guimenuitem>Quit</guimenuitem></menuchoice></term>
+        <listitem><para><action>Quits</action> &ksquares;.</para></listitem>
+      </varlistentry>
+      <varlistentry id="settings-menu-settings">
+        <term><menuchoice>
+        <guimenu>Settings</guimenu>
+        <guimenuitem>Configure &ksquares;...</guimenuitem></menuchoice></term>
+        <listitem><para><action>Opens a dialog to configure &ksquares;.</action> See <link linkend="configuration">Game Configuration</link> section for details.</para></listitem>
+      </varlistentry>
+    </variablelist>
+  </para>
+  <para>
+    Additionally &ksquares; has the common &kde; <guimenu>Settings</guimenu> and <guimenu>Help</guimenu>
+    menu items, for more information read the sections about the
+    <ulink url="help:/fundamentals/menus.html#menus-settings">Settings Menu</ulink> and
+    <ulink url="help:/fundamentals/menus.html#menus-help">Help Menu</ulink>
+    of the &kde; Fundamentals.
+  </para>
+
+</chapter>
+
+<chapter id="faq"><title>Frequently asked questions</title> <!-- do not change this! -->
+<!--This chapter is for frequently asked questions. Please use <qandaset> <qandaentry> only!-->
+<qandaset>
+<!--Following is a standard list of FAQ questions.-->
+<qandaentry>
+ <question><para>I want to change the way this game looks. Can I? </para></question>
+ <answer><para>Currently the only thing you can change about the game look is the color of the lines. To do so use the <menuchoice><guimenu>Settings</guimenu> <guimenuitem>Configure &ksquares;...</guimenuitem></menuchoice> menu item. See <link linkend="configuration">Game Configuration</link> section for details.</para></answer>
+</qandaentry>
+<qandaentry>
+ <question><para>I have made a mistake. Can I undo? </para></question>
+ <answer><para>No. &ksquares; doesn't currently have an <quote>Undo</quote> feature.</para></answer>
+</qandaentry>
+<qandaentry>
+ <question><para>Can I use the keyboard to play the game? </para></question>
+ <answer><para>No. &ksquares; cannot be played using keyboard.</para></answer>
+</qandaentry>
+<qandaentry>
+ <question><para>I cannot figure out what to do here! Are there hints? </para></question>
+ <answer><para>No. There is no <quote>Hint</quote> feature implemented yet.</para></answer>
+</qandaentry>
+<qandaentry>
+ <question><para>I have to quit the game now, but I am not finished yet. Can I save my progress?</para></question>
+  <answer><para>&ksquares; does not have a <quote>Save</quote> feature.</para></answer>
+</qandaentry>
+<!--Please add more Q&As if needed-->
+
+</qandaset>
+</chapter>
+
+<chapter id="configuration"><title>Game Configuration</title> <!-- do not change this! -->
+<sect1 id="newgame-dialog">
+<title>New Game Dialog</title>
+<screenshot>
+<mediaobject>
+<imageobject>
+<imagedata fileref="newgame.png" format="PNG"/>
+</imageobject>
+<textobject>
+<phrase>New game</phrase>
+</textobject>
+</mediaobject>
+</screenshot>
+<para>The <guilabel>New Game</guilabel> dialog consistes of the following groupboxes:</para>
+<variablelist>
+  <varlistentry>
+    <term><guilabel>Players</guilabel></term>
+    <listitem><para>Here you can change the number of participating players, as well as determine who will be played by human and who by the artificial intelligence. Use the <guilabel>Number of players:</guilabel> spin-box to specify the number of participants. Then type a name for each participant and use the <guilabel>Human?</guilabel> check box to specify the player type.</para></listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><guilabel>Game Board</guilabel></term>
+    <listitem><para>Here you can regulate the size of the game board. Use the <guilabel>Width:</guilabel> and <guilabel>Height:</guilabel> spin-boxes to change the width and height of the game board.</para></listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><guilabel>Game Settings</guilabel></term>
+    <listitem><para>This part of the configuration dialog regulates the difficulty of the game. If you leave the <guilabel>Quick start</guilabel> check box unchecked - the game will begin with the empty grid. Otherwise the game will start with the game board partially filled.</para></listitem>
+  </varlistentry>
+</variablelist>
+</sect1>
+<sect1 id="configuration-dialog">
+<title>Configuration Dialog</title>
+<screenshot>
+<mediaobject>
+<imageobject>
+<imagedata fileref="configure-display.png" format="PNG"/>
+</imageobject>
+<textobject>
+<phrase>Configuration dialog</phrase>
+</textobject>
+</mediaobject>
+</screenshot>
+<para>The <guilabel>Configure - &ksquares;</guilabel> dialog consists of the following tabs:</para>
+<variablelist>
+  <varlistentry>
+    <term><guilabel>Display</guilabel></term>
+    <listitem><para>Here you can change the &ksquares; color settings.</para></listitem>
+  </varlistentry>
+  <varlistentry>
+    <term><guilabel>Computer Player</guilabel></term>
+    <listitem><para>Use this tab to regulate the game difficulty.</para></listitem>
+  </varlistentry>
+</variablelist>
+</sect1>
+</chapter>
+
+<chapter id="credits"><title>Credits and License</title> <!-- do not change this! -->
+<!--This chapter is for credits and licenses.-->
+
+<para>
+&ksquares;  <!-- do not change this! -->
+</para>
+
+<para>
+  Program copyright 2006 Matt Williams <email>matt@milliams.com</email>
+  </para>
+
+  <para>Documentation Copyright &copy; 2006 Matt Williams <email>matt@milliams.com</email></para>
+
+<!-- TRANS:CREDIT_FOR_TRANSLATORS -->
+
+
+&underFDL;
+&underGPL;
+
+</chapter>
+
+&documentation.index;
+</book>
+<!--
+Local Variables:
+mode: sgml
+sgml-minimize-attributes:nil
+sgml-general-insert-case:lower
+sgml-omittag:t
+sgml-shorttag:t
+sgml-namecase-general:t
+sgml-always-quote-attributes:t
+sgml-indent-step:0
+sgml-indent-data:nil
+sgml-parent-document:nil
+sgml-exposed-tags:nil
+sgml-local-catalogs:nil
+sgml-local-ecat-files:nil
+End:
+-->
