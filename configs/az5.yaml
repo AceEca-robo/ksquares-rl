@@ -1,0 +1,51 @@
+# AlphaZero on 5x5 (scripts/az_train.py, scripts/az_eval.py, scripts/az_bench.py).
+seed: 2610
+board: [5, 5]
+run_dir: runs/az5
+device: cuda
+
+net:
+  blocks: 6
+  channels: 64
+
+mcts:
+  c_puct: 1.5
+  fpu_reduction: 0.2     # unvisited child Q = parent net value - this
+  dirichlet_alpha: 0.3   # root noise in self-play only
+  dirichlet_eps: 0.25
+  virtual_loss: 1.0
+  leaves_per_tree: 8     # for single-game search (az agent); self-play uses 1
+
+selfplay:
+  workers: 4             # processes, each with its own CUDA context (~160 MB)
+  games_per_worker: 128  # concurrent games per worker = GPU batch size;
+                         # lower it if the GPU runs out of memory
+  games_per_gen: 6000    # ~18 min at ~58k evaluations/s (smoke test)
+  sims: 200
+  temp_moves: 10         # temperature 1 for the first 10 lines, then 0
+
+buffer_size: 500000      # positions (the last ones)
+
+train:
+  batch_size: 512
+  steps_per_gen: 2500   # ~4 samples per new position
+  lr: 0.02
+  momentum: 0.9
+  weight_decay: 0.0001   # L2
+  symmetries: true       # random one of the 8 board symmetries per sample
+  min_buffer: 20000      # do not train before this many positions
+
+gating:
+  games: 100
+  sims: 200
+  temp_moves: 4          # some opening variety; no noise
+  threshold: 0.55
+
+eval:
+  games: 100             # per opponent and mode, first mover alternating
+  sims: 200
+  opponents: [random, greedy, medium, hard, strong]  # random: Elo floor
+  processes: 8           # CPU workers for the opponents' moves
+  params:
+    strong:
+      time_limit: 0.5    # seconds per move, as in the ladder (docs/results.md)

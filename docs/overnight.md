@@ -125,3 +125,95 @@ Ideas for later:
 - gymnasium wrapper `env/ksquares_env.py` over the simulator (opponent =
   port) with the same observation as over the bridge; the bridge for final
   evaluation against the real KSquares.
+
+## 2026-10-23/24 (night) — AlphaZero on 5x5
+
+Chronology:
+1. The task started with "commit the uncommitted analysis of strong's
+   losses": there was none — clean tree, no stash, nothing in `runs/`.
+   The strong losses (~5–6% vs Medium/Hard) stay unanalysed (see the
+   previous section's unclear points).
+2. `torch==2.14.1` (CUDA 13), `matplotlib==3.10.9` installed into `.venv`
+   (optional extra `az` in `pyproject.toml`).
+3. `agents/az_net.py` (encoding, symmetries, ResNet 6x64, 0.51M
+   parameters), `agents/az_mcts.py` (batched PUCT), `agents/az_play.py`
+   (self-play, net-vs-net matches), `scripts/az_train.py` (loop),
+   `scripts/az_eval.py` (ladder, table, plot, Elo), `scripts/az_bench.py`,
+   `configs/az5.yaml`, `tests/test_az.py`.
+4. MCTS test on 2x2: with uniform priors and value 0 PUCT spreads visits
+   breadth-first and never reaches a terminal in 20k simulations on an
+   8-line position (all Q = 0) — not a bug, the test now uses random
+   playouts as the leaf value (pure MCTS), and the root value then has the
+   sign of the exact minimax result in 25/25 positions, with 1 and 4
+   leaves per tree.
+5. Speed (`scripts/az_bench.py`, one process, untrained net, fp16 on the
+   RTX 4060 Laptop, 200 simulations from random positions):
+
+   | games (= batch) | sims/s | net share of the time | ms per net call |
+   |---:|---:|---:|---:|
+   | 1 | 970 | 93% | 0.96 |
+   | 8 | 6,201 | 81% | 1.04 |
+   | 32 | 15,457 | 53% | 1.10 |
+   | 64 | 22,143 | 41% | 1.18 |
+   | 128 | 23,101 | 32% | 1.75 |
+   | 1 game, 8 leaves (virtual loss) | 6,354 | 82% | 0.99 |
+
+   The pure-Python tree is ~10x above the 2k sims/s threshold, so nothing
+   was moved to C (cffi). Without the network the tree alone does ~30k
+   sims/s; at batch 64 it is ~60% of the time, i.e. the bottleneck from
+   batch 64 up is Python tree code, below that the per-call GPU latency.
+6. Smoke test, one generation (480 games, 300 train steps, gating, eval
+   with 20 games per cell): self-play 113 s (6 workers x 48 games,
+   42.5k evaluations/s), training 12 s, gating 48 s (96-4 vs the random
+   initial net, accepted), evaluation 60 s; whole generation 4 min.
+   Self-play layouts, one generation each:
+
+   | workers x games | evaluations/s | GPU util | GPU memory |
+   |---|---:|---:|---:|
+   | 6 x 48 | 42.5k | — | — |
+   | 4 x 128 | 58.2k | 65–80% | 0.8 GB |
+   | 8 x 64 | 55.6k | ~90% | 1.4 GB |
+   | 3 x 192 | 52.5k | ~50% | 0.65 GB |
+
+   Several processes share the GPU by time slicing, so per process it is
+   ~14k/s instead of 22k. Chosen 4 x 128. A generation is then sized to
+   ~30 min: 6000 games (~18 min, ~320k positions), 2500 steps of 512.
+7. Overnight run in tmux `az5`: `scripts/az_train.py --config
+   configs/az5.yaml`, run dir `runs/az5`.
+
+Decisions:
+- Representation: one (2h+1)x(2w+1) = 11x11 grid holding dots, lines and
+  boxes (lines at (even, odd)/(odd, even), boxes at (odd, odd)) rather
+  than a 6x6 dot grid or separate H (6x5) / V (5x6) planes. On this grid
+  all 8 symmetries are plain rotations/flips and the transpose maps
+  horizontal lines to vertical ones by itself; with separate H/V planes
+  a transpose swaps and re-pads channels, and on a 6x6 dot grid two lines
+  share a point so they need two channels with off-by-one offsets anyway.
+  Planes: drawn, undrawn, my box, opponent's box, free box with 0/1/2/3
+  sides, score difference, mover-moved-first, ones (11). Everything is
+  relative to the mover, so the value needs no colour flip.
+- Heads AlphaZero-style (1x1 conv + FC) so the policy can use global
+  counts (chain parity); policy over the 60 lines in KSquares order, masked.
+- Extra turn after a capture: every node stores its mover; a backed-up
+  value flips sign only on edges where the mover changes.
+- Terminal = winner fixed (more than half of the boxes), not only a full
+  board: exact values earlier in the tree and shorter self-play games.
+  Value target is the result (+1/-1) for the mover; score margins are
+  not learned.
+- One leaf per game per round in self-play (no virtual loss needed, the
+  batch comes from 128 parallel games); virtual loss only for single-game
+  search. No tree reuse between moves (200 fresh simulations per move).
+- Positions with one legal move are played without search and not stored.
+- Rejected candidates: the trainer keeps its weights (AlphaGo Zero); only
+  self-play stays on the best net. Gating 100 games, 200 sims, temperature
+  1 for the first 4 lines, no noise.
+- Evaluation games stop when the winner is fixed (win % only). Opponents
+  run in 8 CPU processes; strong has 0.5 s per move by wall clock, so its
+  strength drops somewhat while self-play loads the CPU. random was added
+  to the opponents: without it, an all-lose net only gets an Elo bound.
+- Elo: anchors from the 200-game ladder (random 0, easy 888, greedy 905,
+  medium 1235, hard 1488, strong 1815), each net fitted alone against them,
+  one virtual half/half game per pair.
+- Safe stop: `touch runs/az5/STOP`; the loop finishes the current phase
+  (self-play, train or gating), checkpoints, stops the evaluator and exits,
+  which closes the tmux session. Resume = start the same command.

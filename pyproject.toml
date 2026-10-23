@@ -15,6 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest"]
+az = ["torch==2.14.1", "matplotlib==3.10.9"]
 
 [tool.setuptools]
 packages = ["sim", "agents", "env"]
