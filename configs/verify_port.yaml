@@ -1,0 +1,15 @@
+# Bridge / AI-port verification for scripts/verify_port.py.
+# For each board, level and seat layout `games` games are played both in the
+# simulator and in KSquares over the bridge with the same seeds; with one
+# external seat the first mover alternates between games.
+seed: 2026
+games: 100
+qt_hash_seed: 0      # QT_HASH_SEED for the game (null: random per process);
+                     # the port emulates this seed (0 when null)
+boards:
+  - [5, 5]
+  - [10, 7]
+levels: [easy, medium, hard]
+seats:               # "ext" = seeded random agent, "ai" = KSquares AI
+  - [ext, ai]
+  - [ai, ai]
