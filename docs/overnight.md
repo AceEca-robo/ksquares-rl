@@ -315,7 +315,8 @@ Chronology:
    runs the game with a window on :0, places it with xdotool, records with
    ffmpeg x11grab, scales to 400 px: `docs/az5_vs_hard.mp4` (az5b gen 1 +
    MCTS 200, moving first, vs the game's own Hard: 18–7, 61 s; first take,
-   seed 11). Check over the bridge without a window: az5 gen 29 vs real
+   seed 11; re-recorded with az5b gen 5 once it was accepted: 15–10, also
+   the first take). Check over the bridge without a window: az5 gen 29 vs real
    Hard 18/20 (all 10 as second player, 8/10 as first).
 
 Decisions and findings, strategy probe:
@@ -356,3 +357,7 @@ Ideas for later:
   target, and check whether the raw-net parity score moves.
 - Score target from games played to the end instead of the margin at
   decision.
+- 12:25 az5b gen 5 accepted (58-42 vs gen 1): MCTS 200 vs Hard 95%, vs
+  strong 54%, Elo 1875 (gen 1: 1870, same within noise). Probe: net only
+  dd 99 / parity 49, MCTS dd 100 / parity 85; self-play declined right
+  24/27, no DD that cost boxes. The video now shows gen 5.
