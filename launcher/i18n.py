@@ -12,6 +12,12 @@ LANGS = ("en", "ru", "uk")
 DEFAULT = "en"
 LABELS = {"en": "EN", "ru": "RU", "uk": "UK"}
 
+def _parts(chains, loops, chains_word, loops_word):
+    """"  (chains 5 3, loops 4)", or nothing when there are neither."""
+    parts = [f"{w} {v}" for w, v in ((chains_word, chains), (loops_word, loops)) if v]
+    return f"  ({', '.join(parts)})" if parts else ""
+
+
 STRINGS = {
     # --- menu ----------------------------------------------------------------
     "subtitle": {
@@ -57,9 +63,9 @@ STRINGS = {
     "network": {"en": "Network: {label}", "ru": "Сеть: {label}", "uk": "Мережа: {label}"},
     "on": {"en": "on", "ru": "вкл", "uk": "увім"},
     "off": {"en": "off", "ru": "выкл", "uk": "вимк"},
-    "menu_keys": {"en": "Enter or click: start    Esc: quit",
-                  "ru": "Enter или щелчок: начать    Esc: выход",
-                  "uk": "Enter або клацання: почати    Esc: вихід"},
+    "menu_keys": {"en": "←/→: mode    Enter or click: start    Esc: quit",
+                  "ru": "←/→: режим    Enter или щелчок: начать    Esc: выход",
+                  "uk": "←/→: режим    Enter або клацання: почати    Esc: вихід"},
     # --- game ------------------------------------------------------------------
     "you": {"en": "You", "ru": "Вы", "uk": "Ви"},
     "ksquares_player": {"en": "KSquares {level}", "ru": "KSquares {level}", "uk": "KSquares {level}"},
@@ -88,17 +94,17 @@ STRINGS = {
     "visits_none": {"en": "no search: the policy's best line is played",
                     "ru": "без поиска: играется лучшая линия политики",
                     "uk": "без пошуку: грається найкраща лінія політики"},
+    "visits_decided": {"en": "the winner is already fixed: no search needed",
+                       "ru": "победитель уже определён: поиск не нужен",
+                       "uk": "переможця вже визначено: пошук не потрібен"},
     "value": {"en": "V = {v:+.2f} for the side to move", "ru": "V = {v:+.2f} для ходящего",
               "uk": "V = {v:+.2f} для того, хто ходить"},
     "score_head": {"en": "expected margin {s:+.1f} boxes", "ru": "ожидаемый перевес {s:+.1f} кв.",
                    "uk": "очікувана перевага {s:+.1f} кв."},
     "who_wins": {"en": "who is winning", "ru": "кто выигрывает", "uk": "хто виграє"},
-    "chains": {"en": lambda n, chains, loops: f"Long chains: {n}" + (f"  (chains {chains}" if chains else "  (")
-               + (f", loops {loops})" if loops else ")"),
-               "ru": lambda n, chains, loops: f"Длинных цепочек: {n}" + (f"  (цепочки {chains}" if chains else "  (")
-               + (f", петли {loops})" if loops else ")"),
-               "uk": lambda n, chains, loops: f"Довгих ланцюжків: {n}" + (f"  (ланцюжки {chains}" if chains else "  (")
-               + (f", петлі {loops})" if loops else ")")},
+    "chains": {"en": lambda n, chains, loops: f"Long chains: {n}" + _parts(chains, loops, "chains", "loops"),
+               "ru": lambda n, chains, loops: f"Длинных цепочек: {n}" + _parts(chains, loops, "цепочки", "петли"),
+               "uk": lambda n, chains, loops: f"Довгих ланцюжків: {n}" + _parts(chains, loops, "ланцюжки", "петлі")},
     "parity": {"en": "{dots} dots + {n} long chains: the long chain rule favours {who}",
                "ru": "{dots} точек + {n} длинных: правило длинных цепочек за: {who}",
                "uk": "{dots} крапок + {n} довгих: правило довгих ланцюжків за: {who}"},

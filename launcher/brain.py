@@ -64,7 +64,7 @@ class Brain:
     def think(self, board, sims: int, pv_len: int = 10) -> dict:
         import torch
 
-        from agents.az_mcts import choose_move
+        from agents.az_mcts import choose_move, result_for_mover
 
         net = self.ev.net
         pri, val = self.ev([board])
@@ -74,7 +74,9 @@ class Brain:
                 x = torch.from_numpy(self.ev.codec.encode_boards([board])).to(self.ev.device)
                 score = float(net(x)[2].float()[0]) * board.geo.n_boxes
         out = {"player": board.player, "policy": pri[0], "value": float(val[0]), "score": score,
-               "sims": sims, "visits": None, "q": None, "pv": [], "move": int(np.argmax(pri[0]))}
+               "sims": sims, "visits": None, "q": None, "pv": [], "move": int(np.argmax(pri[0])),
+               # the winner is already fixed: nothing to search or to fight for
+               "decided": result_for_mover(board) is not None}
         if sims > 0:
             root = self.mcts.search([board], sims)[0]
             if not root.terminal:

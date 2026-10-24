@@ -55,7 +55,7 @@ RED = (235, 80, 70)
 SEAT = ((240, 96, 80), (86, 156, 255))       # first / second player, as in KSquares (red, blue)
 HEAT = (255, 196, 0)                          # policy
 VISIT = (110, 220, 160)                       # MCTS visits
-MODES = ("ksquares", "play", "self")
+MODES = core.MODES
 MAIN = (40, 110, 1000, 760)                   # x, y, w, h: the game
 SIDE = (1080, 40, 800, 860)                   # the thought panel
 TIMELINE = (40, 912, 1840, 140)
@@ -158,6 +158,8 @@ class App:
         for k in ("lang", "level", "sims", "net_first", "show_mine"):
             if getattr(args, k, None) is not None:
                 self.settings[k] = type(self.settings[k])(getattr(args, k))
+        if args.board:
+            self.settings["size"] = [f"{bw}x{bh}" for bw, bh in self.cfg["board_sizes"]].index(args.board)
         self.gens = core.generations(self.cfg)
         self.best = core.best(self.cfg)
         labels = [g["label"] for g in self.gens]
@@ -236,8 +238,8 @@ class App:
         for i, lang in enumerate(i18n.LANGS):
             self.button(f"lang:{lang}", (W - 300 + i * 90, 30, 80, 46), i18n.LABELS[lang], s["lang"] == lang)
         for i, m in enumerate(MODES):
-            self.button(f"mode:{m}", (160 + i * 540, 230, 500, 170), self.L(f"mode_{m}"), size=30,
-                        hint=self.L(f"mode_{m}_hint"))
+            self.button(f"mode:{m}", (160 + i * 540, 230, 500, 170), self.L(f"mode_{m}"), s["mode"] == m,
+                        size=30, hint=self.L(f"mode_{m}_hint"))
         y = 450
         rows = [
             ("level", [(f"level:{k}", self.L(f"level_{k}"), s["level"] == k) for k in range(3)]),
@@ -297,6 +299,9 @@ class App:
         from launcher.brain import Brain  # noqa: F401  (torch import before the game)
 
         size = self.cfg["board_sizes"][self.settings["size"]]
+        self.settings["mode"] = mode   # the card stays selected in the menu
+        if self.save:
+            core.save_settings(self.settings)
         err = core.check(mode, size, self.settings["lang"], self.cfg)
         if err:
             self.message = err
@@ -440,12 +445,13 @@ class App:
             view = BoardView(board.geo.w, board.geo.h, (bx, y + 86, bw, bw))
             if i == 1 and heat is None:
                 self.draw_board(view, board, small=True)
-                self.wrap(self.L("visits_none"), (bx + 10, y + 86 + bw / 2 - 20), bw - 20, 18, ACCENT)
+                self.wrap(self.L("visits_decided" if th["decided"] else "visits_none"), (bx, y + 92 + bw), bw, 16,
+                          DIM if th["decided"] else ACCENT)
                 continue
             self.draw_board(view, board, heat=heat, heat_color=col, small=True,
                             pv=th["pv"] if i == 1 else None,
                             move=th["move"] if i == 1 else int(heat.argmax()))
-        yy = y + 100 + bw
+        yy = y + 140 + bw   # room for the no-search caption under the maps
         # value and the bar: the side to move's colour on its side of the bar
         v = th["value"]
         self.text(self.L("value", v=v), (x + 24, yy), 24, FG)
@@ -460,14 +466,15 @@ class App:
         pg.draw.line(self.screen, BG, (bar.centerx, bar.y - 4), (bar.centerx, bar.bottom + 4), 2)
         self.text(self.L("who_wins"), (bar.centerx, bar.bottom + 4), 16, DIM, "midtop")
         yy += 52
-        # chains and the rule
+        # chains and the rule, while the fight for them is on
         ch = th["chains"]
-        self.text(self.L("chains", n=ch["long"], chains=" ".join(map(str, ch["chains"])),
-                         loops=" ".join(map(str, ch["loops"]))), (x + 24, yy), 22, FG)
-        who = self.player_name(ch["favoured"])
-        self.text(self.L("parity", dots=ch["dots"], n=ch["long"], who=who), (x + 24, yy + 32), 20,
-                  SEAT[ch["favoured"]])
-        yy += 74
+        if not snap["over"] and not th["decided"]:
+            self.text(self.L("chains", n=ch["long"], chains=" ".join(map(str, ch["chains"])),
+                             loops=" ".join(map(str, ch["loops"]))), (x + 24, yy), 22, FG)
+            who = self.player_name(ch["favoured"])
+            self.text(self.L("parity", dots=ch["dots"], n=ch["long"], who=who), (x + 24, yy + 32), 20,
+                      SEAT[ch["favoured"]])
+            yy += 74
         # the exact verdict
         vd = self.session.verdict(th["key"])
         if vd == "pending":
@@ -529,7 +536,10 @@ class App:
             if e.key == pg.K_ESCAPE:
                 self.quit = True
             elif e.key in (pg.K_RETURN, pg.K_KP_ENTER):
-                self.start(self.mode or MODES[0])
+                self.start(self.settings["mode"])
+            elif e.key in (pg.K_LEFT, pg.K_RIGHT):
+                i = MODES.index(self.settings["mode"]) + (1 if e.key == pg.K_RIGHT else -1)
+                self.settings["mode"] = MODES[i % len(MODES)]
         else:
             s = self.session
             if e.key == pg.K_ESCAPE:
@@ -641,6 +651,7 @@ def parse(argv=None):
     ap.add_argument("--gen-a", help='"network vs itself", first player, e.g. "az5 gen 1"')
     ap.add_argument("--gen-b", help="second player")
     ap.add_argument("--seed", type=int)
+    ap.add_argument("--board", help="board size, e.g. 5x5 (one of configs/app.yaml board_sizes)")
     ap.add_argument("--net-first", type=int, choices=[0, 1], help="1: the network moves first")
     ap.add_argument("--show-mine", type=int, choices=[0, 1], help="1: the network's view of your moves")
     ap.add_argument("--record", help="record the window into an .mp4 or .gif (with --mode)")

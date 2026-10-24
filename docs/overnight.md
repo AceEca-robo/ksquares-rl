@@ -431,3 +431,12 @@ Ideas for later:
   pause / one move, and the app quitting by itself with no children left.
 - The exact solver moved into agents/strong.py (exact_move_values,
   line_mask); strategy_probe.py uses it from there.
+- App fixes after the first look: the chains block is hidden at game over
+  and once the winner is fixed (it said "0 long chains ()" on a full
+  board; empty brackets are gone too); the no-search caption sits under
+  the maps; at a decided position the panel says the search is not needed
+  instead of "no search"; the selected mode card is highlighted (←/→ in
+  the menu, remembered); --board for scripted runs (they read the saved
+  settings); the game-over frame is published before `over` is set.
+  Two games against KSquares Hard with MCTS 200 (az5b gen 18): 13:11 as
+  first player, 14:11 as second (docs/app_ksquares_end.png).

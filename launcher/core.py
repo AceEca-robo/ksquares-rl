@@ -19,6 +19,7 @@ from . import i18n
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GAME = os.path.join(ROOT, "build", "src", "ksquares")
 APP_CONFIG = os.path.join(ROOT, "configs", "app.yaml")
+MODES = ("ksquares", "play", "self")
 
 # program -> Debian / Ubuntu package (the private Xvfb, finding and grabbing
 # KSquares' window on it)
@@ -51,7 +52,7 @@ def app_config():
 def defaults(cfg):
     return {"lang": i18n.DEFAULT, "level": 2, "net_first": True, "sims": cfg["sims_default"],
             "size": 0, "show_mine": False, "gen_a": None, "gen_b": None,
-            "speed": cfg["selfplay_delay_default"]}
+            "speed": cfg["selfplay_delay_default"], "mode": MODES[0]}
 
 
 def load_settings(cfg):
@@ -69,6 +70,8 @@ def load_settings(cfg):
         s["sims"] = cfg["sims_default"]
     if not isinstance(s["size"], int) or not 0 <= s["size"] < len(cfg["board_sizes"]):
         s["size"] = 0
+    if s["mode"] not in MODES:
+        s["mode"] = MODES[0]
     if not isinstance(s["speed"], int) or not 0 <= s["speed"] < len(cfg["selfplay_delays"]):
         s["speed"] = cfg["selfplay_delay_default"]
     s["net_first"], s["show_mine"] = bool(s["net_first"]), bool(s["show_mine"])

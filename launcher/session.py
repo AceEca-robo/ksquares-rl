@@ -226,8 +226,8 @@ class Session:
             board.step(ln)
             self._publish(board, last=(ln, seat))
         if not self._stop.is_set():
-            self.over = True
             self._publish(board, over=True)
+            self.over = True
 
     def _run_ksquares(self):
         from env.bridge import KSquaresBridge
@@ -254,9 +254,9 @@ class Session:
             bridge.step(ln)
             self._publish(board, last=(ln, net_seat))
         if not self._stop.is_set():
-            self.over = True
             self._sleep(0.5)   # the last frame
             self._publish(board, over=True)
+            self.over = True
 
     def _grab(self, display, pid):
         from PIL import ImageGrab

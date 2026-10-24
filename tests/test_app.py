@@ -151,7 +151,7 @@ def test_app_clean_exit():
     if core.best(core.app_config()) is None:
         pytest.skip("no trained network")
     env = dict(os.environ, CUDA_VISIBLE_DEVICES="", XDG_CONFIG_HOME=str(ROOT / "build" / "test-config"))
-    p = subprocess.Popen([sys.executable, str(ROOT / "scripts/launcher.py"), "--headless", "--mode", "self",
+    p = subprocess.Popen([sys.executable, str(ROOT / "scripts/launcher.py"), "--headless", "--mode", "self", "--board", "5x5",
                           "--sims", "0", "--moves", "8", "--linger", "0.2"], env=env)
     assert p.wait(timeout=180) == 0
     assert _children(p.pid) == []
