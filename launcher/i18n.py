@@ -1,0 +1,169 @@
+"""All user-visible strings of the app (scripts/launcher.py) and of the
+desktop entry, in English (the default), Russian and Ukrainian.
+
+    t("ru", "mode_self")              -> "Сеть против себя"
+    t("uk", "err_size", w=10, ...)    -> "..."
+
+A value is either a string (str.format with the keyword arguments) or a
+function of them.
+"""
+
+LANGS = ("en", "ru", "uk")
+DEFAULT = "en"
+LABELS = {"en": "EN", "ru": "RU", "uk": "UK"}
+
+STRINGS = {
+    # --- menu ----------------------------------------------------------------
+    "subtitle": {
+        "en": "Dots and Boxes: KSquares (KDE) and an AlphaZero network that taught itself the game.",
+        "ru": "Точки и квадраты: KSquares (KDE) и сеть AlphaZero, которая сама научилась игре.",
+        "uk": "Крапки й квадрати: KSquares (KDE) і мережа AlphaZero, яка сама навчилася гри.",
+    },
+    "mode_ksquares": {"en": "Network vs KSquares", "ru": "Сеть против KSquares",
+                      "uk": "Мережа проти KSquares"},
+    "mode_ksquares_hint": {
+        "en": "The real KSquares with its own computer player; the network moves through the RL bridge.",
+        "ru": "Настоящий KSquares со своим компьютерным игроком; сеть ходит через мост.",
+        "uk": "Справжній KSquares зі своїм комп'ютерним гравцем; мережа ходить через міст.",
+    },
+    "mode_play": {"en": "Play the network", "ru": "Сыграть против сети", "uk": "Зіграти проти мережі"},
+    "mode_play_hint": {
+        "en": "Click a line to draw it. Completing a box gives you another move.",
+        "ru": "Щёлкните по линии, чтобы провести её. Закрыли квадрат — ходите ещё раз.",
+        "uk": "Клацніть по лінії, щоб провести її. Закрили квадрат — ходите ще раз.",
+    },
+    "mode_self": {"en": "Network vs itself", "ru": "Сеть против себя", "uk": "Мережа проти себе"},
+    "mode_self_hint": {
+        "en": "Two generations face each other: pick an early one against a late one to see the growth.",
+        "ru": "Два поколения друг против друга: возьмите раннее против позднего, и рост будет виден.",
+        "uk": "Два покоління одне проти одного: візьміть раннє проти пізнього, і зріст буде видно.",
+    },
+    "level": {"en": "KSquares level", "ru": "Уровень KSquares", "uk": "Рівень KSquares"},
+    "level_0": {"en": "Easy", "ru": "Лёгкий", "uk": "Легкий"},
+    "level_1": {"en": "Medium", "ru": "Средний", "uk": "Середній"},
+    "level_2": {"en": "Hard", "ru": "Сложный", "uk": "Складний"},
+    "first": {"en": "Moves first", "ru": "Первым ходит", "uk": "Першим ходить"},
+    "first_net": {"en": "network", "ru": "сеть", "uk": "мережа"},
+    "first_other": {"en": "opponent", "ru": "соперник", "uk": "суперник"},
+    "search": {"en": "Search", "ru": "Поиск", "uk": "Пошук"},
+    "no_search": {"en": "none", "ru": "без поиска", "uk": "без пошуку"},
+    "sims": {"en": lambda n: f"MCTS {n}", "ru": lambda n: f"MCTS {n}", "uk": lambda n: f"MCTS {n}"},
+    "board": {"en": "Board", "ru": "Доска", "uk": "Дошка"},
+    "show_mine": {"en": "Show what the network thinks of my move",
+                  "ru": "Показывать, что думает сеть о моём ходе",
+                  "uk": "Показувати, що думає мережа про мій хід"},
+    "gen_first": {"en": "First", "ru": "Первый", "uk": "Перший"},
+    "gen_second": {"en": "Second", "ru": "Второй", "uk": "Другий"},
+    "network": {"en": "Network: {label}", "ru": "Сеть: {label}", "uk": "Мережа: {label}"},
+    "on": {"en": "on", "ru": "вкл", "uk": "увім"},
+    "off": {"en": "off", "ru": "выкл", "uk": "вимк"},
+    "menu_keys": {"en": "Enter or click: start    Esc: quit",
+                  "ru": "Enter или щелчок: начать    Esc: выход",
+                  "uk": "Enter або клацання: почати    Esc: вихід"},
+    # --- game ------------------------------------------------------------------
+    "you": {"en": "You", "ru": "Вы", "uk": "Ви"},
+    "ksquares_player": {"en": "KSquares {level}", "ru": "KSquares {level}", "uk": "KSquares {level}"},
+    "keys_ksquares": {"en": "Esc: menu", "ru": "Esc: меню", "uk": "Esc: меню"},
+    "keys_play": {"en": "Click a line    Esc: menu", "ru": "Щелчок по линии    Esc: меню",
+                  "uk": "Клацання по лінії    Esc: меню"},
+    "keys_self": {"en": "Space: pause    →: one move    +/−: speed    Esc: menu",
+                  "ru": "Пробел: пауза    →: один ход    +/−: скорость    Esc: меню",
+                  "uk": "Пробіл: пауза    →: один хід    +/−: швидкість    Esc: меню"},
+    "keys_over": {"en": "Enter: another game    Esc: menu", "ru": "Enter: ещё партия    Esc: меню",
+                  "uk": "Enter: ще партія    Esc: меню"},
+    "paused": {"en": "paused", "ru": "пауза", "uk": "пауза"},
+    "speed": {"en": "{s:.1f} s per move", "ru": "{s:.1f} с на ход", "uk": "{s:.1f} с на хід"},
+    "your_turn": {"en": "Your move: click a line", "ru": "Ваш ход: щёлкните по линии",
+                  "uk": "Ваш хід: клацніть по лінії"},
+    "starting": {"en": "Starting KSquares…", "ru": "Запускаю KSquares…", "uk": "Запускаю KSquares…"},
+    "wins": {"en": "{who} wins {a}:{b}", "ru": "Победа: {who}, {a}:{b}", "uk": "Перемога: {who}, {a}:{b}"},
+    # --- the thought panel -----------------------------------------------------------
+    "thoughts": {"en": "What {label} thinks", "ru": "Что думает {label}", "uk": "Що думає {label}"},
+    "thoughts_mine": {"en": "What the network thinks of your position",
+                      "ru": "Что сеть думает о вашей позиции", "uk": "Що мережа думає про вашу позицію"},
+    "policy": {"en": "Policy (first impression)", "ru": "Политика (первое впечатление)",
+               "uk": "Політика (перше враження)"},
+    "visits": {"en": "MCTS visits, principal variation", "ru": "Визиты MCTS, главная линия",
+               "uk": "Візити MCTS, головна лінія"},
+    "visits_none": {"en": "no search: the policy's best line is played",
+                    "ru": "без поиска: играется лучшая линия политики",
+                    "uk": "без пошуку: грається найкраща лінія політики"},
+    "value": {"en": "V = {v:+.2f} for the side to move", "ru": "V = {v:+.2f} для ходящего",
+              "uk": "V = {v:+.2f} для того, хто ходить"},
+    "score_head": {"en": "expected margin {s:+.1f} boxes", "ru": "ожидаемый перевес {s:+.1f} кв.",
+                   "uk": "очікувана перевага {s:+.1f} кв."},
+    "who_wins": {"en": "who is winning", "ru": "кто выигрывает", "uk": "хто виграє"},
+    "chains": {"en": lambda n, chains, loops: f"Long chains: {n}" + (f"  (chains {chains}" if chains else "  (")
+               + (f", loops {loops})" if loops else ")"),
+               "ru": lambda n, chains, loops: f"Длинных цепочек: {n}" + (f"  (цепочки {chains}" if chains else "  (")
+               + (f", петли {loops})" if loops else ")"),
+               "uk": lambda n, chains, loops: f"Довгих ланцюжків: {n}" + (f"  (ланцюжки {chains}" if chains else "  (")
+               + (f", петлі {loops})" if loops else ")")},
+    "parity": {"en": "{dots} dots + {n} long chains: the long chain rule favours {who}",
+               "ru": "{dots} точек + {n} длинных: правило длинных цепочек за: {who}",
+               "uk": "{dots} крапок + {n} довгих: правило довгих ланцюжків за: {who}"},
+    "sees": {"en": "the network sees it: its move keeps the win", "ru": "сеть видит: её ход сохраняет победу",
+             "uk": "мережа бачить: її хід зберігає перемогу"},
+    "misses": {"en": "the network does not see it: a winning move exists, it plays another",
+               "ru": "сеть не видит: есть выигрывающий ход, она играет другой",
+               "uk": "мережа не бачить: є виграшний хід, вона грає інший"},
+    "equal": {"en": "every move gives the same result here", "ru": "здесь все ходы ведут к одному итогу",
+              "uk": "тут усі ходи ведуть до одного підсумку"},
+    "solving": {"en": "solving exactly…", "ru": "точный расчёт…", "uk": "точний розрахунок…"},
+    "no_verdict": {"en": "too early for an exact verdict", "ru": "для точного вердикта ещё рано",
+                   "uk": "для точного вердикту ще зарано"},
+    "verdict_policy": {"en": "policy alone: {ok}", "ru": "одна политика: {ok}", "uk": "сама політика: {ok}"},
+    "right": {"en": "right", "ru": "верно", "uk": "правильно"},
+    "wrong": {"en": "wrong", "ru": "неверно", "uk": "неправильно"},
+    "human_move": {"en": "Your move: the network gave it {p:.0f}% ({rank} of {n})",
+                   "ru": "Ваш ход: сеть дала ему {p:.0f}% ({rank} из {n})",
+                   "uk": "Ваш хід: мережа дала йому {p:.0f}% ({rank} з {n})"},
+    "human_q": {"en": "search value after it: {q:+.2f}", "ru": "оценка поиска после него: {q:+.2f}",
+                "uk": "оцінка пошуку після нього: {q:+.2f}"},
+    "human_right": {"en": "exact: your move keeps the best result", "ru": "точно: ваш ход сохраняет лучший итог",
+                    "uk": "точно: ваш хід зберігає найкращий підсумок"},
+    "human_wrong": {"en": "exact: a better move existed", "ru": "точно: был ход лучше",
+                    "uk": "точно: був кращий хід"},
+    "timeline": {"en": "V for the first player, move by move", "ru": "V первого игрока по ходам партии",
+                 "uk": "V першого гравця за ходами партії"},
+    "player_first": {"en": "first", "ru": "первый", "uk": "перший"},
+    "player_second": {"en": "second", "ru": "второй", "uk": "другий"},
+    # --- errors ---------------------------------------------------------------------
+    "err_no_module": {"en": "The Python module {name} is missing: run ./install.sh again.",
+                      "ru": "Нет модуля Python {name}: запустите ./install.sh ещё раз.",
+                      "uk": "Немає модуля Python {name}: запустіть ./install.sh ще раз."},
+    "err_no_net": {"en": "No trained network: runs/best/best.pt is missing (train az5b first).",
+                   "ru": "Нет обученной сети: нет runs/best/best.pt (сначала обучите az5b).",
+                   "uk": "Немає навченої мережі: немає runs/best/best.pt (спершу навчіть az5b)."},
+    "err_size": {"en": "The network was trained on {tw}×{th}; it cannot play {w}×{h}: its heads are tied "
+                       "to the board size. Pick {tw}×{th}.",
+                 "ru": "Сеть обучена на {tw}×{th} и не может играть на {w}×{h}: её головы привязаны "
+                       "к размеру доски. Выберите {tw}×{th}.",
+                 "uk": "Мережу навчено на {tw}×{th}, і вона не може грати на {w}×{h}: її голови прив'язані "
+                       "до розміру дошки. Виберіть {tw}×{th}."},
+    "err_no_game": {"en": "KSquares is not built: run ./install.sh.", "ru": "KSquares не собран: запустите ./install.sh.",
+                    "uk": "KSquares не зібрано: запустіть ./install.sh."},
+    "err_no_tool": {"en": "Missing {tools}. Install: sudo apt install {pkgs}",
+                    "ru": "Нет {tools}. Установите: sudo apt install {pkgs}",
+                    "uk": "Немає {tools}. Встановіть: sudo apt install {pkgs}"},
+    "err_gpu_memory": {"en": "The GPU ran out of memory. Close other programs that use it, or start with "
+                             "CUDA_VISIBLE_DEVICES= for the CPU.",
+                       "ru": "Не хватило памяти GPU. Закройте другие программы на GPU или запустите с "
+                             "CUDA_VISIBLE_DEVICES= (на CPU).",
+                       "uk": "Забракло пам'яті GPU. Закрийте інші програми на GPU або запустіть з "
+                             "CUDA_VISIBLE_DEVICES= (на CPU)."},
+    "err_game_start": {"en": "KSquares did not start. Details: {log}", "ru": "KSquares не запустился. Подробности: {log}",
+                       "uk": "KSquares не запустився. Подробиці: {log}"},
+    "err_crash": {"en": "The game stopped: {error}. Details: {log}", "ru": "Игра прервалась: {error}. Подробности: {log}",
+                  "uk": "Гра перервалася: {error}. Подробиці: {log}"},
+    # --- desktop entry -----------------------------------------------------------------
+    "desktop_name": {"en": "KSquares RL", "ru": "KSquares RL", "uk": "KSquares RL"},
+    "desktop_comment": {"en": "Dots and Boxes against an AlphaZero network, and KSquares against it",
+                        "ru": "Точки и квадраты против сети AlphaZero и KSquares против неё",
+                        "uk": "Крапки й квадрати проти мережі AlphaZero і KSquares проти неї"},
+}
+
+
+def t(lang, key, **kw):
+    v = STRINGS[key].get(lang) or STRINGS[key][DEFAULT]
+    return v(**kw) if callable(v) else v.format(**kw)

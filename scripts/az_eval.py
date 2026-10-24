@@ -253,6 +253,8 @@ def main() -> None:
             report(cfg)
             # policy / value / PV snapshots of the fixed probe set (docs/probes)
             subprocess.run([sys.executable, str(ROOT / "scripts/az_probe_maps.py"), "--config", a.config])
+            # the app's network: runs/best/best.pt -> the last accepted generation
+            subprocess.run([sys.executable, str(ROOT / "scripts/update_best.py")])
 
 
 if __name__ == "__main__":

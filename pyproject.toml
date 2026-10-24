@@ -16,9 +16,10 @@ dependencies = [
 [project.optional-dependencies]
 test = ["pytest"]
 az = ["torch==2.14.1", "matplotlib==3.10.9"]
+app = ["pygame==2.6.1", "Pillow==12.3.0"]
 
 [tool.setuptools]
-packages = ["sim", "agents", "env"]
+packages = ["sim", "agents", "env", "launcher"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -390,3 +390,44 @@ Ideas for later:
   argmax stays at 3-9/16 (random 2.2), MCTS 15-16/16 from az5 gen 17.
   Parity is known by the value head, not by the policy; search turns it
   into moves.
+
+## 2026-10-24 (afternoon) — the app
+
+- A desktop app on the pacman-rl pattern: scripts/launcher.py (one 1920x1080
+  pygame window, menu, EN/RU/UK, Esc to the menu), launcher/ (core:
+  settings, networks, checks, private Xvfb; session: the games in a worker
+  thread; brain: policy / V / MCTS / PV and the exact verdict; i18n;
+  desktop), install.sh / uninstall.sh, menu entry ksquares-rl. Settings
+  in configs/app.yaml. Training untouched.
+- Modes: network vs KSquares (the real game over the bridge on a private
+  Xvfb, window grabbed with Pillow; Easy / Medium / Hard; who moves first),
+  play the network (clicks; "show what the network thinks of my move":
+  its prior for your line, its rank, the search value after it, and the
+  exact verdict), network vs itself (two generations from az5 / az5b,
+  pause, one move, speed). Search none / 50 / 200 / 800.
+- Thought panel: policy heat map, MCTS visits with the PV (10 lines)
+  numbered on the board, V and a who-is-winning bar, the score head, the
+  long chains and loops on the board (sim/chains.py) with the side the
+  long chain rule favours (dots + long chains even: the first player), and
+  "the network sees / does not see": the strong engine solves every move
+  to the end once at most 34 lines are left (node limit 150k, in its own
+  thread so the game never waits); V timeline below.
+- runs/best/best.pt: a link to the last accepted az5b generation, renewed
+  by scripts/update_best.py (called by az_eval.py after each evaluated
+  generation and by the app at start).
+- 10x7: the net does not play other sizes at all. The body is
+  convolutional, but the policy head (4 x 121 -> 60) and the value head
+  (2 x 121 -> 128) are fully connected over the 11 x 11 grid, so a 10x7
+  input (15 x 21) fails on the shapes (tests/test_app.py). The menu offers
+  10x7 and refuses with this explanation. A fully convolutional policy
+  head and global pooling in the value head would lift this; not done.
+- Colours follow KSquares: first player red, second blue.
+- --record (mp4 or gif via ffmpeg, 1280x720), --screenshot,
+  --human-agent for unattended "play" (screenshots, tests). Screenshots:
+  docs/app_menu.png, app_ksquares.png, app_play.png, app_self.png.
+- Tests (tests/test_app.py): strings in three languages, desktop entry,
+  chain analysis, the size check, the KSquares session over the bridge
+  with a stop mid-game (game and Xvfb gone), clicks with illegal lines,
+  pause / one move, and the app quitting by itself with no children left.
+- The exact solver moved into agents/strong.py (exact_move_values,
+  line_mask); strategy_probe.py uses it from there.

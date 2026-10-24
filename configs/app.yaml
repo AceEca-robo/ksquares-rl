@@ -1,0 +1,23 @@
+# The desktop app (scripts/launcher.py, launcher/).
+best:
+  run_config: configs/az5b.yaml   # runs/best/best.pt -> its last accepted generation
+  dir: runs/best
+generations:                      # pickable in "network vs itself"
+  - configs/az5.yaml
+  - configs/az5b.yaml
+board_sizes: [[5, 5], [10, 7]]
+sims_choices: [0, 50, 200, 800]   # 0 = no search, the policy's argmax
+sims_default: 200
+device: auto                      # cuda if available
+ai_delay_ms: 700                  # KSquares' own player waits this long per line
+net_delay: 0.6                    # seconds the network's move stays shown before it is drawn
+human_review: 1.5                 # seconds the network's view of your move stays before it replies
+selfplay_delays: [0.1, 0.3, 0.6, 1.2, 2.5]   # "network vs itself" speeds, seconds per move
+selfplay_delay_default: 2         # index into selfplay_delays
+pv_len: 10                        # principal variation drawn on the board
+solver:                           # "the network sees / does not see" verdicts
+  max_undrawn: 34                 # exact solving only from here (the chain fight)
+  node_limit: 150000              # per position; bigger ones get no verdict
+xvfb_size: [1024, 900]
+ksquares_window: [760, 800]
+record_fps: 20

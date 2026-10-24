@@ -108,29 +108,16 @@ class Brute:
 
 
 def mask(board) -> int:
-    return sum(1 << i for i, x in enumerate(board.lines) if x)
+    from agents.strong import line_mask
+
+    return line_mask(board)
 
 
 def engine_values(eng, board, node_limit):
     """Exact value of every legal move by the strong engine (None: too big)."""
-    from agents.strong import INF, SOLVED, Timeout
+    from agents.strong import exact_move_values
 
-    L = mask(board)
-    out = {}
-    eng.node_limit = node_limit
-    eng.nodes = 0
-    try:
-        for ln in range(board.geo.n_lines):
-            if not board.lines[ln]:
-                s2 = eng.sides(L)
-                L2, got = eng._draw(L, ln, s2)
-                v = eng.search(L2, SOLVED, -INF, INF)
-                out[ln] = got + v if got else -v
-    except Timeout:
-        return None
-    finally:
-        eng.node_limit = None
-    return out
+    return exact_move_values(eng, board, node_limit)
 
 
 def classify(board, vals):
