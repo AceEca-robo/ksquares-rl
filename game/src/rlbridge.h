@@ -52,6 +52,9 @@ public:
     void awaitMove();
     /// The game is over.
     void gameOver();
+    /// Delay before a computer move in ms: KSQUARES_RL_AI_DELAY_MS, default 0
+    /// (the game itself waits 200 ms; 0 for training, more for watching).
+    static int aiDelayMs();
 
 private:
     RLBridge(KSquaresWindow *window, KSquaresGame *game, int fd);

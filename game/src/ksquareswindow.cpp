@@ -278,7 +278,7 @@ void KSquaresWindow::playerTakeTurn(KSquaresPlayer *currentPlayer)
         setCursor(Qt::WaitCursor);
         m_scene->disableEvents();
 
-        QTimer::singleShot(m_rl ? 0 : 200, this, &KSquaresWindow::aiChooseLine); // RL bridge: no delay
+        QTimer::singleShot(m_rl ? RLBridge::aiDelayMs() : 200, this, &KSquaresWindow::aiChooseLine); // RL bridge: no delay unless KSQUARES_RL_AI_DELAY_MS
         setCursor(Qt::ArrowCursor);
     }
 }

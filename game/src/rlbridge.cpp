@@ -23,6 +23,13 @@
 #include "ksquareswindow.h"
 #include "settings.h"
 
+int RLBridge::aiDelayMs()
+{
+    bool ok = false;
+    const int ms = qEnvironmentVariableIntValue("KSQUARES_RL_AI_DELAY_MS", &ok);
+    return ok && ms > 0 ? ms : 0;
+}
+
 RLBridge *RLBridge::start(KSquaresWindow *window, KSquaresGame *game)
 {
     const QByteArray path = qgetenv("KSQUARES_RL_SOCKET");
