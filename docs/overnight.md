@@ -379,3 +379,14 @@ Ideas for later:
   backfilled (~3 s per generation). On the 16 parity positions the raw
   policy stays near flat: argmax right 5-7/16 from az5 gen 1 to az5b gen
   14; MCTS 4/16 (az5 gen 1) -> 16/16 (az5 gen 17), 15-16 since.
+- Value-sign check on the 16 parity snapshot positions
+  (docs/probes/summary.md, `az_probe_maps.py table`; snapshots redone
+  with the value of every child position). All 16 are "mover wins" by
+  construction, so V > 0 at the root is not a test (a constant scores
+  16/16; the nets get 2-12/16, V there is near 0 or negative). The test
+  that discriminates is the sign of V after each move: 46-59% (chance 50)
+  up to az5 gen 7, 72-74% at gens 8-11, 76-87% from gen 17, 84-87% in
+  az5b; one-ply search with V finds a winning move 7-15/16. The policy
+  argmax stays at 3-9/16 (random 2.2), MCTS 15-16/16 from az5 gen 17.
+  Parity is known by the value head, not by the policy; search turns it
+  into moves.
