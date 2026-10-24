@@ -28,3 +28,11 @@ selfplay_dd:             # double-dealing in self-play per generation
   node_limit: 300000     # engine nodes per judged position; bigger ones are skipped
   sims: 200
   temp_moves: 10
+
+maps:                    # scripts/az_probe_maps.py: per-generation snapshots
+  out: docs/probes       # positions.json (fixed set), {run}/gen_NN.json/.png
+  n_parity: 16
+  n_dd: 4
+  max_correct_share: 0.34  # skip positions where most moves are correct
+  sims: 200              # MCTS as in the probe (no noise, temperature 0)
+  pv_len: 10

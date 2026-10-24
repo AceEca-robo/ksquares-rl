@@ -365,3 +365,17 @@ Ideas for later:
   strong 60%, Elo 1885. Probe: net only dd 97 / parity 43, MCTS dd 100 /
   parity 84; self-play declined right 21/21. Video re-recorded with gen 6
   (14–11, first take, seed 11). Gen 7 rejected (52%).
+- Probe snapshots for a later animation ("how the net discovers chain
+  parity"): scripts/az_probe_maps.py. A fixed set of 20 probe positions
+  (16 parity, 4 dd; only those where at most a third of the legal moves
+  are correct, spread evenly over the probe file) is frozen in
+  docs/probes/positions.json. For every accepted generation it writes
+  docs/probes/{run}/gen_NN.json (policy over the legal lines, value and
+  score head, MCTS 200 visits / Q / chosen move / principal variation)
+  and gen_NN.png (boards with the policy as a fixed-scale heat map,
+  correct moves ringed, MCTS move starred, PV numbered). Per run, since
+  az5b numbers its generations from 1 again. az_eval.py now calls it after
+  each evaluated generation; az5 (21 gens) and az5b (gens 1-14) were
+  backfilled (~3 s per generation). On the 16 parity positions the raw
+  policy stays near flat in every generation (raw 3-13/20 overall, mostly
+  the dd ones), MCTS goes 6/20 (az5 gen 1) -> 16 (gen 14) -> 20 (gen 17).

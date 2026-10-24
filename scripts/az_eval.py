@@ -25,6 +25,8 @@ import argparse
 import json
 import math
 import os
+import subprocess
+import sys
 import time
 from multiprocessing import get_context
 
@@ -249,6 +251,8 @@ def main() -> None:
             p.with_suffix(".tmp").write_text(json.dumps(out, indent=1))
             os.replace(p.with_suffix(".tmp"), p)
             report(cfg)
+            # policy / value / PV snapshots of the fixed probe set (docs/probes)
+            subprocess.run([sys.executable, str(ROOT / "scripts/az_probe_maps.py"), "--config", a.config])
 
 
 if __name__ == "__main__":
