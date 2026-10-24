@@ -377,5 +377,5 @@ Ideas for later:
   az5b numbers its generations from 1 again. az_eval.py now calls it after
   each evaluated generation; az5 (21 gens) and az5b (gens 1-14) were
   backfilled (~3 s per generation). On the 16 parity positions the raw
-  policy stays near flat in every generation (raw 3-13/20 overall, mostly
-  the dd ones), MCTS goes 6/20 (az5 gen 1) -> 16 (gen 14) -> 20 (gen 17).
+  policy stays near flat: argmax right 5-7/16 from az5 gen 1 to az5b gen
+  14; MCTS 4/16 (az5 gen 1) -> 16/16 (az5 gen 17), 15-16 since.
