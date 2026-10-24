@@ -446,3 +446,31 @@ Ideas for later:
   two generations, search, board), a Start button, and the common
   "Network: ..." line at the bottom. A click on a card selects it, a
   second click, Start or Enter starts it.
+
+## 2026-10-24/25 (night) — az5b continued, stop rule
+
+Plan: continue az5b from gen 38 in tmux `az5b` (window `train`); stop
+rule: once 6 generations in a row are rejected, stop it safely (STOP) and
+call az5b finished. The streak counts the generations before the restart
+too (34–37 were rejected, so at the start it stood at 4). A watcher in
+tmux window `stopwatch` reads `state.json` every minute and creates STOP
+when the streak reaches 6 (log `runs/az5b/stopwatch.out`). Disk before
+start: 29 GB free of 144 GB, runs/ 441 MB.
+
+- Strategy probe and the usual cycle backfilled for every accepted az5b
+  generation without them (8, 13, 14, 17, 18, 20 as well as 23–33; the
+  ladder and probe snapshots of those already existed). docs/results.md
+  now lists every accepted az5b generation.
+- Video of the probe snapshots over the generations:
+  `scripts/az_probe_video.py` → `docs/probes/dynamics.mp4` (every
+  docs/probes/{az5,az5b}/gen_NN.png, 0.8 s each). Redone after each
+  accepted generation.
+- 00:27 gen 38 accepted (61-39 vs gen 33). MCTS 200: Hard 100%, strong
+  84%, Elo 2116 (gen 33: 98 / 81 / 2051); raw: Hard 78%, strong 33%,
+  Elo 1684 (best raw so far; gen 33: 74 / 30 / 1591). Probe: raw dd 99 /
+  parity 52 (first time above 50; the raw net was at 42–50 in every
+  earlier generation, ±4 points of noise on 150 positions), MCTS dd 100 /
+  parity 90. Self-play declined right 17/19, 1 of 19 DD moves cost boxes.
+  Snapshots: policy argmax 6/16, MCTS 16/16, V sign after a move 88%.
+  Video re-recorded with gen 38: 16–9 vs Hard (first take, seed 11).
+- Gen 39 rejected (37%).
