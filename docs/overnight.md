@@ -474,3 +474,10 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   Snapshots: policy argmax 6/16, MCTS 16/16, V sign after a move 88%.
   Video re-recorded with gen 38: 16–9 vs Hard (first take, seed 11).
 - Gen 39 rejected (37%).
+- Gens 40–43 rejected (48, 48, 46, 49%; streak 5).
+- 01:35 gen 44 accepted (60-40 vs gen 38). MCTS 200: Hard 97%, strong
+  86%, Elo 2106; raw: Hard 80%, strong 32%, Elo 1656 — level with gen 38
+  within noise (100 games per cell). Probe: raw dd 100 / parity 48, MCTS
+  dd 100 / parity 88; self-play declined right 8/9. Snapshots: argmax
+  6/16, MCTS 16/16, V sign after a move 85%. Video re-recorded with gen
+  44: 18–7 vs Hard (first take, seed 11).
