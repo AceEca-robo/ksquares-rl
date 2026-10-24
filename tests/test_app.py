@@ -155,3 +155,29 @@ def test_app_clean_exit():
                           "--sims", "0", "--moves", "8", "--linger", "0.2"], env=env)
     assert p.wait(timeout=180) == 0
     assert _children(p.pid) == []
+
+
+def test_menu_rows_follow_the_mode(tmp_path, monkeypatch):
+    """Only the selected mode's settings are on the menu; a click on another
+    card selects it, a second click (or Start) would start it."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("launcher_app", ROOT / "scripts/launcher.py")
+    app_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(app_mod)
+    app = app_mod.App(app_mod.parse(["--lang", "en"]), headless=True)
+    try:
+        rows = {}
+        for mode in app_mod.MODES:
+            app.settings["mode"] = mode
+            app.frame()
+            rows[mode] = {n.split(":")[0] for n in app.buttons}
+        assert {"level", "first", "sims", "size"} <= rows["ksquares"] and not rows["ksquares"] & {"mine", "gen_a"}
+        assert {"first", "sims", "size", "mine"} <= rows["play"] and not rows["play"] & {"level", "gen_a"}
+        assert {"gen_a", "gen_b", "sims", "size"} <= rows["self"] and not rows["self"] & {"level", "first", "mine"}
+        app.settings["mode"] = "self"
+        app.menu_click("mode:play")
+        assert app.settings["mode"] == "play" and app.screen_name == "menu"
+    finally:
+        app.pg.quit()

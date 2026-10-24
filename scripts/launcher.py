@@ -231,42 +231,62 @@ class App:
 
     # --- menu ---------------------------------------------------------------------
 
+    # the settings each mode uses, in this order
+    MODE_ROWS = {"ksquares": ("level", "first", "search", "board"),
+                 "play": ("first", "search", "board", "show_mine"),
+                 "self": ("gen_a", "gen_b", "search", "board")}
+
     def draw_menu(self):
+        pg = self.pg
         s = self.settings
-        self.text("KSquares RL", (W / 2, 70), 64, ACCENT, "midtop")
-        self.text(self.L("subtitle"), (W / 2, 160), 24, DIM, "midtop")
+        self.text("KSquares RL", (W / 2, 36), 56, ACCENT, "midtop")
+        self.text(self.L("subtitle"), (W / 2, 112), 22, DIM, "midtop")
         for i, lang in enumerate(i18n.LANGS):
             self.button(f"lang:{lang}", (W - 300 + i * 90, 30, 80, 46), i18n.LABELS[lang], s["lang"] == lang)
+        # modes
+        self.text(self.L("modes_title"), (160, 176), 28, FG)
         for i, m in enumerate(MODES):
-            self.button(f"mode:{m}", (160 + i * 540, 230, 500, 170), self.L(f"mode_{m}"), s["mode"] == m,
+            self.button(f"mode:{m}", (160 + i * 540, 220, 500, 160), self.L(f"mode_{m}"), s["mode"] == m,
                         size=30, hint=self.L(f"mode_{m}_hint"))
-        y = 450
-        rows = [
-            ("level", [(f"level:{k}", self.L(f"level_{k}"), s["level"] == k) for k in range(3)]),
-            ("first", [("first:1", self.L("first_net"), s["net_first"]),
-                       ("first:0", self.L("first_other"), not s["net_first"])]),
-            ("search", [(f"sims:{n}", self.L("sims", n=n) if n else self.L("no_search"), s["sims"] == n)
-                        for n in self.cfg["sims_choices"]]),
-            ("board", [(f"size:{i}", f"{bw}×{bh}", s["size"] == i)
-                       for i, (bw, bh) in enumerate(self.cfg["board_sizes"])]),
-            ("show_mine", [("mine:1", self.L("on"), s["show_mine"]), ("mine:0", self.L("off"), not s["show_mine"])]),
-        ]
-        for key, opts in rows:
-            self.text(self.L(key), (160, y + 10), 22, DIM)
-            for j, (name, label, act) in enumerate(opts):
-                self.button(name, (700 + j * 220, y, 200, 48), label, act, size=20)
+        # settings of the selected mode
+        y = 420
+        self.text(self.L("settings_title"), (160, y), 28, FG)
+        pg.draw.line(self.screen, FAINT, (160, y + 46), (W - 180, y + 46), 1)
+        y += 70
+        for key in self.MODE_ROWS[s["mode"]]:
+            if key in ("gen_a", "gen_b"):
+                self.text(self.L("gen_first" if key == "gen_a" else "gen_second"), (160, y + 10), 22, DIM)
+                self.button(f"{key}:-1", (700, y, 60, 48), "‹", size=24)
+                self.text(s[key] or "—", (900, y + 10), 22, FG, "midtop")
+                self.button(f"{key}:1", (1040, y, 60, 48), "›", size=24)
+            else:
+                self.text(self.L(key), (160, y + 10), 22, DIM)
+                for j, (name, label, act) in enumerate(self.options(key)):
+                    self.button(name, (700 + j * 220, y, 200, 48), label, act, size=20)
             y += 62
-        for key, which in (("gen_first", "gen_a"), ("gen_second", "gen_b")):
-            self.text(f"{self.L('mode_self')}: {self.L(key)}", (160, y + 10), 22, DIM)
-            self.button(f"{which}:-1", (700, y, 60, 48), "‹", size=24)
-            self.text(s[which] or "—", (900, y + 10), 22, FG, "midtop")
-            self.button(f"{which}:1", (1040, y, 60, 48), "›", size=24)
-            y += 62
-        if self.best:
-            self.text(self.L("network", label=f"{self.best['run']} gen {self.best['gen']}"), (160, y + 14), 22, DIM)
+        self.button("start", (160, y + 20, 360, 60), self.L("start"), True, size=24)
         if self.message:
-            self.wrap(self.message, (160, y + 60), 1600, 22, RED)
-        self.text(self.L("menu_keys"), (W / 2, H - 40), 20, FAINT, "midbottom")
+            self.wrap(self.message, (560, y + 26), W - 740, 20, RED)
+        # common
+        pg.draw.line(self.screen, FAINT, (160, 930), (W - 180, 930), 1)
+        if self.best:
+            self.text(self.L("network", label=f"{self.best['run']} gen {self.best['gen']}"), (160, 948), 22, DIM)
+        self.text(self.L("menu_keys"), (W / 2, H - 30), 20, FAINT, "midbottom")
+
+    def options(self, key):
+        """(button name, label, active) for one settings row."""
+        s = self.settings
+        if key == "level":
+            return [(f"level:{k}", self.L(f"level_{k}"), s["level"] == k) for k in range(3)]
+        if key == "first":
+            return [("first:1", self.L("first_net"), s["net_first"]),
+                    ("first:0", self.L("first_you" if s["mode"] == "play" else "first_other"), not s["net_first"])]
+        if key == "search":
+            return [(f"sims:{n}", self.L("sims", n=n) if n else self.L("no_search"), s["sims"] == n)
+                    for n in self.cfg["sims_choices"]]
+        if key == "board":
+            return [(f"size:{i}", f"{bw}×{bh}", s["size"] == i) for i, (bw, bh) in enumerate(self.cfg["board_sizes"])]
+        return [("mine:1", self.L("on"), s["show_mine"]), ("mine:0", self.L("off"), not s["show_mine"])]
 
     def menu_click(self, name):
         s = self.settings
@@ -274,7 +294,13 @@ class App:
         if kind == "lang":
             s["lang"] = val
         elif kind == "mode":
-            self.start(val)
+            if s["mode"] == val:
+                self.start(val)   # a second click on the selected card starts it
+            else:
+                s["mode"] = val
+                self.message = None
+        elif kind == "start":
+            self.start(s["mode"])
         elif kind == "level":
             s["level"] = int(val)
         elif kind == "first":

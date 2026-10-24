@@ -440,3 +440,9 @@ Ideas for later:
   settings); the game-over frame is published before `over` is set.
   Two games against KSquares Hard with MCTS 200 (az5b gen 18): 13:11 as
   first player, 14:11 as second (docs/app_ksquares_end.png).
+- Menu split in two: "Mode" with the three cards, then "Settings" under a
+  thin rule with only the selected mode's rows (vs KSquares: level, first,
+  search, board; play: first, search, board, show my move; vs itself: the
+  two generations, search, board), a Start button, and the common
+  "Network: ..." line at the bottom. A click on a card selects it, a
+  second click, Start or Enter starts it.
