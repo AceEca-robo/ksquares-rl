@@ -360,4 +360,8 @@ Ideas for later:
 - 12:25 az5b gen 5 accepted (58-42 vs gen 1): MCTS 200 vs Hard 95%, vs
   strong 54%, Elo 1875 (gen 1: 1870, same within noise). Probe: net only
   dd 99 / parity 49, MCTS dd 100 / parity 85; self-play declined right
-  24/27, no DD that cost boxes. The video now shows gen 5.
+  24/27, no DD that cost boxes.
+- 12:36 az5b gen 6 accepted (56-44 vs gen 5): MCTS 200 vs Hard 96%, vs
+  strong 60%, Elo 1885. Probe: net only dd 97 / parity 43, MCTS dd 100 /
+  parity 84; self-play declined right 21/21. Video re-recorded with gen 6
+  (14–11, first take, seed 11). Gen 7 rejected (52%).
