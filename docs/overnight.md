@@ -239,3 +239,45 @@ Overnight notes (az5):
   the first 30 lines (self-play outcome is barely predictable there with
   temperature-1 openings), 0.79 at 40–50 lines, 0.40 at 50+ (corr 0.67).
   So the overall value loss of ~0.90 is not a bug.
+- 02:59–04:59 the neighbour was in a lighter phase (`dist0`): self-play
+  25–35k evaluations/s, generations ~20 min; from 04:59 (`distill-collect`
+  again) 13–21k/s, ~40 min. Training 1100 steps: 36 s with the lighter
+  neighbour, ~3 min with the heavier one.
+
+Results by 07:25 (15 generations, 11 accepted: 1, 2, 3, 5, 7, 8, 9, 10,
+11, 14, 15; rejected 4, 6, 12, 13). Full table `docs/az5_ladder.md`,
+curves `docs/az5_ladder.png`. Net win % (100 games per cell):
+
+| gen | raw: greedy | medium | hard | strong | Elo | mcts 200: greedy | medium | hard | strong | Elo |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0 | 0 | 0 | 0 | 454 | 21 | 10 | 3 | 0 | 750 |
+| 2 | 46 | 14 | 3 | 0 | 894 | 92 | 76 | 27 | 2 | 1351 |
+| 5 | 84 | 46 | 18 | 2 | 1206 | 94 | 80 | 80 | 4 | 1539 |
+| 11 | 88 | 65 | 19 | 15 | 1320 | 99 | 87 | 91 | 40 | 1743 |
+| 15 | 85 | 73 | 46 | 10 | 1402 | 100 | 94 | 91 | 33 | 1747 |
+
+Anchors: greedy 905, medium 1235, hard 1488, strong 1815.
+- With MCTS 200 the net passed greedy and Medium in gen 2, Hard in gen 5
+  (80%); since gen 11 it beats Hard ~90% and wins 33–40% against strong
+  (Elo ~1745 vs 1815). The raw policy alone passed greedy in gen 3,
+  Medium in gen 9 (53%), and is below Hard (46% in gen 15).
+- MCTS adds ~350 Elo over the raw policy at every generation.
+- Progress per generation is slowing: gating scores fell from 100% to
+  55–61% with two rejections in a row (12, 13) before gen 14.
+
+Bottleneck: GPU time shared with the pacman distillation. The training
+itself is cheap (36 s per generation with a free-ish GPU); self-play is
+85–90% of a generation. Within one process the Python tree is ~60% of
+the time at batch 64, so with a free GPU the next limit would be the
+tree code (then cffi/C would pay off).
+
+Ideas for later:
+- Learning-rate drop (0.02 → 0.002) once gating stalls; currently
+  constant.
+- KataGo-style playout cap randomisation and an auxiliary score-margin
+  head (the value only knows win/loss; endgame margins are free signal).
+- Tree reuse between moves; C tree (cffi) once the GPU is not shared.
+- Evaluate against strong with a fixed node budget instead of 0.5 s wall
+  clock, which depends on the machine load during self-play.
+- `az` agent in `agents/registry.py` for the ladder script and the
+  bridge (final games against the real KSquares).

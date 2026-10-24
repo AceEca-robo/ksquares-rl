@@ -146,3 +146,23 @@ Easy plays like greedy (random capture, random safe line, random
 sacrifice); the step to Medium is sacrificing the shortest chain, the step
 to Hard (96.5% vs Medium) is all-but-two and hard-hearted handouts. Strong
 vs Hard came out 93.5% here and 94.5% in the separate run above.
+
+## AlphaZero on 5x5 (overnight 2026-10-23/24)
+
+`scripts/az_train.py` / `scripts/az_eval.py` (`configs/az5.yaml`):
+ResNet 6x64 (0.51M parameters), 200 simulations per move in self-play,
+gating at 55% over 100 games. Every accepted generation plays 100 games
+against each opponent (first mover alternating), as the raw policy
+(argmax, no search) and with MCTS 200 (no noise). Elo: Bradley-Terry
+against the fixed ladder anchors above (random 0, greedy 905, easy 888,
+medium 1235, hard 1488, strong 1815). strong has 0.5 s per move by wall
+clock on a loaded machine. Full table per generation: `docs/az5_ladder.md`;
+curves: `docs/az5_ladder.png`.
+
+| gen | raw vs greedy | raw vs medium | raw vs hard | raw vs strong | raw Elo | mcts vs greedy | mcts vs medium | mcts vs hard | mcts vs strong | mcts Elo |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 0 | 0 | 0 | 0 | 454 | 21 | 10 | 3 | 0 | 750 |
+| 2 | 46 | 14 | 3 | 0 | 894 | 92 | 76 | 27 | 2 | 1351 |
+| 5 | 84 | 46 | 18 | 2 | 1206 | 94 | 80 | 80 | 4 | 1539 |
+| 11 | 88 | 65 | 19 | 15 | 1320 | 99 | 87 | 91 | 40 | 1743 |
+| 15 | 85 | 73 | 46 | 10 | 1402 | 100 | 94 | 91 | 33 | 1747 |
