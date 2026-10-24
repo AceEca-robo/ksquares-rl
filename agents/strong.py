@@ -69,6 +69,7 @@ class Engine:
         self.dp: dict[tuple, int] = {}
         self.tt_limit = tt_limit
         self.deadline = None
+        self.node_limit = None
         self.nodes = 0
 
     # --- primitives --------------------------------------------------------
@@ -259,6 +260,8 @@ class Engine:
 
     def _tick(self):
         self.nodes += 1
+        if self.node_limit is not None and self.nodes > self.node_limit:
+            raise Timeout
         if self.deadline is not None and not self.nodes & 255 and time.perf_counter() > self.deadline:
             raise Timeout
 
@@ -351,8 +354,11 @@ class Engine:
 
     # --- root --------------------------------------------------------------
 
-    def best_move(self, L: int, time_limit: float, rng: random.Random, max_depth: int = 64):
-        """Returns (line, value, depth reached, exact?)."""
+    def best_move(self, L: int, time_limit: float | None, rng: random.Random, max_depth: int = 64,
+                  node_budget: int | None = None):
+        """Returns (line, value, depth reached, exact?). The search stops at
+        ``time_limit`` seconds (wall clock) or, if ``node_budget`` is set,
+        after that many nodes (machine-independent and reproducible)."""
         s = self.sides(L)
         # forced captures at the root: just take one
         for c in range(self.n_boxes):
@@ -372,7 +378,8 @@ class Engine:
             loony = not safe
         if len(cand) == 1:
             return cand[0], None, 0, True
-        self.deadline = time.perf_counter() + time_limit
+        self.deadline = None if node_budget is not None else time.perf_counter() + time_limit
+        self.node_limit = node_budget
         self.nodes = 0
         best_line, best_val, reached = rng.choice(cand), None, 0
         depths = [SOLVED] if loony else range(1, max_depth + 1)
@@ -403,6 +410,7 @@ class Engine:
             pass
         finally:
             self.deadline = None
+            self.node_limit = None
         return best_line, best_val, reached, False
 
 
@@ -410,9 +418,10 @@ class StrongAgent:
     name = "strong"
 
     def __init__(self, seed: int | None = None, time_limit: float = 1.0, max_depth: int = 64,
-                 tt_limit: int = 2_000_000):
+                 tt_limit: int = 2_000_000, node_budget: int | None = None):
         self.rng = random.Random(seed)
         self.time_limit = time_limit
+        self.node_budget = node_budget  # if set, replaces the time limit
         self.max_depth = max_depth
         self.tt_limit = tt_limit
         self._engines: dict[tuple[int, int], Engine] = {}
@@ -427,5 +436,5 @@ class StrongAgent:
         for i, x in enumerate(board.lines):
             if x:
                 L |= 1 << i
-        self.last = eng.best_move(L, self.time_limit, self.rng, self.max_depth)
+        self.last = eng.best_move(L, self.time_limit, self.rng, self.max_depth, self.node_budget)
         return self.last[0]

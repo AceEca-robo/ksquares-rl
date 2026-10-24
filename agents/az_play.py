@@ -36,7 +36,9 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
     sp = cfg["selfplay"]
     rng = np.random.default_rng(seed)
     mcts = make_mcts(evaluate, cfg["mcts"], rng, noise=True)
-    cols = {k: [] for k in ("lines", "sides", "owner", "diff", "first", "pi", "z")}
+    cols = {k: [] for k in ("lines", "sides", "owner", "diff", "first", "pi", "z", "margin")}
+    # sims: a fixed count, or [lo, hi] drawn uniformly per game and move
+    lo, hi = (sp["sims"], sp["sims"]) if isinstance(sp["sims"], int) else sp["sims"]
     started = 0
     live = []  # [board, records [(state, pi, player)], plies]
     t0 = time.perf_counter()
@@ -46,7 +48,7 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
         while len(live) < concurrent and started < n_games:
             live.append([Board(w, h), [], 0])
             started += 1
-        roots = mcts.search([g[0] for g in live], sp["sims"], noise=True)
+        roots = mcts.search([g[0] for g in live], rng.integers(lo, hi + 1, len(live)), noise=True)
         nxt = []
         for g, root in zip(live, roots):
             board, recs, plies = g
@@ -62,6 +64,9 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
                 nxt.append(g)
                 continue
             winner = board.player if res > 0 else board.player ^ 1 if res < 0 else -1
+            # final score difference of player 0 when the winner became fixed
+            # (games stop there, the rest of the boxes is not played out)
+            m0 = board.score[0] - board.score[1]
             first_wins += winner == 0
             lengths.append(g[2])
             if progress and len(lengths) % max(1, n_games // 4) == 0:
@@ -74,13 +79,14 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
                 cols["first"].append(first)
                 cols["pi"].append(pi)
                 cols["z"].append(0 if winner < 0 else 1 if winner == player else -1)
+                cols["margin"].append(m0 if player == 0 else -m0)
         live = nxt
     dt = time.perf_counter() - t0
     samples = {
         "lines": np.array(cols["lines"], dtype=np.uint8), "sides": np.array(cols["sides"], dtype=np.uint8),
         "owner": np.array(cols["owner"], dtype=np.int8), "diff": np.array(cols["diff"], dtype=np.int8),
         "first": np.array(cols["first"], dtype=np.uint8), "pi": np.array(cols["pi"], dtype=np.float16),
-        "z": np.array(cols["z"], dtype=np.int8),
+        "z": np.array(cols["z"], dtype=np.int8), "margin": np.array(cols["margin"], dtype=np.int8),
     }
     stats = {"games": n_games, "positions": len(cols["z"]), "moves": n_moves, "searches": n_search,
              "evals": mcts.n_evals, "seconds": dt, "mean_len": float(np.mean(lengths)),

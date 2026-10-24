@@ -70,3 +70,16 @@ def test_strong_beats_hard_quickly():
             b.step(seats[b.player].act(b))
         wins += b.score[seats.index(st)] > b.score[seats.index(ai)]
     assert wins >= 3
+
+
+def test_node_budget_stops_search():
+    rng = random.Random(0)
+    b = Board(5, 5)
+    for _ in range(12):
+        b.step(rng.choice(b.legal_moves()))
+    a = StrongAgent(1, time_limit=100.0, node_budget=2000)
+    ln = a.act(b)
+    assert not b.lines[ln]
+    assert a._engines[(5, 5)].nodes <= 2001
+    # deterministic: same seed and budget -> same move
+    assert StrongAgent(1, node_budget=2000).act(b) == ln

@@ -1,0 +1,59 @@
+# AlphaZero on 5x5, second stage: continues from the best az5 net (gen 29)
+# with half the learning rate, a score-difference head and random
+# self-play simulation counts (scripts/az_train.py, scripts/az_eval.py).
+seed: 2611
+board: [5, 5]
+run_dir: runs/az5b
+init_from: runs/az5/gen_0029.pt   # best accepted az5 generation
+device: cuda
+
+net:
+  blocks: 6
+  channels: 64
+  score_head: true       # second value head: final score difference / boxes
+
+mcts:
+  c_puct: 1.5
+  fpu_reduction: 0.2     # unvisited child Q = parent net value - this
+  dirichlet_alpha: 0.3   # root noise in self-play only
+  dirichlet_eps: 0.25
+  virtual_loss: 1.0
+  leaves_per_tree: 8     # for single-game search (az agent); self-play uses 1
+
+selfplay:
+  workers: 3             # processes, each with its own CUDA context (~160 MB)
+  games_per_worker: 192  # concurrent games per worker = GPU batch size;
+                         # lower it if the GPU runs out of memory
+  games_per_gen: 2500    # ~10.4k evaluations per game; ~25 min at ~17k/s
+                         # with the GPU shared (6000 games took 65 min)
+  sims: [100, 300]      # drawn uniformly per game and move
+  temp_moves: 10         # temperature 1 for the first 10 lines, then 0
+
+buffer_size: 500000      # positions (the last ones)
+
+train:
+  batch_size: 512
+  steps_per_gen: 1100   # ~4 samples per new position
+  lr: 0.01               # half of az5
+  momentum: 0.9
+  weight_decay: 0.0001   # L2
+  score_weight: 0.25     # weight of the score-difference MSE
+  symmetries: true       # random one of the 8 board symmetries per sample
+  min_buffer: 20000      # do not train before this many positions
+
+gating:
+  games: 100
+  sims: 200
+  temp_moves: 4          # some opening variety; no noise
+  tasks: 2               # games split over this many worker tasks
+  threshold: 0.55
+
+eval:
+  games: 100             # per opponent and mode, first mover alternating
+  sims: 200
+  opponents: [random, greedy, medium, hard, strong]  # random: Elo floor
+  processes: 8           # CPU workers for the opponents' moves
+  params:
+    strong:
+      node_budget: 23000 # = 0.5 s of one core (scripts/calibrate_strong.py:
+                         # median 46k nodes per CPU second), not wall clock

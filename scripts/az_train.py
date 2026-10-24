@@ -83,7 +83,7 @@ def _match_task(args):
 # --- replay buffer --------------------------------------------------------------
 
 FIELDS = {"lines": (np.uint8, 60), "sides": (np.uint8, 25), "owner": (np.int8, 25), "diff": (np.int8, None),
-          "first": (np.uint8, None), "pi": (np.float16, 60), "z": (np.int8, None)}
+          "first": (np.uint8, None), "pi": (np.float16, 60), "z": (np.int8, None), "margin": (np.int8, None)}
 
 
 class Buffer:
@@ -124,7 +124,8 @@ def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int)
     dev = cfg["device"]
     syms = codec.syms if tc["symmetries"] else codec.syms[:1]
     net.train()
-    tot = {"policy": 0.0, "value": 0.0}
+    tot = {"policy": 0.0, "value": 0.0, "score": 0.0}
+    sw = tc.get("score_weight", 0.0)
     for _ in range(steps):
         s = buf.sample(rng, tc["batch_size"])
         x = codec.encode(s["lines"], s["sides"], s["owner"], s["diff"].astype(np.float32), s["first"])
@@ -140,13 +141,19 @@ def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int)
         x = torch.from_numpy(x.reshape(B, -1, codec.rows, codec.cols)).to(dev, non_blocking=True)
         pi = torch.from_numpy(pi).to(dev)
         z = torch.from_numpy(s["z"].astype(np.float32)).to(dev)
-        logits, v = net(x)
+        logits, v, sc = net(x)
         legal = x[:, 1].flatten(1)[:, net.line_cell] > 0
         logp = F.log_softmax(logits.masked_fill(~legal, -1e9), 1)
         lp = -(pi * logp).sum(1).mean()
         lv = F.mse_loss(v, z)
+        loss = lp + lv
+        if sc is not None:
+            m = torch.from_numpy(s["margin"].astype(np.float32) / codec.n_boxes).to(dev)
+            ls = F.mse_loss(sc, m)
+            loss = loss + sw * ls
+            tot["score"] += ls.item()
         opt.zero_grad(set_to_none=True)
-        (lp + lv).backward()
+        loss.backward()
         opt.step()
         tot["policy"] += lp.item()
         tot["value"] += lv.item()
@@ -208,6 +215,12 @@ class Run:
             log(self.run, f"resumed: gen {self.state['gen']} phase {self.state['phase']}, best gen "
                           f"{self.state['best']}, buffer {self.buf.n}")
         else:
+            if cfg.get("init_from"):
+                sd = torch.load(ROOT / cfg["init_from"], map_location=cfg["device"])
+                missing, unexpected = self.net.load_state_dict(sd, strict=False)
+                assert not unexpected, unexpected
+                log(self.run, f"initialised from {cfg['init_from']}; new (random) parameters: "
+                              f"{sorted({k.split('.')[0] for k in missing})}")
             save_atomic(self.net.state_dict(), self.run / "gen_0000.pt")
             save_atomic(self.net.state_dict(), self.run / "best.pt")
             self.save()
@@ -299,7 +312,7 @@ class Run:
         dt = time.time() - t0
         save_atomic(self.net.state_dict(), self.run / "candidate.pt")
         log(self.run, f"gen {gen} train: {tc['steps_per_gen']} steps, {dt:.0f} s, policy {loss['policy']:.3f}, "
-                      f"value {loss['value']:.3f}", gen=gen, phase="train", seconds=dt, **loss)
+                      f"value {loss['value']:.3f}, score {loss['score']:.4f}", gen=gen, phase="train", seconds=dt, **loss)
 
     def gate(self, pool, gen: int) -> None:
         g = self.cfg["gating"]

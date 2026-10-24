@@ -161,3 +161,40 @@ def test_selfplay_and_train_smoke(tmp_path):
     b2 = Buffer(100, codec.n_lines, codec.n_boxes)
     b2.load(tmp_path / "b.npz")
     assert b2.n == buf.n and np.array_equal(b2.a["pi"], buf.a["pi"])
+
+
+def test_score_head_and_random_sims():
+    from agents.az_play import selfplay
+
+    import sys
+    sys.path.insert(0, "scripts")
+    from az_train import Buffer, train_steps
+
+    cfg = {"board": [2, 2], "device": "cpu", "seed": 0,
+           "mcts": {"c_puct": 1.5, "fpu_reduction": 0.2, "dirichlet_alpha": 0.3, "dirichlet_eps": 0.25,
+                    "virtual_loss": 1.0},
+           "selfplay": {"sims": [4, 12], "temp_moves": 3},
+           "train": {"batch_size": 16, "symmetries": True, "score_weight": 0.25}}
+    net = AZNet(2, 2, blocks=1, channels=8, score_head=True)
+    p, v, s = net(torch.zeros(3, N_PLANES, 5, 5))
+    assert s.shape == (3,)
+    samples, _ = selfplay(Evaluator(net, "cpu"), cfg, n_games=5, concurrent=3, seed=1)
+    # the margin is +-(final difference) and agrees in sign with the result
+    assert np.all(np.sign(samples["margin"]) == samples["z"])
+    codec = Codec(2, 2)
+    buf = Buffer(100, codec.n_lines, codec.n_boxes)
+    buf.add(samples)
+    loss = train_steps(net, torch.optim.SGD(net.parameters(), lr=0.01), buf, codec, cfg,
+                       np.random.default_rng(0), 2)
+    assert loss["score"] > 0
+    # old checkpoints (no score head) load with the head left random
+    old = AZNet(2, 2, blocks=1, channels=8).state_dict()
+    missing, unexpected = net.load_state_dict(old, strict=False)
+    assert not unexpected and all(k.startswith("s_fc") for k in missing)
+
+
+def test_mcts_per_board_sims():
+    rng = random.Random(4)
+    boards = [random_board(3, 3, 6, rng) for _ in range(3)]
+    roots = MCTS(rollout, rng=np.random.default_rng(0)).search(boards, [5, 20, 40])
+    assert [int(r.N.sum()) for r in roots] == [5, 20, 40]

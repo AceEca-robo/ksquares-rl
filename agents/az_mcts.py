@@ -123,8 +123,11 @@ class MCTS:
             noise = self.rng.dirichlet([self.alpha] * len(root.P))
             root.P = (1 - self.eps) * root.P + self.eps * noise
 
-    def search(self, boards: list[Board], sims: int, noise: bool = False) -> list[Node]:
-        """Run ``sims`` simulations for every board; returns the roots."""
+    def search(self, boards: list[Board], sims, noise: bool = False) -> list[Node]:
+        """Run ``sims`` simulations for every board (an int, or one count per
+        board); returns the roots."""
+        if isinstance(sims, (int, np.integer)):
+            sims = [int(sims)] * len(boards)
         roots = [Node(b.clone()) for b in boards]
         todo = [r for r in roots if not r.terminal]
         if todo:
@@ -143,7 +146,7 @@ class MCTS:
                     continue
                 # the first descent of a round cannot collide, so every
                 # round makes progress
-                for _ in range(min(self.leaves_per_tree, sims - done[i])):
+                for _ in range(min(self.leaves_per_tree, sims[i] - done[i])):
                     path, leaf = self._descend(root)
                     if leaf is None:
                         self._undo(path)

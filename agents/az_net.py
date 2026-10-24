@@ -21,7 +21,11 @@ Encoding
 
 Outputs
     Policy logits over the lines in KSquares order (illegal lines are masked
-    by the caller) and a value in [-1, 1] for the side to move.
+    by the caller), a value in [-1, 1] for the side to move and, with
+    ``score_head``, a second value head: the expected final score
+    difference for the mover divided by the number of boxes (regression,
+    auxiliary; the search uses only the win/loss value). ``forward``
+    returns (policy, value, score or None).
 """
 
 from __future__ import annotations
@@ -124,7 +128,7 @@ class ResBlock(nn.Module):
 class AZNet(nn.Module):
     """ResNet body, AlphaZero-style policy and value heads."""
 
-    def __init__(self, w: int, h: int, blocks: int = 6, channels: int = 64):
+    def __init__(self, w: int, h: int, blocks: int = 6, channels: int = 64, score_head: bool = False):
         super().__init__()
         self.w, self.h = w, h
         codec = Codec(w, h)
@@ -138,17 +142,20 @@ class AZNet(nn.Module):
         self.p_fc = nn.Linear(4 * cells, self.n_lines)
         self.v_conv = nn.Sequential(nn.Conv2d(channels, 2, 1, bias=False), nn.BatchNorm2d(2), nn.ReLU())
         self.v_fc = nn.Sequential(nn.Linear(2 * cells, 128), nn.ReLU(), nn.Linear(128, 1))
+        self.s_fc = nn.Sequential(nn.Linear(2 * cells, 128), nn.ReLU(), nn.Linear(128, 1)) if score_head else None
 
     def forward(self, x):
         y = self.body(self.stem(x))
         p = self.p_fc(self.p_conv(y).flatten(1))
-        v = torch.tanh(self.v_fc(self.v_conv(y).flatten(1))).squeeze(1)
-        return p, v
+        vf = self.v_conv(y).flatten(1)
+        v = torch.tanh(self.v_fc(vf)).squeeze(1)
+        s = self.s_fc(vf).squeeze(1) if self.s_fc is not None else None
+        return p, v, s
 
 
 def make_net(cfg: dict) -> AZNet:
     w, h = cfg["board"]
-    return AZNet(w, h, cfg["net"]["blocks"], cfg["net"]["channels"])
+    return AZNet(w, h, cfg["net"]["blocks"], cfg["net"]["channels"], cfg["net"].get("score_head", False))
 
 
 class Evaluator:
@@ -163,7 +170,7 @@ class Evaluator:
     def __call__(self, boards):
         x = torch.from_numpy(self.codec.encode_boards(boards)).to(self.device)
         with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=self.device.startswith("cuda")):
-            logits, v = self.net(x)
+            logits, v, _ = self.net(x)
         logits = logits.float()
         legal = x[:, 1].flatten(1)[:, self.net.line_cell] > 0
         logits = logits.masked_fill(~legal, -1e9)

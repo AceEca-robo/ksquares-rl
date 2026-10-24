@@ -4,7 +4,7 @@ random, greedy  — agents.baselines
 easy, medium, hard — the KSquares AI port (sim.ksquares_ai), each instance
     with its own glibc rand() state seeded with ``seed`` (in the real game
     all computer seats share one process-wide state)
-strong — agents.strong (params: time_limit, max_depth, tt_limit)
+strong — agents.strong (params: time_limit, max_depth, tt_limit, node_budget)
 """
 
 from __future__ import annotations
