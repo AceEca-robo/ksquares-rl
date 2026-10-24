@@ -1,0 +1,30 @@
+# Strategy probe for the AlphaZero nets (scripts/strategy_probe.py).
+seed: 31
+board: [5, 5]
+device: cuda
+processes: 8
+
+positions:
+  out: docs/strategy_probe_positions.json
+  max_undrawn: 19        # full brute force (memo over line masks) is cheap up to here
+  max_safe: 6            # parity candidates: no capture, 1..6 safe lines left
+  parity_per_game: 2     # engine-solved parity positions kept per game (cost)
+  node_limit: 3000000    # engine nodes per position; bigger ones are skipped
+  per_category: 150
+  games: 600             # source games, agents below, first mover alternating
+  pairs: [[hard, hard], [medium, hard], [greedy, hard], [easy, medium], [medium, medium]]
+
+agents:
+  sims: 200              # MCTS for the net (no noise, temperature 0)
+  strong:
+    node_budget: 23000   # as in the az5b ladder
+
+runs:                    # every accepted generation of these runs is probed
+  - {name: az5, config: configs/az5.yaml}
+  - {name: az5b, config: configs/az5b.yaml}
+
+selfplay_dd:             # double-dealing in self-play per generation
+  games: 40
+  node_limit: 300000     # engine nodes per judged position; bigger ones are skipped
+  sims: 200
+  temp_moves: 10

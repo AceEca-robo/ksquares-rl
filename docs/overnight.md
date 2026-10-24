@@ -281,3 +281,78 @@ Ideas for later:
   clock, which depends on the machine load during self-play.
 - `az` agent in `agents/registry.py` for the ladder script and the
   bridge (final games against the real KSquares).
+- az5 kept running after the morning report until the az5b request: 31
+  generations, 21 accepted, best gen 29 (MCTS 200: Hard 93%, strong
+  49–60% at 0.5 s wall clock). Safe stop at 11:04 after gen 31 training.
+
+## 2026-10-24 — az5b, strategy probe, video
+
+Chronology:
+1. az5 stopped safely (STOP → checkpoint → tmux empty); best accepted
+   generation 29.
+2. Strong with a node budget (`node_budget` in `agents/strong.py`; the
+   search stops after that many nodes instead of at a wall-clock
+   deadline). Calibration `scripts/calibrate_strong.py`: strong (0.5 s)
+   vs Hard, 12 games, 170 searches that hit the limit; median 46k nodes
+   per CPU second → **23,000 nodes** = 0.5 s of one core. Measured in CPU
+   time because the machine was fully loaded by the pacman `distill-eval`
+   (1700% CPU); the wall-clock node count per search came out the same
+   (23k), so the single process got a full core. Caveat: a laptop under
+   full load runs at a lower turbo clock, so on a really idle machine
+   0.5 s may be somewhat more than 23k nodes.
+3. az5b (`configs/az5b.yaml`, tmux `az5b`, `runs/az5b`): initialised from
+   az5 gen 29 (`init_from`, the new head random), lr 0.01 (half), second
+   value head for the score difference (MSE on margin / 25, weight 0.25;
+   the target is the margin when the winner became fixed, because games
+   stop there), self-play simulations drawn uniformly from 100–300 per game
+   and move, fresh replay buffer, same gating and ladder, strong by node
+   budget in the ladder. Gen 1 accepted 72-28 vs az5 gen 29; MCTS 200 vs
+   Hard 98%, vs strong (23k nodes) 51%; then 2, 3, 4 rejected (47, 41, 54%).
+4. Strategy probe `scripts/strategy_probe.py`, `docs/strategy_probe.md`,
+   `docs/strategy_probe.png`, positions `docs/strategy_probe_positions.json`.
+5. Game: `KSQUARES_RL_AI_DELAY_MS` (bridge only; delay before computer
+   moves, default 0) so a bridge game can be watched. `scripts/az_video.py`
+   runs the game with a window on :0, places it with xdotool, records with
+   ffmpeg x11grab, scales to 400 px: `docs/az5_vs_hard.mp4` (az5b gen 1 +
+   MCTS 200, moving first, vs the game's own Hard: 18–7, 61 s; first take,
+   seed 11). Check over the bridge without a window: az5 gen 29 vs real
+   Hard 18/20 (all 10 as second player, 8/10 as first).
+
+Decisions and findings, strategy probe:
+- "Correct by full brute force" is only feasible late: parity decisions
+  on 5x5 fall at ~30–36 undrawn lines (safe lines run out at ~30, median
+  over 60 Hard-Medium games), 2^30+ states. So dd positions (≤ 19 undrawn
+  lines) are judged by brute force, parity positions by the strong engine
+  solving every child to the end (no depth limit, no heuristic). The
+  engine agreed with brute force on every move of 8144/8144 positions
+  met while generating.
+- Correct = reaches the best result (win/tie/loss) from the current score,
+  not the most boxes; positions where all moves give the same result are
+  dropped. 1610 critical positions from 600 games, 150 + 150 sampled.
+- Result: double-dealing is learnt by the policy itself (net without
+  search: 0% in gens 2–3, ~50% gens 5–10, 82% gen 14, 92–98% from gen 15;
+  with MCTS 92% at gen 2 and 100% from gen 3 — the search finds it
+  tactically long before the policy does). The long chain rule is not
+  in the policy: on parity positions the raw net stays at 41–49% in every
+  generation, the level of greedy (42%, i.e. a random safe line) and Hard
+  (44%); a uniform random legal move gets 14%. Only the search knows
+  parity, and it learnt it gradually: 33% (gen 2) → 59% (gen 14) → 83%
+  (gen 19) → 89% (az5b gen 1); strong 96%.
+- Self-play: the first crude count of "hands over two boxes" was
+  useless — the random net (gen 0) did it 238 times in 100 games, by
+  accident (declining captures at random). Replaced by exact verdicts:
+  every loony-phase position with a capture available (40 games per
+  generation) is solved by the engine. Positions where only declining
+  gets the most boxes: the net declined right 1/7 in gen 1, 12/19 in
+  gen 2 (first appearance), 69–87% in gens 3–11, 83–100% from gen 14;
+  wrong hand-overs (DD that cost boxes) fell from 14–33% (gens 2–3) to
+  0–8% from gen 15. It happens ~46–48 lines into the game (of 60) with
+  ~11–14 boxes left, i.e. in the loony endgame right after the safe lines
+  run out.
+
+Ideas for later:
+- The policy never learns parity: add chain-structure input planes
+  (chain/loop lengths, safe-line count parity) or a parity auxiliary
+  target, and check whether the raw-net parity score moves.
+- Score target from games played to the end instead of the margin at
+  decision.

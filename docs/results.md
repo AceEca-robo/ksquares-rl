@@ -166,3 +166,35 @@ curves: `docs/az5_ladder.png`.
 | 5 | 84 | 46 | 18 | 2 | 1206 | 94 | 80 | 80 | 4 | 1539 |
 | 11 | 88 | 65 | 19 | 15 | 1320 | 99 | 87 | 91 | 40 | 1743 |
 | 15 | 85 | 73 | 46 | 10 | 1402 | 100 | 94 | 91 | 33 | 1747 |
+
+### az5 continued and az5b
+
+az5 ran to gen 31 (21 accepted); best gen 29: MCTS 200 vs Hard 93%, vs
+strong (0.5 s wall clock) 49%, Elo 1829 (table `docs/az5_ladder.md`).
+az5b continues from it with lr 0.01, a score-difference head and random
+self-play simulations (100–300); strong there plays with a fixed budget of
+23,000 nodes per move (= 0.5 s of one core, `scripts/calibrate_strong.py`).
+Table `docs/az5b_ladder.md`, curves `docs/az5b_ladder.png`.
+
+| run gen | raw vs greedy | raw vs medium | raw vs hard | raw vs strong | raw Elo | mcts vs greedy | mcts vs medium | mcts vs hard | mcts vs strong | mcts Elo |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| az5 29 | 90 | 74 | 63 | 24 | 1517 | 99 | 97 | 93 | 49 | 1829 |
+| az5b 1 | 95 | 86 | 72 | 28 | 1614 | 99 | 99 | 98 | 51 | 1870 |
+
+Real game over the bridge: az5 gen 29 + MCTS 200 vs KSquares Hard 18/20.
+Video `docs/az5_vs_hard.mp4` (az5b gen 1 vs the game's Hard, 18–7).
+
+## Strategy probe (5x5)
+
+`docs/strategy_probe.md` (method and full table per generation),
+`docs/strategy_probe.png`. 300 critical late positions, % of moves that
+reach the best result (exact: brute force for dd, solver for parity):
+
+| player | double-dealing (150) | parity / long chain rule (150) |
+|---|---:|---:|
+| strong (23k nodes) | 100 | 96 |
+| KSquares Hard | 100 | 44 |
+| greedy | 0 | 42 |
+| random legal move (expected) | 7 | 14 |
+| az5b gen 1, net only | 99 | 44 |
+| az5b gen 1, net + MCTS 200 | 100 | 89 |
