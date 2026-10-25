@@ -495,3 +495,11 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   Self-play declined right 20/21, no DD move cost boxes. Snapshots:
   argmax 5/16, MCTS 15/16, V sign after a move 85%. Video with gen 48:
   15–10 vs Hard (first take, seed 11).
+- Gens 49–51 rejected (51, 47, 38%).
+- 03:03 gen 52 accepted (63-37 vs gen 48). MCTS 200: Hard 100%, strong
+  86%, Elo 2127 (best so far); raw: Hard 76%, medium 94%, strong 45%
+  (az5b raw had been at 20–38% vs strong), Elo 1724 (best raw so far).
+  Probe: raw dd 99 / parity 51, MCTS dd 100 / parity 90. Self-play
+  declined right 19/24, no DD move cost boxes. Snapshots: argmax 7/16,
+  MCTS 15/16, V sign after a move 89% (highest so far). Video with gen
+  52: 15–10 vs Hard (first take, seed 11; the same score as gens 46 and 48).
