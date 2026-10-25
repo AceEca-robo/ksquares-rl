@@ -525,3 +525,14 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   parity 50, MCTS dd 100 / parity 89. Self-play declined right 17/21, 1
   of 21 DD moves cost boxes. Snapshots: argmax 5/16, MCTS 15/16, V sign
   after a move 86%. Video with gen 60: 16–9 vs Hard (first take, seed 11).
+- Gens 61–63 rejected (51, 50, 49%).
+- 04:18 gen 64 accepted (59-41 vs gen 60). MCTS 200: Hard 96%, strong
+  83%, Elo 2068; raw: Hard 73%, strong 42%, Elo 1680. Probe: raw dd 99 /
+  parity 53, MCTS dd 100 / parity 89. Self-play declined right 27/32, no
+  DD move cost boxes. Snapshots: argmax 7/16, MCTS 14/16, V sign after a
+  move 85%. Video with gen 64: 14–11 vs Hard (first take, seed 11).
+- Observation: gating keeps passing (every 2–4 generations), but the
+  ladder has flattened since gen 38: MCTS Elo 2068–2164, vs strong
+  83–89%, vs Hard 96–100% (100 games per cell, ±4–7 points). Each new
+  net beats the previous best 55–63% yet does not score better against
+  the fixed opponents.
