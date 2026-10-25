@@ -536,3 +536,12 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   83–89%, vs Hard 96–100% (100 games per cell, ±4–7 points). Each new
   net beats the previous best 55–63% yet does not score better against
   the fixed opponents.
+- Gens 65–68 rejected (48, 46, 39, 35%; streak 4).
+- 05:14 gen 69 accepted (63-37 vs gen 64). MCTS 200: Hard 99%, strong
+  82%, Elo 2077; raw: Hard 79%, strong 34%, Elo 1691. Probe: raw dd 99 /
+  parity 57 — the highest the raw net has reached (41–53 in every
+  earlier generation of az5/az5b; ~4 points standard error on 150
+  positions, so a hint, not proof, that the policy starts to pick up
+  parity), MCTS dd 100 / parity 91. Self-play declined right 22/23, 1 of
+  23 DD moves cost boxes. Snapshots: argmax 6/16, MCTS 15/16, V sign
+  after a move 88%. Video with gen 69: 14–11 vs Hard (first take, seed 11).
