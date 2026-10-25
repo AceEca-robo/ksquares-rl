@@ -257,3 +257,28 @@ reach the best result (exact: brute force for dd, solver for parity):
 | az5b gen 78, net + MCTS 200 | 100 | 93 |
 | az5b gen 84, net only | 100 | 55 |
 | az5b gen 84, net + MCTS 200 | 100 | 89 |
+
+## Parity probe, 1000 positions (5x5)
+
+`scripts/parity_probe.py`, `configs/parity_probe.yaml`. A fresh set of
+1000 parity positions (`docs/parity_probe_positions.json`; same generator
+as the strategy probe, new seed, its 150 positions excluded): nothing to
+capture, safe lines left, the move decides who opens the first long
+chain. % of moves that reach the best result, Wilson 95% interval:
+
+| player | net only | net + MCTS 200 |
+|---|---|---|
+| strong (23k nodes) | 94.7 [93.1, 95.9] | |
+| KSquares Hard | 49.6 [46.5, 52.7] | |
+| greedy | 49.0 [45.9, 52.1] | |
+| random legal move (expected) | 16.8 | |
+| az5b gen 33 | 50.0 [46.9, 53.1] | 86.9 [84.7, 88.9] |
+| az5b gen 54 | 52.5 [49.4, 55.6] | 90.2 [88.2, 91.9] |
+| az5b gen 73 | 57.3 [54.2, 60.3] | 90.7 [88.7, 92.3] |
+| az5b gen 84 | 59.1 [56.0, 62.1] | 90.8 [88.8, 92.4] |
+
+Paired on the same positions (exact McNemar, gained / lost, p): net only
+33 -> 54 +112/-87, p 0.09; 33 -> 73 +167/-94, p 7e-6; 33 -> 84
++187/-96, p 7e-8; 54 -> 73 +134/-86, p 0.0015; 73 -> 84 +102/-84, p 0.21.
+With MCTS: 33 -> 54 +71/-38, p 0.002; 54 -> 73 / 84 no difference
+(p 0.66 / 0.61).

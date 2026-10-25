@@ -31,8 +31,9 @@ The thought panel shows the policy as a heat map over the lines, V with a
 on the board, the long chains on the board with the side the long chain
 rule favours, and whether the move keeps the win (exact solving once at
 most 34 lines are left); below, V move by move. Search: none or MCTS
-50 / 200 / 800. The network is `runs/best/best.pt`, a link to the last
-accepted az5b generation (`scripts/update_best.py`). It plays 5x5 only:
+50 / 200 / 800. The network is `runs/best/best.pt`, a link to az5b gen 54, the
+ladder best (pinned by `best.gen` in `configs/app.yaml`; without the pin,
+the last accepted generation, `scripts/update_best.py`). It plays 5x5 only:
 its policy and value heads are fully connected over the 11 x 11 grid, so
 10x7 is offered in the menu but refused with that explanation.
 

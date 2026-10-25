@@ -1,0 +1,23 @@
+# Large parity probe (scripts/parity_probe.py): is the raw policy's rise on
+# the 150 parity positions of the strategy probe real? Same generator as
+# scripts/strategy_probe.py positions, fresh seed, parity only, the 150 old
+# positions excluded.
+seed: 77
+board: [5, 5]
+device: cuda
+processes: 16
+base: configs/strategy_probe.yaml   # agents, pairs, node limits as there
+
+positions:
+  out: docs/parity_probe_positions.json   # in git: pool order makes a rerun differ
+  n: 1000                # parity positions kept
+  games: 800             # source games (about 2 parity positions each)
+  max_undrawn: 0         # no brute-force positions (they are the dd set)
+  max_safe: 6
+  parity_per_game: 2
+  node_limit: 3000000
+
+gens:                    # az5b generations probed
+  run_config: configs/az5b.yaml
+  list: [33, 54, 73, 84]
+baselines: [strong, hard, greedy]

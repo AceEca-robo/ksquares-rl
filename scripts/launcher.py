@@ -16,8 +16,9 @@ board with the side the long chain rule favours, and whether the network's
 move keeps the win (exact solving in the chain fight). Below, V move by
 move. Search: none (the policy's argmax) or 50 / 200 / 800 simulations.
 
-The network is runs/best/best.pt, the last accepted generation of az5b
-(scripts/update_best.py keeps the link current); "network vs itself" can
+The network is runs/best/best.pt: az5b gen 54, pinned by best.gen in
+configs/app.yaml (without the pin, the last accepted generation;
+scripts/update_best.py keeps the link current); "network vs itself" can
 pick any accepted generation of az5 and az5b. Esc goes back to the menu
 from any mode (the game, its Xvfb and the worker are closed), Esc in the
 menu quits. English, Russian or Ukrainian (launcher/i18n.py), switched in

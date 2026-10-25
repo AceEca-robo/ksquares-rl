@@ -1,5 +1,6 @@
 """Point runs/best/best.pt at the last accepted generation of the run in
-configs/app.yaml (``best``) and describe it in runs/best/best.json.
+configs/app.yaml (``best``), or at ``best.gen`` when that pins one, and
+describe it in runs/best/best.json.
 
     python scripts/update_best.py
 
@@ -25,6 +26,9 @@ def update(app_cfg: dict) -> dict | None:
     except OSError:
         return None
     gens = [h["gen"] for h in st["history"] if h["accepted"] and (run / f"gen_{h['gen']:04d}.pt").exists()]
+    if bc.get("gen") is not None:
+        # pinned: the chosen generation, whatever is accepted after it
+        gens = [g for g in gens if g == bc["gen"]]
     if not gens:
         return None
     d = ROOT / bc["dir"]

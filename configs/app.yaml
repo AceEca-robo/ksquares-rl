@@ -1,6 +1,7 @@
 # The desktop app (scripts/launcher.py, launcher/).
 best:
-  run_config: configs/az5b.yaml   # runs/best/best.pt -> its last accepted generation
+  run_config: configs/az5b.yaml   # runs/best/best.pt -> its last accepted generation...
+  gen: 54                         # ...unless pinned: az5b gen 54, the ladder best (MCTS Elo 2164)
   dir: runs/best
 generations:                      # pickable in "network vs itself"
   - configs/az5.yaml

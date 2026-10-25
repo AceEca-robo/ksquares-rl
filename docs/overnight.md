@@ -589,3 +589,33 @@ Ideas for later:
   cleanly at 08:48 ("stopped cleanly", state saved at gen 88 phase
   train, so a restart continues with gen 88 training); tmux session
   closed. Best accepted generation 84; ladder best gen 54.
+
+## 2026-10-25 (evening) — best net pinned, parity probe on 1000 positions
+
+- az5b stays stopped (stopped by hand at 08:43, exited cleanly after
+  gen 88 self-play; see above). Final: best az5b net = gen 54, the
+  ladder best (MCTS Elo 2164, Hard 99%, strong 89%).
+- runs/best/best.pt is pinned to gen 54: `best.gen: 54` in
+  configs/app.yaml; scripts/update_best.py points the link at that
+  generation instead of the last accepted one (the app calls it at every
+  start, so the pin has to live in the config, not in the link).
+- Parity question from the night ("raw parity rose from 41-53 to 54-59
+  over gens 69-84"): scripts/parity_probe.py, 1000 fresh parity
+  positions, gens 33, 54, 73, 84 (docs/results.md, "Parity probe, 1000
+  positions"). Generation took 35 s (no brute force: parity positions
+  are all engine-solved).
+- Answer: the rise is real for the raw policy. Net only: 50.0 / 52.5 /
+  57.3 / 59.1% (gen 33 / 54 / 73 / 84); 33 -> 73 p 7e-6, 33 -> 84
+  p 7e-8, 54 -> 73 p 0.0015 (paired McNemar); 73 -> 84 not
+  significant (p 0.21). Gen 33 is at the level of KSquares Hard and
+  greedy (49-50%), gen 84 is 9 points above them; strong is at 95%.
+- What it is not: a jump at gen 70. On the old 150 set gens 1-60 hover
+  at 42-53% and 69-84 at 54-59%; on the 1000 set 33 -> 54 is +2.5
+  (p 0.09) and 54 -> 73 +4.8, a gradual climb that is clearest after
+  gen 54. And it is modest: 59% against 95% for the solver; with MCTS 200
+  the nets are at 87-91% and gens 54-84 are level, so the search, not
+  the policy, still does most of the parity work.
+- For the video, the honest caption: "without search the policy now
+  gets the long chain rule right in 59% of decisive positions, up from
+  50% (KSquares Hard's level) at gen 33" — not "it began to see parity
+  after 70 generations".
