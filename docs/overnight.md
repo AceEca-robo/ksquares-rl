@@ -503,3 +503,10 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   declined right 19/24, no DD move cost boxes. Snapshots: argmax 7/16,
   MCTS 15/16, V sign after a move 89% (highest so far). Video with gen
   52: 15–10 vs Hard (first take, seed 11; the same score as gens 46 and 48).
+- Gen 53 rejected (33%).
+- 03:25 gen 54 accepted (62-38 vs gen 52). MCTS 200: Hard 99%, strong
+  89%, Elo 2164 (best so far); raw: Hard 83%, strong 34%, Elo 1680.
+  Probe: raw dd 99 / parity 49, MCTS dd 100 / parity 90. Self-play
+  declined right 12/14, 1 of 15 DD moves cost boxes. Snapshots: argmax
+  8/16, MCTS 15/16, V sign after a move 84%. Video with gen 54: 18–7 vs
+  Hard (first take, seed 11).
