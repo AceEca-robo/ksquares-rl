@@ -560,3 +560,26 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   far; strong 96). Self-play declined right 17/23, no DD move cost
   boxes. Snapshots: argmax 6/16, MCTS 16/16, V sign after a move 86%.
   Video with gen 78: 16–9 vs Hard (first take, seed 11).
+- Gens 79–83 rejected (54, 50, 50, 49, 52%; streak 5, one short of the
+  stop rule).
+- 08:04 gen 84 accepted (65-35 vs gen 78). MCTS 200: Hard 97%, strong
+  75% (lowest since gen 13), Elo 2005; raw: Hard 73%, strong 38%, Elo
+  1684. Probe: raw dd 100 / parity 55, MCTS dd 100 / parity 89.
+  Self-play declined right 17/21, no DD move cost boxes. Snapshots:
+  argmax 5/16, MCTS 16/16, V sign after a move 88%. Video with gen 84:
+  15–10 vs Hard (first take, seed 11).
+- Morning status (08:15): the stop rule has not fired; az5b keeps
+  running (gen 85 self-play). Night: gens 38–84 (47 generations), 13
+  accepted (38, 44, 46, 48, 52, 54, 58, 60, 64, 69, 73, 78, 84), longest
+  rejection streak 5 (gens 39–43 and 79–83). By the ladder the best is
+  gen 54 (MCTS Elo 2164, Hard 99%, strong 89%); gens 60 and 73 are level
+  within noise (2151). Best raw: gen 52 (Elo 1724, strong 45%).
+  runs/best/best.pt follows the last accepted generation (now 84), which
+  is not the ladder best — the gate is against the previous best only.
+
+Ideas for later:
+- Gate on a fixed panel as well (e.g. 100 games vs strong) or keep the
+  ladder-best net for the app, since gating against the previous best
+  accepts nets that score worse against fixed opponents (gen 84).
+- Raw parity rose from 41–53 to 54–59 over gens 69–84: re-run the probe
+  with more parity positions to tell signal from noise.
