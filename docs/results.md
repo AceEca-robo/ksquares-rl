@@ -205,9 +205,10 @@ Table `docs/az5b_ladder.md`, curves `docs/az5b_ladder.png`.
 | az5b 64 | 98 | 87 | 73 | 42 | 1680 | 100 | 100 | 96 | 83 | 2068 |
 | az5b 69 | 97 | 93 | 79 | 34 | 1691 | 100 | 99 | 99 | 82 | 2077 |
 | az5b 73 | 98 | 89 | 68 | 35 | 1645 | 100 | 98 | 100 | 89 | 2151 |
+| az5b 78 | 94 | 88 | 80 | 40 | 1688 | 100 | 100 | 98 | 83 | 2086 |
 
 Real game over the bridge: az5 gen 29 + MCTS 200 vs KSquares Hard 18/20.
-Video `docs/az5_vs_hard.mp4` (az5b gen 73 vs the game's Hard, 16–9).
+Video `docs/az5_vs_hard.mp4` (az5b gen 78 vs the game's Hard, 16–9).
 
 ## Strategy probe (5x5)
 
@@ -251,3 +252,5 @@ reach the best result (exact: brute force for dd, solver for parity):
 | az5b gen 69, net + MCTS 200 | 100 | 91 |
 | az5b gen 73, net only | 98 | 59 |
 | az5b gen 73, net + MCTS 200 | 100 | 91 |
+| az5b gen 78, net only | 100 | 54 |
+| az5b gen 78, net + MCTS 200 | 100 | 93 |
