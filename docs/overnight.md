@@ -583,3 +583,9 @@ Ideas for later:
   accepts nets that score worse against fixed opponents (gen 84).
 - Raw parity rose from 41–53 to 54–59 over gens 69–84: re-run the probe
   with more parity positions to tell signal from noise.
+- Gens 85–87 rejected (35, 48, 54%).
+- 08:43 stopped by hand at the user's request (STOP; the stop rule had
+  not fired, streak 3). The trainer finished gen 88 self-play and exited
+  cleanly at 08:48 ("stopped cleanly", state saved at gen 88 phase
+  train, so a restart continues with gen 88 training); tmux session
+  closed. Best accepted generation 84; ladder best gen 54.
