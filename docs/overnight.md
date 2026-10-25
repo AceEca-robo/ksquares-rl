@@ -510,3 +510,12 @@ start: 29 GB free of 144 GB, runs/ 441 MB.
   declined right 12/14, 1 of 15 DD moves cost boxes. Snapshots: argmax
   8/16, MCTS 15/16, V sign after a move 84%. Video with gen 54: 18–7 vs
   Hard (first take, seed 11).
+- Gens 55–57 rejected (41, 47, 48%).
+- Clock note: summer time ended at 04:00, so log times after gen 57 go
+  back an hour (gen 58 gated at "03:10", eleven minutes after gen 57).
+- gen 58 accepted (59-41 vs gen 54). MCTS 200: Hard 100%, strong 83%,
+  Elo 2106; raw: Hard 75%, strong 41%, Elo 1691. Probe: raw dd 99 /
+  parity 53 (highest raw so far, within noise of 48–52), MCTS dd 100 /
+  parity 90. Self-play declined right 14/17, no DD move cost boxes.
+  Snapshots: argmax 8/16, MCTS 16/16, V sign after a move 84%. Video
+  with gen 58: 15–10 vs Hard (first take, seed 11).
