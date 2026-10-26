@@ -14,10 +14,12 @@ minute (Pacman video), so the English text is longer for the same slots.
 | scene | time | length | words |
 |---|---|---|---:|
 | 1. What this is | 0:00–0:40 | 0:40 | 88 |
-| 2. The game and its trick | 0:40–2:05 | 1:25 | 174 |
-| 3. How it was built | 2:05–3:05 | 1:00 | 154 |
+| 2. The game and its trick | 0:40–1:30 | 0:50 | 89 |
+| 2p. Pause: the double-cross | 1:30–1:34 | 0:04 | — |
+| 2a. Control and parity | 1:34–2:05 | 0:31 | 84 |
+| 3. How it was built | 2:05–3:05 | 1:00 | 151 |
 | 4. AlphaZero in brief | 3:05–3:55 | 0:50 | 111 |
-| 5. The ladder | 3:55–4:55 | 1:00 | 98 |
+| 5. The ladder | 3:55–4:55 | 1:00 | 84 |
 | 6. How the network thinks | 4:55–7:25 | 2:30 | 343 |
 | 7. The plateau | 7:25–8:15 | 0:50 | 111 |
 | 8. The app | 8:15–8:55 | 0:40 | 88 |
@@ -33,7 +35,7 @@ laptop graphics card. But this video is not about the fact that it wins.
 It's about how it thinks. Because inside the network there turned out to
 be two parts, and one of them knows something the other one doesn't."
 
-## Scene 2. The game and its trick (0:40–2:05)
+## Scene 2. The game and its trick (0:40–1:30)
 
 **Voice:** "The rules in thirty seconds. Players take turns drawing a line
 between two neighbouring dots. Close a box, and it's yours — and you move
@@ -41,13 +43,21 @@ again. Most boxes wins. At first everyone plays safe lines: lines that
 don't give the opponent a third side of a box. But safe moves run out,
 and the board ends up cut into chains. Now someone has to open a chain.
 The opponent takes almost all of it, but hands the last two boxes back —
-with a single line. That's the double-cross. After taking those two boxes,
+with a single line. That's the double-cross."
+
+## Scene 2p. Pause: the double-cross (1:30–1:34)
+
+No voice: the double-cross animation.
+
+## Scene 2a. Control and parity (1:34–2:05)
+
+**Voice:** "After taking those two boxes,
 the player who opened has to move again — and open the next chain. So the
 player in control gets nearly everything. And control is decided by
 parity: how many long chains there will be, and who has to open the first
 one. The fight for it happens earlier, while safe moves are still left.
 KSquares Hard knows the double-cross and always plays it right. But on
-parity it guesses right only half the time — like a greedy player."
+parity it does no better than picking a safe line at random."
 
 ## Scene 3. How it was built (2:05–3:05)
 
@@ -62,7 +72,7 @@ thirty thousand moves matched. So the network could train against Hard
 without a window on the screen. To measure it we also needed something
 stronger: an alpha-beta solver that beats Hard in ninety-four games out of
 a hundred. As in my previous project, the code was written by the Claude
-Code agent, mostly at night; the whole decision log is in the repository."
+Code agent; the whole decision log is in the repository."
 
 ## Scene 4. AlphaZero in brief (3:05–3:55)
 
@@ -78,15 +88,14 @@ of a hundred. Otherwise it's thrown away."
 
 ## Scene 5. The ladder (3:55–4:55)
 
-**Voice:** "To measure strength we built a ladder. A random player is zero
-on the Elo scale. Greedy is about nine hundred. Medium is twelve hundred,
-Hard almost fifteen hundred, the solver eighteen hundred. The best
-generation, number fifty-four, without search lands between Hard and the
-solver: it beats Hard in eighty-three games out of a hundred. With a
-two-hundred-variation search it's at twenty-one sixty-four: it beats Hard
-almost every time and the solver in eighty-nine games out of a hundred.
-Search adds almost five hundred Elo points. The interesting part is where
-those five hundred points come from."
+**Voice:** "To measure strength we built a ladder on the Elo scale. A
+random player is zero, Hard is about fifteen hundred, the solver about
+eighteen hundred. The best generation, number fifty-four, without search
+lands between Hard and the solver: it beats Hard in eighty-three games out
+of a hundred. With a two-hundred-variation search it climbs above the
+solver: it beats Hard almost every time, and the solver itself in
+eighty-nine games out of a hundred. The interesting part is where that
+difference comes from."
 
 ## Scene 6. How the network thinks (4:55–7:25)
 
@@ -103,7 +112,7 @@ them right, and up to generation seven the network does no better. At
 generation eight it jumps; by generation eleven it's right three times out
 of four, and later up to eighty-eight percent. The network knows who will
 win. But the same network, picking a move by itself, doesn't know which
-move leads to the win. It seems to come down to what each head learns
+move leads to the win. The difference is in what each head learns
 from. The value learns from game results, and in these positions the
 result is parity. The policy learns to imitate the search, and to pick the
 right line out of thirty similar ones it would have to ask, for each of
