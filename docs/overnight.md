@@ -646,3 +646,14 @@ Ideas for later:
   `video/rec/hard_gen54_{ru,en}.mp4` at 1920x1080 (new
   `scripts/launcher.py --record-size`; the en take with LANG=en_US.UTF-8
   so KSquares' own menus are English too).
+- Russian voice and first cut (video/, not in git): edge-tts
+  ru-RU-DmitryNeural, 460 s of voice; the service refused longer texts for
+  a while (NoAudioReceived on scenes 3 and 7–9 for many tries), so
+  video_voice.py now falls back to one sentence at a time joined with
+  0.35 s pauses (used for scene 8). Scene 2 is animated (video_anim.py:
+  the chain position, then the endgame played by the exact solver for both
+  sides: red keeps control with all-but-two, 19–6). Stills from
+  video_cards.py (terminal shots with real command output, the curves on
+  the 1000 positions, the Elo ladder, the night table). Cut:
+  video/ksquares_rl_ru.mp4, 8:21, soft Russian subtitles; copied to
+  ~/YouTube/ksquares-rl/ with thumbnail_ru.png for review.
