@@ -18,8 +18,10 @@ move. Search: none (the policy's argmax) or 50 / 200 / 800 simulations.
 
 The network is runs/best/best.pt: az5b gen 54, pinned by best.gen in
 configs/app.yaml (without the pin, the last accepted generation;
-scripts/update_best.py keeps the link current); "network vs itself" can
-pick any accepted generation of az5 and az5b. Esc goes back to the menu
+scripts/update_best.py keeps the link current); in a fresh clone, without
+runs/, the menu offers to download it from the v0.1 release (best.download
+in configs/app.yaml). "network vs itself" can pick any accepted generation
+of az5 and az5b on disk. Esc goes back to the menu
 from any mode (the game, its Xvfb and the worker are closed), Esc in the
 menu quits. English, Russian or Ukrainian (launcher/i18n.py), switched in
 the menu's corner; the choices are kept in ~/.config/ksquares-rl/.
@@ -36,6 +38,7 @@ import math
 import os
 import subprocess
 import sys
+import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -60,6 +63,35 @@ MODES = core.MODES
 MAIN = (40, 110, 1000, 760)                   # x, y, w, h: the game
 SIDE = (1080, 40, 800, 860)                   # the thought panel
 TIMELINE = (40, 912, 1840, 140)
+
+
+class Download:
+    """The release network's download in a thread; the menu polls its fields."""
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.done = self.total = 0
+        self.verifying = False
+        self.result = None   # None while running, then "ok", "cancelled", "hash" or the error
+        self.cancel = False
+        threading.Thread(target=self.run, daemon=True).start()
+
+    def progress(self, done, total):
+        if done is None:
+            self.verifying = True
+        else:
+            self.done, self.total = done, total
+
+    def run(self):
+        try:
+            core.download_best(self.cfg, self.progress, lambda: self.cancel)
+            self.result = "ok"
+        except core.Cancelled:
+            self.result = "cancelled"
+        except ValueError:
+            self.result = "hash"
+        except Exception as e:   # network errors come as several types
+            self.result = str(getattr(e, "reason", None) or e) or type(e).__name__
 
 
 class Recorder:
@@ -161,17 +193,13 @@ class App:
                 self.settings[k] = type(self.settings[k])(getattr(args, k))
         if args.board:
             self.settings["size"] = [f"{bw}x{bh}" for bw, bh in self.cfg["board_sizes"]].index(args.board)
-        self.gens = core.generations(self.cfg)
-        self.best = core.best(self.cfg)
-        labels = [g["label"] for g in self.gens]
         if args.gen_a:
             self.settings["gen_a"] = args.gen_a
         if args.gen_b:
             self.settings["gen_b"] = args.gen_b
-        if self.settings["gen_a"] not in labels:
-            self.settings["gen_a"] = labels[0] if labels else None
-        if self.settings["gen_b"] not in labels:
-            self.settings["gen_b"] = labels[-1] if labels else None
+        self.find_networks()
+        self.offer = False      # the download dialog is up
+        self.download = None    # its Download once started
         self.fonts = {}
         self.buttons = {}
         self.hover = None
@@ -183,6 +211,15 @@ class App:
         self.quit = False
         self.recorder = None
         self.over_at = None
+
+    def find_networks(self):
+        self.gens = core.generations(self.cfg)
+        self.best = core.best(self.cfg)
+        labels = [g["label"] for g in self.gens]
+        if self.settings["gen_a"] not in labels:
+            self.settings["gen_a"] = labels[0] if labels else None
+        if self.settings["gen_b"] not in labels:
+            self.settings["gen_b"] = labels[-1] if labels else None
 
     # --- drawing helpers ---------------------------------------------------------
 
@@ -272,7 +309,57 @@ class App:
         pg.draw.line(self.screen, FAINT, (160, 930), (W - 180, 930), 1)
         if self.best:
             self.text(self.L("network", label=f"{self.best['run']} gen {self.best['gen']}"), (160, 948), 22, DIM)
+        else:
+            self.text(self.L("network_none"), (160, 948), 22, DIM)
         self.text(self.L("menu_keys"), (W / 2, H - 30), 20, FAINT, "midbottom")
+        if self.offer or self.download is not None:
+            self.draw_download()
+
+    def draw_download(self):
+        """The dialog that fetches the network: offer, progress, error."""
+        pg = self.pg
+        self.buttons = {}   # modal: only its own buttons
+        shade = pg.Surface((W, H), pg.SRCALPHA)
+        shade.fill((0, 0, 0, 170))
+        self.screen.blit(shade, (0, 0))
+        p = pg.Rect(W / 2 - 440, H / 2 - 200, 880, 400)
+        pg.draw.rect(self.screen, PANEL, p, border_radius=20)
+        pg.draw.rect(self.screen, ACCENT, p, 3, border_radius=20)
+        dl = self.cfg["best"]["download"]
+        self.text(self.L("dl_title"), (p.x + 40, p.y + 34), 34, ACCENT)
+        self.wrap(self.L("dl_text", label=f"{dl['run']} gen {dl['gen']}", size=f"{dl['size'] / 1e6:.1f}",
+                         url=dl["url"]), (p.x + 40, p.y + 94), p.w - 80, 22, FG)
+        d = self.download
+        buttons = []
+        if d is None or d.result not in (None, "ok"):
+            if d is not None and d.result != "cancelled":
+                err = self.L("dl_err_hash") if d.result == "hash" else self.L("dl_err_net", error=d.result)
+                self.wrap(err, (p.x + 40, p.y + 230), p.w - 80, 20, RED)
+            buttons = [("dl_yes", self.L("dl_yes" if d is None else "dl_retry")), ("dl_no", self.L("dl_no"))]
+        elif d.result is None:
+            bar = pg.Rect(p.x + 40, p.y + 240, p.w - 80, 18)
+            pg.draw.rect(self.screen, BG, bar, border_radius=9)
+            frac = d.done / d.total if d.total else 0.0
+            if frac:
+                pg.draw.rect(self.screen, ACCENT, (bar.x, bar.y, max(bar.h, bar.w * frac), bar.h), border_radius=9)
+            s = (self.L("dl_verifying") if d.verifying else
+                 self.L("dl_progress", done=f"{d.done / 1e6:.1f}", total=f"{d.total / 1e6:.1f}"))
+            self.text(s, (bar.x, bar.bottom + 12), 20, DIM)
+            buttons = [("dl_cancel", self.L("dl_cancel"))]
+        x = p.right - 40
+        for name, label in reversed(buttons):
+            w = self.font(24).size(label)[0] + 50
+            x -= w
+            self.button(name, (x, p.bottom - 80, w, 52), label, name == "dl_yes", size=24)
+            x -= 16
+
+    def poll_download(self):
+        """A finished download closes the dialog and starts the chosen mode."""
+        d = self.download
+        if d is not None and d.result == "ok":
+            self.download = None
+            self.find_networks()
+            self.start(self.settings["mode"])
 
     def options(self, key):
         """(button name, label, active) for one settings row."""
@@ -292,7 +379,13 @@ class App:
     def menu_click(self, name):
         s = self.settings
         kind, _, val = name.partition(":")
-        if kind == "lang":
+        if kind == "dl_yes":
+            self.offer, self.download = False, Download(self.cfg)
+        elif kind == "dl_no":
+            self.offer, self.download = False, None
+        elif kind == "dl_cancel":
+            self.download.cancel = True
+        elif kind == "lang":
             s["lang"] = val
         elif kind == "mode":
             if s["mode"] == val:
@@ -330,6 +423,9 @@ class App:
         if self.save:
             core.save_settings(self.settings)
         err = core.check(mode, size, self.settings["lang"], self.cfg)
+        if err == core.NO_NET:
+            self.offer = True   # the download dialog says why
+            return
         if err:
             self.message = err
             return
@@ -559,6 +655,12 @@ class App:
         pg = self.pg
         if e.key == pg.K_F11:
             pg.display.toggle_fullscreen()
+        elif self.screen_name == "menu" and (self.offer or self.download is not None):
+            if e.key == pg.K_ESCAPE:
+                if self.download is not None and self.download.result is None:
+                    self.download.cancel = True
+                else:
+                    self.offer, self.download = False, None
         elif self.screen_name == "menu":
             if e.key == pg.K_ESCAPE:
                 self.quit = True
@@ -600,6 +702,7 @@ class App:
                     self.session.click(ln)
 
     def frame(self):
+        self.poll_download()
         self.screen.fill(BG)
         self.buttons = {}
         if self.screen_name == "menu":
@@ -663,6 +766,8 @@ class App:
                 self.session.stop()
                 self.session.thread.join(timeout=15)
             pg.quit()
+        if self.offer:
+            self.message = self.L("err_no_net")
         if self.message:
             print(self.message, file=sys.stderr)
             return 1

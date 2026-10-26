@@ -31,6 +31,29 @@ def test_desktop_entry():
     assert 'Exec="/x y/ksquares-rl"' in e and "Name[ru]=" in e and "Icon=ksquares-rl" in e
 
 
+def test_download_best(tmp_path, monkeypatch):
+    import hashlib
+
+    src = tmp_path / "release.pt"
+    src.write_bytes(b"weights" * 1000)
+    cfg = core.app_config()
+    dl = cfg["best"]["download"]
+    dl.update(url=src.as_uri(), size=src.stat().st_size,
+              sha256=hashlib.sha256(src.read_bytes()).hexdigest())
+    monkeypatch.setattr(core, "ROOT", str(tmp_path / "clone"))
+    seen = []
+    core.download_best(cfg, lambda done, total: seen.append(done))
+    best = tmp_path / "clone" / cfg["best"]["dir"]
+    assert (best / "best.pt").read_bytes() == src.read_bytes()
+    assert seen[-2:] == [src.stat().st_size, None]
+    assert core.json.loads((best / "best.json").read_text())["gen"] == dl["gen"]
+    (best / "best.pt").unlink()
+    dl["sha256"] = "0" * 64
+    with pytest.raises(ValueError):
+        core.download_best(cfg, lambda *a: None)
+    assert not (best / "best.pt").exists() and not (best / "best.pt.part").exists()
+
+
 def test_chains():
     # 3x1 strip with tops and bottoms drawn: one chain of three
     b = Board(3, 1)

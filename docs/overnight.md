@@ -657,3 +657,20 @@ Ideas for later:
   the 1000 positions, the Elo ladder, the night table). Cut:
   video/ksquares_rl_ru.mp4, 8:21, soft Russian subtitles; copied to
   ~/YouTube/ksquares-rl/ with thumbnail_ru.png for review.
+
+## 2026-10-26 (evening) — publication on GitHub
+
+- Public repository github.com/AceEca-robo/ksquares-rl; release v0.1 with
+  az5b gen 54 as the asset `best.pt` (2,207,519 bytes, sha256
+  fbf37b1d…f44e304b). runs/ and video/ stay out of git.
+- The app fetches the network when runs/best/best.pt is missing (a fresh
+  clone), as in pacman-rl: a dialog in the menu (download / not now,
+  progress, cancel, sha256 check, retry on errors), written straight into
+  runs/best/best.pt with a best.json saying az5b gen 54. URL, size and
+  checksum in configs/app.yaml (`best.download`). Unlike pacman-rl it
+  goes into the checkout, not ~/.local/share: the app already writes
+  runs/best/ through update_best.py. "Network vs itself" lists the
+  downloaded network when the runs are not on disk (gen 54 vs gen 54).
+- README rewritten for the public: what it is, the ladder and the parity
+  curves, the app, build and run, license. The video link is a
+  placeholder until the videos are out.

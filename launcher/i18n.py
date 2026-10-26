@@ -142,9 +142,31 @@ STRINGS = {
     "err_no_module": {"en": "The Python module {name} is missing: run ./install.sh again.",
                       "ru": "Нет модуля Python {name}: запустите ./install.sh ещё раз.",
                       "uk": "Немає модуля Python {name}: запустіть ./install.sh ще раз."},
-    "err_no_net": {"en": "No trained network: runs/best/best.pt is missing (train az5b first).",
-                   "ru": "Нет обученной сети: нет runs/best/best.pt (сначала обучите az5b).",
-                   "uk": "Немає навченої мережі: немає runs/best/best.pt (спершу навчіть az5b)."},
+    "err_no_net": {"en": "No network: runs/best/best.pt is missing. Start the app to download it, or train az5b.",
+                   "ru": "Нет сети: нет runs/best/best.pt. Запустите приложение, чтобы скачать её, или обучите az5b.",
+                   "uk": "Немає мережі: немає runs/best/best.pt. Запустіть застосунок, щоб завантажити її, або навчіть az5b."},
+    "network_none": {"en": "Network: not downloaded yet", "ru": "Сеть: ещё не скачана",
+                     "uk": "Мережа: ще не завантажена"},
+    # --- the download dialog ------------------------------------------------------
+    "dl_title": {"en": "Download the network?", "ru": "Скачать сеть?", "uk": "Завантажити мережу?"},
+    "dl_text": {"en": "There is no trained network here yet (runs/best/best.pt). The app can download "
+                      "{label}, the ladder best ({size} MB), from the project's release: {url}",
+                "ru": "Обученной сети здесь пока нет (runs/best/best.pt). Приложение может скачать "
+                      "{label}, лучшую на лестнице ({size} МБ), из релиза проекта: {url}",
+                "uk": "Навченої мережі тут поки немає (runs/best/best.pt). Застосунок може завантажити "
+                      "{label}, найкращу на драбині ({size} МБ), з релізу проєкту: {url}"},
+    "dl_yes": {"en": "Download", "ru": "Скачать", "uk": "Завантажити"},
+    "dl_retry": {"en": "Try again", "ru": "Ещё раз", "uk": "Ще раз"},
+    "dl_no": {"en": "Not now", "ru": "Не сейчас", "uk": "Не зараз"},
+    "dl_cancel": {"en": "Cancel", "ru": "Отмена", "uk": "Скасувати"},
+    "dl_progress": {"en": "{done} of {total} MB", "ru": "{done} из {total} МБ", "uk": "{done} з {total} МБ"},
+    "dl_verifying": {"en": "checking the checksum…", "ru": "проверка контрольной суммы…",
+                     "uk": "перевірка контрольної суми…"},
+    "dl_err_hash": {"en": "The file's checksum does not match; it was not kept.",
+                    "ru": "Контрольная сумма файла не совпала; он не сохранён.",
+                    "uk": "Контрольна сума файлу не збіглася; його не збережено."},
+    "dl_err_net": {"en": "The download failed: {error}", "ru": "Скачать не удалось: {error}",
+                   "uk": "Завантажити не вдалося: {error}"},
     "err_size": {"en": "The network was trained on {tw}×{th}; it cannot play {w}×{h}: its heads are tied "
                        "to the board size. Pick {tw}×{th}.",
                  "ru": "Сеть обучена на {tw}×{th} и не может играть на {w}×{h}: её головы привязаны "

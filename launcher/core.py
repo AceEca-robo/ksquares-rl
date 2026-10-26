@@ -6,6 +6,7 @@ the games, launcher/brain.py thinks.
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -13,6 +14,7 @@ import select
 import shutil
 import subprocess
 import time
+import urllib.request
 
 from . import i18n
 
@@ -112,9 +114,52 @@ def best(cfg):
     return info if os.path.isfile(info["path"]) else None
 
 
+class Cancelled(Exception):
+    pass
+
+
+def download_best(cfg, progress, cancelled=lambda: False):
+    """Download the release's network (best.download in configs/app.yaml)
+    over https into runs/best/best.pt and describe it in best.json.
+    progress(done, total) is called per chunk, with done = None while the
+    checksum is checked. Raises Cancelled, ValueError (checksum mismatch)
+    or OSError."""
+    dl = cfg["best"]["download"]
+    d = os.path.join(ROOT, cfg["best"]["dir"])
+    os.makedirs(d, exist_ok=True)
+    path = os.path.join(d, "best.pt")
+    part = path + ".part"
+    h = hashlib.sha256()
+    try:
+        req = urllib.request.Request(dl["url"], headers={"User-Agent": "ksquares-rl-launcher"})
+        with urllib.request.urlopen(req, timeout=30) as r, open(part, "wb") as f:
+            total = int(r.headers.get("Content-Length") or dl["size"])
+            done = 0
+            while chunk := r.read(1 << 16):
+                if cancelled():
+                    raise Cancelled
+                f.write(chunk)
+                h.update(chunk)
+                done += len(chunk)
+                progress(done, total)
+        progress(None, total)
+        if h.hexdigest() != dl["sha256"]:
+            raise ValueError("sha256 mismatch")
+        os.replace(part, path)
+    finally:
+        if os.path.exists(part):
+            os.remove(part)
+    info = {"run": dl["run"], "gen": dl["gen"], "config": cfg["best"]["run_config"],
+            "checkpoint": dl["url"]}
+    with open(os.path.join(d, "best.json.tmp"), "w") as f:
+        json.dump(info, f, indent=1)
+    os.replace(os.path.join(d, "best.json.tmp"), os.path.join(d, "best.json"))
+
+
 def generations(cfg):
     """Every accepted generation on disk, in order: [{"run", "gen", "config",
-    "path", "label"}]."""
+    "path", "label"}]; the best network too when its run is not on disk (a
+    fresh clone with the downloaded one)."""
     out = []
     for c in cfg["generations"]:
         rc = load_yaml(c)
@@ -130,20 +175,26 @@ def generations(cfg):
             if h["accepted"] and os.path.isfile(p):
                 out.append({"run": name, "gen": h["gen"], "config": c, "path": p,
                             "label": f"{name} gen {h['gen']}"})
+    b = best(cfg)
+    if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):
+        out.append({**b, "label": f"{b['run']} gen {b['gen']}"})
     return out
 
 
 # --- checks -------------------------------------------------------------------
 
+NO_NET = "no network"   # check()'s answer when runs/best/best.pt is missing: offer the download
+
+
 def check(mode, size, lang, cfg):
     """The message that stops `mode` (ksquares / play / self) on board `size`,
-    or None."""
+    NO_NET, or None."""
     for name in ("torch", "yaml", "PIL"):
         if importlib.util.find_spec(name) is None:
             return i18n.t(lang, "err_no_module", name={"yaml": "PyYAML", "PIL": "Pillow"}.get(name, name))
     b = best(cfg)
     if b is None:
-        return i18n.t(lang, "err_no_net")
+        return NO_NET
     trained = tuple(load_yaml(b["config"])["board"])
     if tuple(size) != trained:
         return i18n.t(lang, "err_size", w=size[0], h=size[1], tw=trained[0], th=trained[1])

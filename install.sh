@@ -97,6 +97,6 @@ echo "$DATA/applications/ksquares-rl.desktop -> $BIN/ksquares-rl"
 if (cd "$ROOT/scripts" && "$PY" update_best.py) | grep -q "'gen'"; then
     ck="the network is $(readlink "$ROOT/runs/best/best.pt")"
 else
-    ck="there is no trained network yet (runs/best/best.pt): train az5b first (docs/overnight.md)"
+    ck="the app offers to download the network (az5b gen 54, 2.2 MB, from the v0.1 release) on its first start"
 fi
 printf '\nDone. Start "KSquares RL" from the applications menu or run ksquares-rl;\n%s.\n' "$ck"
