@@ -18,7 +18,7 @@ minute (Pacman video), so the English text is longer for the same slots.
 | 3. How it was built | 2:05–3:05 | 1:00 | 154 |
 | 4. AlphaZero in brief | 3:05–3:55 | 0:50 | 111 |
 | 5. The ladder | 3:55–4:55 | 1:00 | 98 |
-| 6. How the network thinks | 4:55–7:25 | 2:30 | 310 |
+| 6. How the network thinks | 4:55–7:25 | 2:30 | 343 |
 | 7. The plateau | 7:25–8:15 | 0:50 | 111 |
 | 8. The app | 8:15–8:55 | 0:40 | 88 |
 | 9. What next | 8:55–9:35 | 0:40 | 77 |
@@ -90,29 +90,32 @@ those five hundred points come from."
 
 ## Scene 6. How the network thinks (4:55–7:25)
 
-**Voice:** "We collected positions where only parity matters: nothing to
-capture, safe moves still left, and the line you choose decides who has
-to open the first long chain. The solver worked out the right answer for
-each one, all the way to the end. Then we tested every generation of the
-network in three ways. First, the policy: the move without search. It
-reaches Hard's level almost at once — about half the moves right — and
-then stays there for dozens of generations. Second, the value head. We
-play every possible move and ask the network: who is winning now? Up to
-generation eight the answers are random. From generation eight it gets the
-sign right three times out of four, and by the end eighty-five percent of
-the time. The network knows who will win. But the same network, picking a
-move by itself, doesn't know which move leads to the win. It seems to come
-down to what each head learns from. The value learns from game results,
-and in these positions the result is parity. The policy learns to imitate
-the search, and to pick the right line out of thirty similar ones it would
-have to ask, for each of them: and what happens next? That is exactly what
-the search does. The third curve is the network with a two-hundred-
-variation search. It climbs right after the value head and reaches ninety
-percent. The solver is at ninety-five. You can see it on the heat map: the
-policy is smeared over the whole board, while the search visits pile up on
-the winning move. One last check, on a thousand fresh positions. Without
-search the policy did improve: from fifty to fifty-nine percent over fifty
-generations, and that's not noise. But with search it's ninety. The parity
+**Voice:** "We collected a thousand positions where only parity matters:
+nothing to capture, safe moves still left, and the line you choose decides
+who has to open the first long chain. The solver worked out the right
+answer for each one, all the way to the end. Then we tested every
+generation of the network on them in three ways. First, the policy: the
+move without search. By generation three it already reaches Hard's level
+— about half the moves right — and then stays there for dozens of
+generations. Second, the value head. We play every possible move and ask
+the network: who is winning now? Guessing the sign at random gets half of
+them right, and up to generation seven the network does no better. At
+generation eight it jumps; by generation eleven it's right three times out
+of four, and later up to eighty-eight percent. The network knows who will
+win. But the same network, picking a move by itself, doesn't know which
+move leads to the win. It seems to come down to what each head learns
+from. The value learns from game results, and in these positions the
+result is parity. The policy learns to imitate the search, and to pick the
+right line out of thirty similar ones it would have to ask, for each of
+them: and what happens next? Even the simplest version of that works:
+play each move and pick the one after which the value head says "I'm
+winning". That alone gets over eighty percent — no tree at all. And the
+network with a two-hundred-variation search climbs right behind the value
+head and reaches ninety percent. The solver is at ninety-five. You can see
+it on the heat map: the policy is smeared over the whole board, while the
+search visits pile up on the winning move. Only in the last thirty
+generations did the policy start to catch up: from fifty to fifty-nine
+percent, and that's not noise. But with search it's ninety. The parity
 work is still done by the search."
 
 ## Scene 7. The plateau (7:25–8:15)

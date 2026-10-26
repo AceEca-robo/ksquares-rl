@@ -611,7 +611,8 @@ class App:
         pg = self.pg
         a = self.args
         if a.record:
-            self.recorder = Recorder(a.record, self.cfg["record_fps"])
+            self.recorder = Recorder(a.record, self.cfg["record_fps"],
+                                     tuple(int(x) for x in a.record_size.split("x")))
         if a.mode:
             self.start(a.mode)
         clock = pg.time.Clock()
@@ -682,6 +683,7 @@ def parse(argv=None):
     ap.add_argument("--net-first", type=int, choices=[0, 1], help="1: the network moves first")
     ap.add_argument("--show-mine", type=int, choices=[0, 1], help="1: the network's view of your moves")
     ap.add_argument("--record", help="record the window into an .mp4 or .gif (with --mode)")
+    ap.add_argument("--record-size", default="1280x720", help="WxH of the recording (the window is 1920x1080)")
     ap.add_argument("--screenshot", help="save the last frame here and quit (no window)")
     ap.add_argument("--moves", type=int, help="with --screenshot / --record: stop after this many lines")
     ap.add_argument("--linger", type=float, default=2.0, help="seconds kept after the game / --moves")

@@ -619,3 +619,30 @@ Ideas for later:
   gets the long chain rule right in 59% of decisive positions, up from
   50% (KSquares Hard's level) at gen 33" — not "it began to see parity
   after 70 generations".
+
+## 2026-10-26 — video script, parity curves, gen 54 recordings
+
+- Video script `docs/video_script_ru.md` / `_en.md` (nine scenes, theme
+  "the value head knows who wins, the policy does not know how, search
+  closes the gap"); pipeline and materials in `video/` (not in git, as in
+  pacman-rl). Thumbnail C picked: `docs/thumb_c_{ru,en}.png`
+  (`video/video_thumbnail.py`; probe #172, gen 54: policy heat map vs the
+  value's sign after each move).
+- The three curves for the video were on different sets (policy and MCTS
+  on the 150 strategy-probe parity positions, the value's sign on the 16
+  snapshot positions). `scripts/parity_probe.py curves` / `plot` now
+  measure all of them on the 1000 parity positions for every accepted
+  generation (49: az5 21, az5b 28), ~10 s each: `docs/parity_curves.md`,
+  `docs/parity_curves.png`, summary in docs/results.md. The earlier
+  `evaluate` numbers for az5b 33/54/73/84 came out identical.
+- What changed against the 16-position picture: the value's sign is at
+  chance up to az5 gen 7 (50–57%), 66% at gen 8 (not 74%), 76% at gen 11,
+  79–88% in az5b. A one-ply search with the value alone gets 80–84% from
+  az5b gen 46 on, close to MCTS 200 (87–92%).
+- Game videos re-recorded with gen 54 (ladder best), seed 11, net first:
+  18–7 against KSquares Hard in all three. `docs/az5_vs_hard.mp4` via
+  `scripts/az_video.py` on a private Xvfb (`windowactivate` is now
+  optional: a bare Xvfb has no window manager); app recordings
+  `video/rec/hard_gen54_{ru,en}.mp4` at 1920x1080 (new
+  `scripts/launcher.py --record-size`; the en take with LANG=en_US.UTF-8
+  so KSquares' own menus are English too).

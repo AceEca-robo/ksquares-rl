@@ -65,8 +65,10 @@ def main() -> None:
         win = subprocess.run(["xdotool", "search", "--sync", "--onlyvisible", "--pid", str(pid)],
                              check=True, capture_output=True, text=True, env=xenv).stdout.split()[-1]
         ww, wh = a.size.split("x")
-        for cmd in (["windowsize", win, ww, wh], ["windowmove", win, "60", "60"], ["windowactivate", win]):
+        for cmd in (["windowsize", win, ww, wh], ["windowmove", win, "60", "60"]):
             subprocess.run(["xdotool", *cmd], check=True, env=xenv)
+        # raising needs a window manager; a bare Xvfb has none and needs no raising
+        subprocess.run(["xdotool", "windowactivate", win], env=xenv, stderr=subprocess.DEVNULL)
         time.sleep(1.0)
         info = subprocess.run(["xwininfo", "-id", win], check=True, capture_output=True, text=True,
                               env=xenv).stdout

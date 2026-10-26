@@ -209,7 +209,8 @@ Table `docs/az5b_ladder.md`, curves `docs/az5b_ladder.png`.
 | az5b 84 | 97 | 93 | 73 | 38 | 1684 | 100 | 99 | 97 | 75 | 2005 |
 
 Real game over the bridge: az5 gen 29 + MCTS 200 vs KSquares Hard 18/20.
-Video `docs/az5_vs_hard.mp4` (az5b gen 84 vs the game's Hard, 15–10).
+Video `docs/az5_vs_hard.mp4` (az5b gen 54, the ladder best, + MCTS 200 vs the
+game's Hard, 18–7, seed 11; re-recorded 2026-10-26 on a private Xvfb).
 
 ## Strategy probe (5x5)
 
@@ -282,3 +283,34 @@ Paired on the same positions (exact McNemar, gained / lost, p): net only
 +187/-96, p 7e-8; 54 -> 73 +134/-86, p 0.0015; 73 -> 84 +102/-84, p 0.21.
 With MCTS: 33 -> 54 +71/-38, p 0.002; 54 -> 73 / 84 no difference
 (p 0.66 / 0.61).
+
+## Parity curves over generations, 1000 positions (5x5)
+
+`scripts/parity_probe.py curves` / `plot`, the 1000 positions above, every
+accepted generation of az5 and az5b, 2026-10-26. Full table
+`docs/parity_curves.md`, plot `docs/parity_curves.png`. % right; V child =
+sign of V after each legal move, balanced over winning / losing moves
+(chance 50); V greedy = the move with the best child V.
+
+| run gen | policy | V child | V greedy | MCTS 200 |
+|---|---:|---:|---:|---:|
+| az5 1 | 14.0 | 49.9 | 10.5 | 16.8 |
+| az5 3 | 47.7 | 55.2 | 12.4 | 38.1 |
+| az5 7 | 48.9 | 56.8 | 35.1 | 52.0 |
+| az5 8 | 47.2 | 66.3 | 42.4 | 54.4 |
+| az5 11 | 49.3 | 76.3 | 48.8 | 67.3 |
+| az5 21 | 48.7 | 80.6 | 65.6 | 83.5 |
+| az5 29 | 49.0 | 79.8 | 67.0 | 84.7 |
+| az5b 1 | 48.5 | 82.7 | 74.2 | 89.2 |
+| az5b 33 | 50.0 | 84.8 | 79.1 | 86.9 |
+| az5b 54 | 52.5 | 88.1 | 82.4 | 90.2 |
+| az5b 73 | 57.3 | 86.7 | 83.6 | 90.7 |
+| az5b 84 | 59.1 | 88.1 | 84.3 | 90.8 |
+
+The policy reaches Hard's level (49.6) by az5 gen 3 and stays at 44–53%
+up to az5b gen 54, then climbs to 53–59%. The value's sign after a move is
+at chance up to az5 gen 7 (50–57%), jumps at gen 8 (66%), passes 75% at
+gen 11 and sits at 79–88% through az5b. A one-ply search with the value
+alone picks a winning move in 80–84% from az5b gen 46 on; MCTS 200 rises
+just behind the value curve to 87–92% (strong 94.7).
+

@@ -21,3 +21,8 @@ gens:                    # az5b generations probed
   run_config: configs/az5b.yaml
   list: [33, 54, 73, 84]
 baselines: [strong, hard, greedy]
+
+curves:                  # `curves` / `plot`: every accepted generation of these runs
+  runs: [configs/az5.yaml, configs/az5b.yaml]
+  sims_label: "200"      # MCTS sims come from the base config (agents.sims)
+  plot: docs/parity_curves.png
