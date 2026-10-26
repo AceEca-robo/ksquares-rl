@@ -8,3 +8,7 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 _src/
+
+# materials for the video (docs/video_script_ru.md): generators, recordings,
+# voice, builds; the finished videos go to ~/YouTube/ksquares-rl/
+video/
