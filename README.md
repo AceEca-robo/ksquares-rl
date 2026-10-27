@@ -85,18 +85,38 @@ to download it (2.2 MB, checked by sha256) from the
 
 ## Build and run
 
-Linux (tested on Ubuntu 22.04), Python 3.10+. `install.sh` checks the
-system packages and prints the `sudo apt install ...` line for the missing
-ones (Qt 5 / KDE Frameworks 5 dev packages, cmake, Xvfb, xdotool,
-x11-utils, ffmpeg; see `docs/game_spec.md` §6); nothing else needs root.
+Requirements:
+
+- Ubuntu 22.04 or 24.04 (x86-64), with sudo for the system packages;
+- to play: any machine, no GPU needed;
+- to train your own Dot: an NVIDIA GPU with its driver (CUDA 12.6 or
+  newer as `nvidia-smi` reports it) and 4 GB of video memory or more;
+- disk: about 2.5 GB without a GPU (system packages ~1 GB, `.venv` with
+  torch's CPU build ~1 GB), about 7 GB with one (`.venv` with the CUDA build
+  of torch ~5.5 GB), plus ~1 GB per training run;
+- time: ~2.5 minutes on a fresh Ubuntu without a GPU (measured in clean
+  `ubuntu:22.04` and `ubuntu:24.04` containers, 250 MB of packages to
+  download); with a GPU add the ~3 GB download of torch's CUDA build.
 
 ```
 git clone https://github.com/AceEca-robo/ksquares-rl && cd ksquares-rl
-./install.sh            # builds KSquares with the bridge, .venv, the menu entry
-./install.sh --cpu      # the same with torch's CPU-only build (a much smaller download)
+./install.sh            # everything, ending with a self-check
+./install.sh --cpu      # torch's CPU-only build even with a GPU (a much smaller download)
+./install.sh --no-apt   # install no system packages, only list the missing ones
 ksquares-rl             # or "KSquares RL" in the applications menu
 ./uninstall.sh [--purge]
 ```
+
+`install.sh` installs the missing system packages with apt (the KSquares
+build dependencies, as `apt-get build-dep ksquares`: Qt 5 / KDE Frameworks 5
+dev packages, cmake; then Xvfb, xdotool, x11-utils, ffmpeg, python3-venv,
+fonts, dbus; see `docs/game_spec.md` §6), builds KSquares with the bridge
+into `build/`, creates `.venv` from `requirements.txt` with torch built for
+the machine (CUDA when `nvidia-smi` is there, else the CPU build with a
+warning), adds the app to the applications menu, and ends with a
+self-check (`scripts/selfcheck.py`, also runnable on its own): KSquares
+built, Xvfb starts, a whole game against KSquares over the bridge, whether
+torch sees the GPU, the fonts. Running it again is quick.
 
 The app runs fine on a CPU. Recording a game:
 

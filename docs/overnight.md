@@ -712,3 +712,27 @@ Ideas for later:
   Just not how."). video/storyboard_en.py moves every Russian cut to the
   same place of the same sentence in the English voice (two sentence
   starts in scene 6 set by hand). EN 6:32.
+
+## 2026-10-27 (afternoon) — the training screen, install from scratch
+
+- Training screen: progress inside the round from az_train.py's
+  `progress.jsonl` (self-play games, training steps, the match and its
+  score), a pulse with the time since the trainer last wrote, the self-play
+  game followed live (`live.json`), a timeline of the rounds; after the
+  first accepted round, buttons into play / vs Dot / vs KSquares with it.
+  "vs KSquares" and "play" choose between the released Dot and the own
+  runs. Thought panel and ladder legend in the video's words.
+- A test run from the app, test_New_dot, 5 rounds from scratch: all
+  accepted (100-0, 98-2, 89-11, 71-29, 74-26), ~12 min each; vs Hard with
+  MCTS 200: 0, 3, 47, 70, 70%.
+- Install from scratch in clean podman containers (ubuntu:22.04 and
+  ubuntu:24.04, as root, only git installed before the clone). The first
+  run failed in the self-check: KSquares quits at once without a D-Bus
+  session bus (KDBusService: "DBus session bus not found"), as on any
+  machine without a desktop session (ssh, a container). Fix: env/bridge.py
+  starts a private dbus-daemon for the game when DBUS_SESSION_BUS_ADDRESS
+  is unset. After it both pass: ~2.5 min, 250 MB of packages, 1.1-1.2 GB
+  in build/ + .venv with torch's CPU build. install.sh now installs the
+  apt packages itself (only the missing ones), torch by the driver's CUDA
+  version (cu130 / cu126 / CPU with a warning), and ends with
+  scripts/selfcheck.py.
