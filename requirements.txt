@@ -1,0 +1,9 @@
+# Python packages of the app and the training, pinned (install.sh puts them
+# into .venv). torch is installed separately by install.sh: the CUDA build
+# when nvidia-smi is there, else the CPU-only build (same version as in
+# pyproject.toml's "az" extra).
+numpy==2.2.6
+PyYAML==6.0.3
+matplotlib==3.10.9
+pygame==2.6.1
+Pillow==12.3.0
