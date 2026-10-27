@@ -320,8 +320,8 @@ class Run:
             return f"{k} rejected generations in a row"
         if sc.get("elo") is None:
             return None
-        from az_eval import fit_anchors, fit_one
-        anchors = fit_anchors()
+        from az_eval import anchors_for, fit_one
+        anchors = anchors_for(self.cfg)
         for h in hist:
             p = self.run / "eval" / f"gen_{h['gen']:04d}.json"
             if h["accepted"] and p.exists():

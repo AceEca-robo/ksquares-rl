@@ -67,3 +67,8 @@ eval:
     strong:
       node_budget: 23000 # = 0.5 s of one core (scripts/calibrate_strong.py:
                          # median 46k nodes per CPU second), not wall clock
+
+bridge_eval:             # scripts/az_vs_hard.py: vs the real game's Hard
+  games: 20              # as for Dot (18/20)
+  sims: 200
+  seed: 11
