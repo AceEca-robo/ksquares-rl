@@ -624,10 +624,10 @@ class App:
         else:
             self.text(self.L("tr_idle", gen=pr["gen"]), (x, y + 18), 26, FG)
         # the rounds: a timeline of dots, then the last ones in full
-        yy = y + 196
+        yy = y + (178 if pr["running"] else 70)   # right under the header when there is no round
         self.text(self.L("tr_timeline"), (x, yy), 18, DIM)
         self.draw_rounds(pr["history"], (x, yy + 30, w - 48))
-        yy += 96
+        yy += 86
         self.text(self.L("tr_history"), (x, yy), 18, DIM)
         yy += 28
         for h in pr["history"][-4:]:
@@ -639,14 +639,15 @@ class App:
             self.text(verdict, (x + w - 48, yy), 20, GREEN if h["accepted"] else DIM, "topright")
             yy += 28
         # the ladder against Hard
-        yy = y + 440
+        yy += 10
         self.text(self.L("tr_ladder"), (x, yy), 20, FG)
-        self.draw_ladder(pr["ladder"], (x, yy + 30, w - 48, 250))
-        # the log: the last lines, newest at the bottom
-        yy = y + 732
+        self.draw_ladder(pr["ladder"], (x, yy + 30, w - 48, 260))
+        # the log: the last lines, newest at the bottom, as wide as the panel
+        yy = y + 712
         self.text(self.L("tr_log"), (x, yy), 18, DIM)
+        cols = int((w - 48) / self.font(14, mono=True).size("M")[0])
         for k, ln in enumerate(pr["log"][-10:]):
-            self.text(ln[:96], (x, yy + 26 + k * 17), 14, FAINT, mono=True)
+            self.text(ln[:cols], (x, yy + 26 + k * 18), 14, FAINT, mono=True)
         # left, at the bottom: the self-play game followed right now
         if pr["live"]:
             self.draw_live(pr["live"], (64, 690, 812, 320))
