@@ -112,9 +112,9 @@ went into the app is not the last Dot, but the strongest one."
 **Screen:** as in Russian, plus a closing frame of the app's new mode
 "Train your own Dot" (`docs/app_train.png`, English).
 
-**Voice:** "You can play Dot yourself. The app has three ways to play: Dot
-against the real KSquares, you against Dot, and Dot against an early
-version of herself. On the right you see what she is thinking: the
+**Voice:** "You can play Dot yourself. The app has four modes: Dot
+against the real KSquares, you against Dot, Dot against an early
+version of herself — and training your own Dot. On the right you see what she is thinking: the
 options she goes through, and a bar — who, in her view, is winning right
 now. Here is Dot from round one against Dot from round fifty-four. Below —
 how her confidence changes over the game."
