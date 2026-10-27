@@ -21,7 +21,7 @@ from . import i18n
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GAME = os.path.join(ROOT, "build", "src", "ksquares")
 APP_CONFIG = os.path.join(ROOT, "configs", "app.yaml")
-MODES = ("ksquares", "play", "self")
+MODES = ("ksquares", "play", "self", "train")
 
 # program -> Debian / Ubuntu package (the private Xvfb, finding and grabbing
 # KSquares' window on it)
@@ -54,7 +54,8 @@ def app_config():
 def defaults(cfg):
     return {"lang": i18n.DEFAULT, "level": 2, "net_first": True, "sims": cfg["sims_default"],
             "size": 0, "show_mine": False, "gen_a": None, "gen_b": None,
-            "speed": cfg["selfplay_delay_default"], "mode": MODES[0]}
+            "speed": cfg["selfplay_delay_default"], "mode": MODES[0], "gen_play": None,
+            "train_name": cfg["train"]["default_name"], "train_rounds": cfg["train"]["rounds_default"]}
 
 
 def load_settings(cfg):
@@ -76,6 +77,10 @@ def load_settings(cfg):
         s["mode"] = MODES[0]
     if not isinstance(s["speed"], int) or not 0 <= s["speed"] < len(cfg["selfplay_delays"]):
         s["speed"] = cfg["selfplay_delay_default"]
+    if s["train_rounds"] not in cfg["train"]["rounds_choices"]:
+        s["train_rounds"] = cfg["train"]["rounds_default"]
+    if not isinstance(s["train_name"], str):
+        s["train_name"] = cfg["train"]["default_name"]
     s["net_first"], s["show_mine"] = bool(s["net_first"]), bool(s["show_mine"])
     return s
 
@@ -158,10 +163,14 @@ def download_best(cfg, progress, cancelled=lambda: False):
 
 def generations(cfg):
     """Every accepted generation on disk, in order: [{"run", "gen", "config",
-    "path", "label"}]; the best network too when its run is not on disk (a
-    fresh clone with the downloaded one)."""
+    "path", "label"}]: the project's runs, the best network too when its run
+    is not on disk (a fresh clone with the downloaded one), then the app's
+    own runs ("Train your own Dot", runs/<name>/train.yaml)."""
+    from . import train
+
     out = []
-    for c in cfg["generations"]:
+    own = [os.path.relpath(os.path.join(train.run_dir(n), "train.yaml"), ROOT) for n in train.own_runs()]
+    for c in cfg["generations"] + own:
         rc = load_yaml(c)
         run = os.path.join(ROOT, rc["run_dir"])
         try:
@@ -177,7 +186,8 @@ def generations(cfg):
                             "label": f"{name} gen {h['gen']}"})
     b = best(cfg)
     if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):
-        out.append({**b, "label": f"{b['run']} gen {b['gen']}"})
+        k = sum(1 for g in out if g["config"] in cfg["generations"])
+        out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}"})
     return out
 
 
@@ -187,11 +197,13 @@ NO_NET = "no network"   # check()'s answer when runs/best/best.pt is missing: of
 
 
 def check(mode, size, lang, cfg):
-    """The message that stops `mode` (ksquares / play / self) on board `size`,
-    NO_NET, or None."""
+    """The message that stops `mode` (ksquares / play / self / train) on board
+    `size`, NO_NET, or None."""
     for name in ("torch", "yaml", "PIL"):
         if importlib.util.find_spec(name) is None:
             return i18n.t(lang, "err_no_module", name={"yaml": "PyYAML", "PIL": "Pillow"}.get(name, name))
+    if mode == "train":
+        return None   # needs no network: launcher/train.py checks the machine
     b = best(cfg)
     if b is None:
         return NO_NET

@@ -204,3 +204,96 @@ def test_menu_rows_follow_the_mode(tmp_path, monkeypatch):
         assert app.settings["mode"] == "play" and app.screen_name == "menu"
     finally:
         app.pg.quit()
+
+
+MOCK_TRAINER = r'''
+import json, os, sys, time
+run = sys.argv[1]
+os.makedirs(os.path.join(run, "eval"), exist_ok=True)
+hist = []
+for gen in (1, 2, 3, 4, 5, 6):
+    if os.path.exists(os.path.join(run, "STOP")):
+        print("stopped cleanly", flush=True)
+        break
+    ok = gen != 2
+    hist.append({"gen": gen, "accepted": ok, "score": 0.6 if ok else 0.4, "wins": 60 if ok else 40,
+                 "losses": 40 if ok else 60, "ties": 0, "margin": 1.0, "time": time.time()})
+    with open(os.path.join(run, "log.jsonl"), "a") as f:
+        for ph, sec in (("selfplay", 600.0), ("train", 30.0), ("gate", 40.0)):
+            f.write(json.dumps({"time": time.time(), "gen": gen, "phase": ph, "seconds": sec, "vs": gen - 1}) + "\n")
+    if ok:
+        with open(os.path.join(run, "eval", f"gen_{gen:04d}.json"), "w") as f:
+            json.dump({"gen": gen, "raw": {"hard": [10 * gen, 100 - 10 * gen, 0]},
+                       "mcts": {"hard": [20 * gen, 100 - 20 * gen, 0]}}, f)
+        open(os.path.join(run, f"gen_{gen:04d}.pt"), "w").close()
+    with open(os.path.join(run, "state.json"), "w") as f:
+        json.dump({"gen": gen, "best": gen, "phase": "selfplay", "history": hist}, f)
+    print(f"gen {gen} done", flush=True)
+    time.sleep(0.3)
+'''
+
+
+def test_train_mode_with_a_mock_trainer(tmp_path, monkeypatch):
+    """"Train your own Dot" without training: the run's config, one trainer
+    at a time, the progress read from its files, the safe stop, and the
+    accepted rounds in the generation lists."""
+    from launcher import train
+
+    monkeypatch.setattr(train, "RUNS", str(tmp_path / "runs"))
+    monkeypatch.setattr(train, "LOCK", str(tmp_path / "runs" / ".training.json"))
+    cfg = core.app_config()
+    assert not train.valid_name("az5b") and not train.valid_name("../x") and train.valid_name("my_dot")
+    m = train.machine(cfg)
+    assert m["running"] is None and m["disk_gb"] > 0
+    script = tmp_path / "mock_trainer.py"
+    script.write_text(MOCK_TRAINER)
+    run = tmp_path / "runs" / "my_dot"
+    p = train.start("my_dot", 3, cfg, device="cpu", argv=[sys.executable, str(script), str(run)])
+    try:
+        rc = core.load_yaml(str(run / "train.yaml"))
+        assert rc["init_from"] is None and rc["publish"] is False and rc["device"] == "cpu"
+        assert rc["run_dir"].endswith("my_dot") and rc["net"] == core.load_yaml(cfg["train"]["base_config"])["net"]
+        assert train.running() == "my_dot"
+        with pytest.raises(RuntimeError):
+            train.start("other", 1, cfg, device="cpu", argv=[sys.executable, "-c", "pass"])
+        t0 = time.time()
+        while time.time() - t0 < 20 and train.progress("my_dot", cfg)["gen"] < 3:
+            time.sleep(0.1)
+        pr = train.progress("my_dot", cfg)
+        assert pr["running"] and pr["rounds"] == 3 and pr["gen"] >= 3
+        assert [h["accepted"] for h in pr["history"][:3]] == [True, False, True]
+        assert pr["history"][1]["vs"] == 1 and pr["history"][0]["seconds"] == 670.0
+        assert pr["round_s"] == 670.0 and pr["eta_s"] is not None
+        assert pr["ladder"][:2] == [(1, 10.0, 20.0), (3, 30.0, 60.0)]
+        train.stop("my_dot")
+        assert p.wait(timeout=20) == 0
+        pr = train.progress("my_dot", cfg)
+        assert not pr["running"] and train.running() is None and pr["gen"] < 6
+        assert "stopped cleanly" in (run / "train.log").read_text()
+    finally:
+        if p.poll() is None:
+            p.kill()
+    # the accepted rounds join "network vs itself" and "play the network"
+    labels = [g["label"] for g in core.generations(cfg)]
+    assert "my_dot gen 1" in labels and "my_dot gen 3" in labels and "my_dot gen 2" not in labels
+
+
+def test_train_screen_draws(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("launcher_app", ROOT / "scripts/launcher.py")
+    app_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(app_mod)
+    app = app_mod.App(app_mod.parse(["--lang", "ru"]), headless=True)
+    try:
+        app.start("train")
+        app.frame()
+        assert app.screen_name == "train" and "rounds:10" in app.buttons and "name" in app.buttons
+        app.train_click("name")
+        app.settings["train_name"] = ""
+        app.train_text("a/b")   # not a valid name: no Start
+        app.frame()
+        assert "train_start" not in app.buttons
+    finally:
+        app.pg.quit()

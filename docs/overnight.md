@@ -674,3 +674,41 @@ Ideas for later:
 - README rewritten for the public: what it is, the ladder and the parity
   curves, the app, build and run, license. The video link is a
   placeholder until the videos are out.
+
+## 2026-10-27 (night) — video: the new Russian voice, Dot
+
+- New voice text for scenes 1–9 (the network is the hero "Dot", «Дот»
+  in the voice); the storyboard kept, cuts moved to the new sentences,
+  on-screen words per the dictionary in docs/video_script_ru.md
+  (intuition = value, judge = strong, built-in opponent = Hard, round =
+  generation, training hall = simulator). Thumbnail C: «Dot знает, кто
+  выиграет. / Но не знает, как.» Cut: video/ksquares_rl_ru.mp4, 7:27.
+- edge-tts was refusing or hanging for long stretches (one call hung for
+  28 min): timeout per call, by-sentence voicing resumes from its parts.
+  Voicing all scenes took ~2 h.
+- EN waits for the author's OK on RU.
+
+## 2026-10-27 (morning) — "Train your own Dot", the English cut
+
+- The app's fourth mode, "Train your own Dot" (launcher/train.py,
+  scripts/launcher.py): checks the CUDA GPU (name, memory), free disk and
+  a training already running (runs/.training.json, one at a time); run
+  name and rounds (10 / no limit); starts scripts/az_train.py detached
+  (own session) with runs/<name>/train.yaml = configs/az5b.yaml from
+  scratch (init_from null, publish: false so az_eval.py writes nothing to
+  docs/ or runs/best); progress from state.json / log.jsonl / eval/;
+  Stop = the STOP file. Accepted rounds join "play" (new network picker)
+  and "self" as "<name> gen N". Terminal: python -m launcher.train.
+- Real run my_dot, 4 rounds from scratch on the RTX 4060 Laptop: all
+  accepted (100-0, 98-2, 85-15, 69-31), 11:04–11:27 per round (az5b
+  median 11.3 min: the README table), vs Hard with search 2, 2, 46, 46%.
+- Video: RU scene 9 new last sentence (re-voiced), scene 8 closes with the
+  training screen (video/rec/train_{ru,en}.png). RU 7:36. The RU voice of
+  scene 8 still says "три режима" (not re-voiced, as asked): the menu
+  shot there is the old three-card one.
+- EN cut: docs/video_script_en.md rewritten sentence for sentence from
+  the Russian (Dot, intuition, the judge, the built-in opponent, round);
+  English cards, scene 2 animation and thumbnail C ("Dot knows who wins. /
+  Just not how."). video/storyboard_en.py moves every Russian cut to the
+  same place of the same sentence in the English voice (two sentence
+  starts in scene 6 set by hand). EN 6:32.

@@ -8,6 +8,10 @@ the menu and shows every mode in place:
     Play the network      a board of your own: click a line to draw it
     Network vs itself     two generations (or one) against each other; Space
                           pauses, → plays one move, +/− change the speed
+    Train your own Dot    checks the GPU and the disk, starts scripts/az_train.py
+                          from scratch into runs/<name>/ as a process of its own
+                          (it outlives the app) and shows its progress; its
+                          accepted rounds join the generations of the modes above
 
 The thought panel on the right shows the network's side: the policy as a
 heat map over the lines, V and a "who is winning" bar, the MCTS visits
@@ -29,6 +33,7 @@ the menu's corner; the choices are kept in ~/.config/ksquares-rl/.
     python scripts/launcher.py
     python scripts/launcher.py --mode self --gen-a "az5 gen 1" --record docs/self.mp4
     python scripts/launcher.py --mode ksquares --screenshot docs/app_ksquares.png --moves 30
+    python scripts/launcher.py --mode train --screenshot docs/app_train.png
 """
 
 from __future__ import annotations
@@ -43,7 +48,7 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
-from launcher import core, i18n  # noqa: E402
+from launcher import core, i18n, train  # noqa: E402
 from launcher.i18n import t  # noqa: E402
 
 W, H = 1920, 1080
@@ -211,6 +216,9 @@ class App:
         self.quit = False
         self.recorder = None
         self.over_at = None
+        self.machine = None     # "train": launcher/train.machine(), checked when the mode opens
+        self.name_focus = False
+        self.train_polled = (0.0, None)
 
     def find_networks(self):
         self.gens = core.generations(self.cfg)
@@ -220,6 +228,8 @@ class App:
             self.settings["gen_a"] = labels[0] if labels else None
         if self.settings["gen_b"] not in labels:
             self.settings["gen_b"] = labels[-1] if labels else None
+        if self.settings["gen_play"] not in labels:
+            self.settings["gen_play"] = None   # the best network
 
     # --- drawing helpers ---------------------------------------------------------
 
@@ -251,11 +261,11 @@ class App:
             y += size + 6
         return y
 
-    def button(self, name, rect, label, active=False, size=22, hint=None):
+    def button(self, name, rect, label, active=False, size=22, hint=None, bg=PANEL):
         pg = self.pg
         r = pg.Rect(rect)
         hot = self.hover == name
-        pg.draw.rect(self.screen, PANEL_HI if hot or active else PANEL, r, border_radius=10)
+        pg.draw.rect(self.screen, PANEL_HI if hot or active else bg, r, border_radius=10)
         if active:
             pg.draw.rect(self.screen, ACCENT, r, 2, border_radius=10)
         self.text(label, (r.x + 18, r.y + (14 if hint else r.h / 2 - size * 0.62)), size, ACCENT if active else FG)
@@ -271,8 +281,9 @@ class App:
 
     # the settings each mode uses, in this order
     MODE_ROWS = {"ksquares": ("level", "first", "search", "board"),
-                 "play": ("first", "search", "board", "show_mine"),
-                 "self": ("gen_a", "gen_b", "search", "board")}
+                 "play": ("gen_play", "first", "search", "board", "show_mine"),
+                 "self": ("gen_a", "gen_b", "search", "board"),
+                 "train": ()}
 
     def draw_menu(self):
         pg = self.pg
@@ -284,19 +295,22 @@ class App:
         # modes
         self.text(self.L("modes_title"), (160, 176), 28, FG)
         for i, m in enumerate(MODES):
-            self.button(f"mode:{m}", (160 + i * 540, 220, 500, 160), self.L(f"mode_{m}"), s["mode"] == m,
-                        size=30, hint=self.L(f"mode_{m}_hint"))
+            self.button(f"mode:{m}", (160 + i * 400, 220, 380, 160), self.L(f"mode_{m}"), s["mode"] == m,
+                        size=28, hint=self.L(f"mode_{m}_hint"))
         # settings of the selected mode
         y = 420
         self.text(self.L("settings_title"), (160, y), 28, FG)
         pg.draw.line(self.screen, FAINT, (160, y + 46), (W - 180, y + 46), 1)
         y += 70
         for key in self.MODE_ROWS[s["mode"]]:
-            if key in ("gen_a", "gen_b"):
-                self.text(self.L("gen_first" if key == "gen_a" else "gen_second"), (160, y + 10), 22, DIM)
+            if key in ("gen_a", "gen_b", "gen_play"):
+                self.text(self.L({"gen_a": "gen_first", "gen_b": "gen_second"}.get(key, key)), (160, y + 10), 22, DIM)
                 self.button(f"{key}:-1", (700, y, 60, 48), "‹", size=24)
-                self.text(s[key] or "—", (900, y + 10), 22, FG, "midtop")
-                self.button(f"{key}:1", (1040, y, 60, 48), "›", size=24)
+                label = s[key] or "—"
+                if key == "gen_play" and s[key] is None:
+                    label = self.L("gen_best", label=f"{self.best['run']} gen {self.best['gen']}") if self.best else "—"
+                self.text(label, (930, y + 10), 22, FG, "midtop")
+                self.button(f"{key}:1", (1100, y, 60, 48), "›", size=24)
             else:
                 self.text(self.L(key), (160, y + 10), 22, DIM)
                 for j, (name, label, act) in enumerate(self.options(key)):
@@ -409,6 +423,10 @@ class App:
             labels = [g["label"] for g in self.gens]
             i = labels.index(s[kind]) if s[kind] in labels else 0
             s[kind] = labels[(i + int(val)) % len(labels)]
+        elif kind == "gen_play":
+            labels = [None] + [g["label"] for g in self.gens]   # None: the best network
+            i = labels.index(s[kind]) if s[kind] in labels else 0
+            s[kind] = labels[(i + int(val)) % len(labels)]
         if self.save:
             core.save_settings(s)
 
@@ -422,6 +440,9 @@ class App:
         self.settings["mode"] = mode   # the card stays selected in the menu
         if self.save:
             core.save_settings(self.settings)
+        if mode == "train":
+            self.open_train()
+            return
         err = core.check(mode, size, self.settings["lang"], self.cfg)
         if err == core.NO_NET:
             self.offer = True   # the download dialog says why
@@ -434,6 +455,9 @@ class App:
             by = {g["label"]: g for g in self.gens}
             specs = [(by[self.settings[k]]["config"], by[self.settings[k]]["path"], self.settings[k])
                      for k in ("gen_a", "gen_b")]
+        elif mode == "play" and self.settings["gen_play"]:
+            g = {g["label"]: g for g in self.gens}[self.settings["gen_play"]]
+            specs = [(g["config"], g["path"], g["label"])]
         else:
             specs = [(self.best["config"], self.best["path"], f"{self.best['run']} gen {self.best['gen']}")]
         prev = self.session
@@ -452,6 +476,217 @@ class App:
             self.session.thread.join(timeout=15)
         self.session = None
         self.screen_name = "menu"
+
+    # --- "Train your own Dot" -----------------------------------------------------------
+
+    def open_train(self):
+        self.machine = train.machine(self.cfg)
+        if self.machine["running"]:
+            self.settings["train_name"] = self.machine["running"]   # show the run in progress
+        self.mode = "train"
+        self.screen_name = "train"
+        self.message = None
+        self.name_focus = False
+        self.train_polled = (0.0, None)
+
+    def train_progress(self):
+        """train.progress() of the shown run, read at most once a second."""
+        t0, pr = self.train_polled
+        name = self.settings["train_name"]
+        if pr is None or time.time() - t0 > 1.0 or pr.get("_name") != name:
+            pr = train.progress(name, self.cfg) if train.valid_name(name) else None
+            if pr is not None:
+                pr["_name"] = name
+            self.train_polled = (time.time(), pr)
+            if self.machine is not None:
+                self.machine["running"] = train.running()
+        return pr
+
+    @staticmethod
+    def hms(sec):
+        sec = int(sec)
+        return f"{sec // 3600}:{sec // 60 % 60:02d}:{sec % 60:02d}" if sec >= 3600 else f"{sec // 60}:{sec % 60:02d}"
+
+    def draw_train(self):
+        pg = self.pg
+        s = self.settings
+        m = self.machine
+        tc = self.cfg["train"]
+        name = s["train_name"]
+        pr = self.train_progress()
+        busy = m["running"]
+        self.text(self.L("mode_train"), (40, 30), 40, ACCENT)
+        self.text(self.L("keys_train"), (40, H - 30), 18, FAINT, "bottomleft")
+        # left: the machine and the settings
+        x, y, w = 40, 100, 860
+        pg.draw.rect(self.screen, PANEL, (x, y, w, 930), border_radius=14)
+        x += 24
+        self.text(self.L("tr_machine"), (x, y + 18), 26, FG)
+        yy = y + 62
+        if m["gpu"]:
+            self.text(self.L("tr_gpu", name=m["gpu"]["name"], mem=m["gpu"]["mem_gb"]), (x, yy), 22, GREEN)
+            yy += 34
+            if m["low_vram"]:
+                yy = self.wrap(self.L("tr_low_vram", mem=m["gpu"]["mem_gb"], need=tc["min_vram_gb"]), (x, yy),
+                               w - 48, 20, ACCENT)
+        else:
+            yy = self.wrap(self.L("tr_no_gpu", k=tc["cpu_slowdown"]), (x, yy), w - 48, 22, ACCENT)
+        self.text(self.L("tr_disk", gb=m["disk_gb"]), (x, yy + 4), 22, RED if m["low_disk"] else FG)
+        yy += 38
+        if m["low_disk"]:
+            yy = self.wrap(self.L("tr_low_disk", need=tc["min_disk_gb"]), (x, yy), w - 48, 20, RED)
+        if busy and busy != name:
+            yy = self.wrap(self.L("tr_busy", name=busy), (x, yy + 4), w - 48, 20, ACCENT)
+        yy += 30
+        pg.draw.line(self.screen, FAINT, (x, yy), (x + w - 48, yy), 1)
+        yy += 24
+        # name
+        self.text(self.L("tr_name"), (x, yy + 10), 22, DIM)
+        field = pg.Rect(x + 220, yy, 360, 48)
+        pg.draw.rect(self.screen, BG, field, border_radius=8)
+        pg.draw.rect(self.screen, ACCENT if self.name_focus else FAINT, field, 2, border_radius=8)
+        caret = "▏" if self.name_focus and int(time.time() * 2) % 2 else ""
+        self.text(name + caret, (field.x + 14, field.y + 10), 22, FG)
+        self.buttons["name"] = field
+        ok = train.valid_name(name)
+        if not ok:
+            yy = self.wrap(self.L("tr_name_bad"), (x, yy + 58), w - 48, 18, RED) - 58
+        yy += 66
+        # rounds
+        self.text(self.L("tr_rounds"), (x, yy + 10), 22, DIM)
+        for j, n in enumerate(tc["rounds_choices"]):
+            bw = 190 if n == 0 else 80
+            bx = x + 220 + sum(190 if c == 0 else 80 for c in tc["rounds_choices"][:j]) + 12 * j
+            self.button(f"rounds:{n}", (bx, yy, bw, 48), str(n) if n else self.L("tr_unlimited"),
+                        s["train_rounds"] == n, size=20, bg=BG)
+        yy += 80
+        # start / stop
+        mine = busy == name
+        if mine:
+            if pr and pr["stopping"]:
+                self.text(self.L("tr_stopping"), (x, yy + 16), 22, ACCENT)
+            else:
+                self.button("train_stop", (x, yy, 300, 60), self.L("tr_stop"), True, size=24)
+        elif not busy and ok:
+            again = bool(pr and pr["gen"])
+            self.button("train_start", (x, yy, 300, 60), self.L("tr_resume" if again else "tr_start"), True, size=24)
+        yy += 84
+        if self.message:
+            yy = self.wrap(self.message, (x, yy), w - 48, 20, RED) + 8
+        if ok:
+            d = os.path.relpath(train.run_dir(name), ROOT)
+            yy = self.wrap(self.L("tr_files", dir=d + "/", log=f"{d}/train.log"), (x, yy), w - 48, 18) + 6
+            self.wrap(self.L("tr_gens_note", name=name), (x, yy), w - 48, 18)
+        # right: the progress
+        x, y, w = 940, 100, 940
+        pg.draw.rect(self.screen, PANEL, (x, y, w, 930), border_radius=14)
+        if pr is None:
+            return
+        x += 24
+        if pr["running"]:
+            gen = pr["gen"] + 1
+            head = (self.L("tr_round_of", gen=gen, total=self.train_last(pr)) if pr["rounds"]
+                    else self.L("tr_round", gen=gen))
+            phase = self.L(f"tr_phase_{pr['phase'] or 'selfplay'}")
+            self.text(f"{head}: {phase}", (x, y + 18), 26, FG)
+            since = self.hms(pr["since_s"] or 0)
+            if pr["round_s"]:
+                eta = self.hms(pr["eta_s"]) if pr["eta_s"] is not None else self.L("tr_eta_none")
+                t = self.L("tr_times", r=self.hms(pr["round_s"]), s=since, eta=eta)
+            else:
+                t = self.L("tr_times_first", r=self.hms(tc["round_minutes_gpu"] * 60), s=since)
+            self.text(t, (x, y + 58), 20, DIM)
+        else:
+            self.text(self.L("tr_idle", gen=pr["gen"]), (x, y + 18), 26, FG)
+        # the rounds, last ones
+        yy = y + 100
+        self.text(self.L("tr_history"), (x, yy), 18, DIM)
+        yy += 30
+        for h in pr["history"][-8:]:
+            verdict = self.L("tr_accepted" if h["accepted"] else "tr_rejected")
+            t = self.hms(h["seconds"]) if h["seconds"] else ""
+            row = self.L("tr_row", gen=h["gen"], vs=h["vs"] if h["vs"] is not None else "?", w=h["wins"],
+                         l=h["losses"], p=100 * h["score"], t=t)
+            self.text(row, (x, yy), 20, FG, mono=True)
+            self.text(verdict, (x + w - 48, yy), 20, GREEN if h["accepted"] else DIM, "topright")
+            yy += 28
+        # the ladder against Hard
+        yy = y + 380
+        self.text(self.L("tr_ladder"), (x, yy), 20, FG)
+        self.draw_ladder(pr["ladder"], (x, yy + 34, w - 48, 300))
+        # the log
+        yy = y + 760
+        self.text(self.L("tr_log"), (x, yy), 18, DIM)
+        for k, ln in enumerate(pr["log"][-5:]):
+            self.text(ln[:84], (x, yy + 28 + k * 26), 16, FAINT, mono=True)
+
+    def train_last(self, pr):
+        return train._planned_last(self.settings["train_name"], pr)
+
+    def draw_ladder(self, ladder, rect):
+        """% won against Hard per accepted round: intuition alone and with search."""
+        pg = self.pg
+        x, y, w, h = rect
+        px0, px1, py0, py1 = x + 50, x + w - 10, y + 10, y + h - 50
+        for v in (0, 50, 100):
+            yv = py1 - (py1 - py0) * v / 100
+            pg.draw.line(self.screen, FAINT, (px0, yv), (px1, yv), 1)
+            self.text(f"{v}%", (px0 - 8, yv), 16, DIM, "midright")
+        if not ladder:
+            self.wrap(self.L("tr_ladder_none"), (px0 + 20, py0 + 30), px1 - px0 - 40, 20)
+            return
+        g0, g1 = ladder[0][0], max(ladder[-1][0], ladder[0][0] + 1)
+        for k, (col, key) in enumerate(((HEAT, "tr_raw"), (VISIT, "tr_mcts"))):
+            pts = [(px0 + (px1 - px0) * (g - g0) / (g1 - g0), py1 - (py1 - py0) * row[k] / 100)
+                   for g, *row in ladder]
+            if len(pts) > 1:
+                pg.draw.lines(self.screen, col, False, pts, 3)
+            for p in pts:
+                pg.draw.circle(self.screen, col, p, 5)
+            lx = px0 + k * 320
+            pg.draw.line(self.screen, col, (lx, py1 + 34), (lx + 30, py1 + 34), 3)
+            self.text(self.L(key), (lx + 40, py1 + 24), 18, col)
+        self.text(f"gen {g0}", (px0, py1 + 4), 16, DIM)
+        self.text(f"gen {ladder[-1][0]}", (px1, py1 + 4), 16, DIM, "topright")
+
+    def train_click(self, name):
+        s = self.settings
+        kind, _, val = name.partition(":")
+        self.name_focus = kind == "name"
+        if kind == "rounds":
+            s["train_rounds"] = int(val)
+        elif kind == "train_start":
+            self.machine = train.machine(self.cfg)
+            try:
+                train.start(s["train_name"], s["train_rounds"], self.cfg)
+                self.message = None
+            except Exception as e:
+                self.message = self.L("tr_err_start", error=str(e))
+            self.machine["running"] = train.running()
+            self.train_polled = (0.0, None)
+        elif kind == "train_stop":
+            train.stop(s["train_name"])
+            self.train_polled = (0.0, None)
+        if self.save:
+            core.save_settings(s)
+
+    def train_key(self, e):
+        pg = self.pg
+        if e.key == pg.K_ESCAPE:
+            if self.name_focus:
+                self.name_focus = False
+            else:
+                self.screen_name = "menu"
+                self.find_networks()   # its accepted rounds join the generations
+        elif self.name_focus and e.key == pg.K_BACKSPACE:
+            self.settings["train_name"] = self.settings["train_name"][:-1]
+        elif self.name_focus and e.key in (pg.K_RETURN, pg.K_KP_ENTER):
+            self.name_focus = False
+
+    def train_text(self, text):
+        if self.name_focus and not self.machine["running"] == self.settings["train_name"]:
+            self.settings["train_name"] = (self.settings["train_name"] + text)[:32]
+
 
     # --- the game screen ---------------------------------------------------------------
 
@@ -661,6 +896,8 @@ class App:
                     self.download.cancel = True
                 else:
                     self.offer, self.download = False, None
+        elif self.screen_name == "train":
+            self.train_key(e)
         elif self.screen_name == "menu":
             if e.key == pg.K_ESCAPE:
                 self.quit = True
@@ -689,11 +926,13 @@ class App:
                     s.delay = d[i]
 
     def on_click(self, pos):
-        if self.screen_name == "menu":
+        if self.screen_name in ("menu", "train"):
+            click = self.menu_click if self.screen_name == "menu" else self.train_click
             for name, r in self.buttons.items():
                 if r.collidepoint(pos):
-                    self.menu_click(name)
+                    click(name)
                     return
+            self.name_focus = False
         else:
             snap = self.session.snap
             if snap and snap["waiting"]:
@@ -707,6 +946,8 @@ class App:
         self.buttons = {}
         if self.screen_name == "menu":
             self.draw_menu()
+        elif self.screen_name == "train":
+            self.draw_train()
         else:
             self.draw_game()
 
@@ -734,6 +975,8 @@ class App:
                         self.hover = next((n for n, r in self.buttons.items() if r.collidepoint(e.pos)), None)
                     elif e.type == pg.MOUSEBUTTONDOWN and e.button == 1:
                         self.on_click(e.pos)
+                    elif e.type == pg.TEXTINPUT and self.screen_name == "train":
+                        self.train_text(e.text)
                 s = self.session
                 if human is not None and s and s.snap and s.snap["waiting"] and s.snap.get("_asked") != s.version:
                     s.snap["_asked"] = s.version
@@ -799,8 +1042,10 @@ def parse(argv=None):
 
 def main(argv=None):
     a = parse(argv)
-    if a.screenshot and not a.mode:   # the menu
+    if a.screenshot and a.mode in (None, "train"):   # the menu, the training screen
         app = App(a, headless=True)
+        if a.mode:
+            app.start(a.mode)
         app.frame()
         app.pg.image.save(app.screen, a.screenshot)
         app.pg.quit()

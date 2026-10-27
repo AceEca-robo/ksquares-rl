@@ -28,3 +28,12 @@ solver:                           # "the network sees / does not see" verdicts
 xvfb_size: [1024, 900]
 ksquares_window: [760, 800]
 record_fps: 20
+train:                            # "Train your own Dot" (launcher/train.py)
+  base_config: configs/az5b.yaml  # copied to runs/<name>/train.yaml: run_dir, from scratch, no docs
+  default_name: my_dot
+  rounds_choices: [5, 10, 25, 50, 0]   # 0 = until stopped
+  rounds_default: 10
+  cpu_slowdown: 10                # what the app says about training without a GPU
+  min_vram_gb: 4
+  min_disk_gb: 1                  # az5b: 182 MB after 87 rounds (buffer, checkpoints, logs)
+  round_minutes_gpu: 11           # RTX 4060 Laptop, az5b median: the forecast before the first round

@@ -16,6 +16,9 @@ docs/results.md (LADDER below); each net is then fitted alone against the
 fixed anchors. Every pair gets one virtual game split half/half so that
 100% scores stay finite.
 
+``publish: false`` in the run config (the app's own runs) keeps only the
+eval JSONs: no docs/, no probes, no runs/best update.
+
 ``--report`` only rebuilds the table and plot.
 """
 
@@ -250,6 +253,8 @@ def main() -> None:
             p = run / "eval" / f"gen_{gen:04d}.json"
             p.with_suffix(".tmp").write_text(json.dumps(out, indent=1))
             os.replace(p.with_suffix(".tmp"), p)
+            if not cfg.get("publish", True):
+                continue   # a run of the app's "Train your own Dot": nothing goes to docs/ or runs/best
             report(cfg)
             # policy / value / PV snapshots of the fixed probe set (docs/probes)
             subprocess.run([sys.executable, str(ROOT / "scripts/az_probe_maps.py"), "--config", a.config])

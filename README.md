@@ -112,6 +112,62 @@ cmake -S game -B build && cmake --build build -j     # the game (+ bridge)
 .venv/bin/python scripts/az_train.py --config configs/az5.yaml   # then az5b.yaml
 ```
 
+## Train your own Dot
+
+Dot (the network of the video) can be trained again from scratch on your
+machine: the az5b recipe (`configs/az5b.yaml`) without its start from az5,
+in `runs/<name>/`. In the app: the fourth mode, **Train your own Dot**. It
+checks the GPU (name, memory), the free disk and whether a training is
+already running (one at a time), then takes a run name (`my_dot` by
+default) and a number of rounds (10 by default, or no limit). The trainer
+is a process of its own: it goes on after the app is closed and the mode
+picks it up again. The mode shows the round and its phase, every round's
+match against the accepted version (accepted / rejected), the round time
+and the forecast, the win rate against the built-in opponent (KSquares
+Hard) per accepted round as a plot, and the log (`runs/<name>/train.log`).
+**Stop** is the trainer's safe stop (the `STOP` file: it saves and exits
+after the current phase; **Continue** resumes). Accepted rounds join
+"Play the network" and "Network vs itself" as `my_dot gen N`.
+
+![train your own Dot](docs/app_train.png)
+
+From a terminal, the same in one command:
+
+```
+.venv/bin/python -m launcher.train my_dot --rounds 10    # --rounds 0: until stopped
+.venv/bin/python -m launcher.train my_dot --status       # or --stop
+```
+
+Requirements: an NVIDIA GPU with CUDA and 4 GB of video memory or more
+(the trainer uses ~1 GB; self-play runs 3 worker processes with 192 games
+each), about 1 GB of disk (az5b took 182 MB after 87 rounds), a CPU with 4+
+cores (the evaluation against the ladder runs on it alongside). Without a
+GPU it runs on the CPU, about 10 times slower.
+
+| GPU | one round | overnight (8 h) | a day and a half (36 h) |
+|---|---|---|---|
+| RTX 4060 Laptop (measured) | 11 min | ~40 rounds | ~190 rounds |
+| RTX 3060 (estimate) | ~12 min | ~40 rounds | ~180 rounds |
+| RTX 4070 (estimate) | ~8 min | ~60 rounds | ~270 rounds |
+| RTX 4090 (estimate) | ~5 min | ~95 rounds | ~430 rounds |
+| CPU only (estimate) | ~2 h | ~4 rounds | ~18 rounds |
+
+Measured: the median of az5b's 87 rounds (self-play 2500 games 10 min,
+training 0.6 min, match 0.7 min) on an RTX 4060 Laptop GPU with the
+evaluation running beside it. The other rows scale that by the cards'
+relative speed; a round is many small batches of a small network, so the
+CPU side (the tree search in Python) caps the gain of a fast card, and the
+4090 is estimated at about twice the 4060, not more. What you get, from the
+project's own runs (az5 from scratch, then az5b; `docs/az5_ladder.md`,
+`docs/az5b_ladder.md`): after ~10 rounds Dot with search beats the
+built-in opponent ~80% of the games; overnight (~40 rounds) over 90% and
+about even with the judge (the exact solver `strong`); in a day and a
+half she reaches the level of the released network (gen 54: the
+built-in opponent 99%, the judge ~85%), after which the strength stops
+growing. Your rounds do not count toward those numbers exactly (az5 had
+twice the learning rate and the rounds are random): treat them as an
+estimate.
+
 ## Videos
 
 Coming soon.
