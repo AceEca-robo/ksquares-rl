@@ -25,6 +25,9 @@ pv_len: 10                        # principal variation drawn on the board
 solver:                           # "the network sees / does not see" verdicts
   max_undrawn: 34                 # exact solving only from here (the chain fight)
   node_limit: 150000              # per position; bigger ones get no verdict
+  sizes:                          # per board "WxH", overrides of the above (launcher/brain.py solver_params)
+    10x7: {max_undrawn: null, node_limit: null, time_limit: 1.0}   # covers ~50% of a game
+                                  # (docs/judge_coverage.md; max_undrawn 34 would be the last 22%)
 xvfb_size: [1024, 900]
 ksquares_window: [760, 800]
 record_fps: 20

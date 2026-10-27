@@ -1,0 +1,128 @@
+{
+ "5x5@0.25": {
+  "board": [
+   5,
+   5
+  ],
+  "time_limit": 0.25,
+  "positions": 1200,
+  "share": 0.5558333333333333,
+  "max_undrawn_solved": 34,
+  "tail_median": 33.0,
+  "n_lines": 60,
+  "median_seconds_solved": 0.0004896189999499256,
+  "wall": 14.238645792007446
+ },
+ "5x5@1.0": {
+  "board": [
+   5,
+   5
+  ],
+  "time_limit": 1.0,
+  "positions": 1200,
+  "share": 0.5741666666666667,
+  "max_undrawn_solved": 35,
+  "tail_median": 34.5,
+  "n_lines": 60,
+  "median_seconds_solved": 0.0005624909999824013,
+  "wall": 53.192567348480225
+ },
+ "5x5@4.0": {
+  "board": [
+   5,
+   5
+  ],
+  "time_limit": 4.0,
+  "positions": 1200,
+  "share": 0.595,
+  "max_undrawn_solved": 37,
+  "tail_median": 36.0,
+  "n_lines": 60,
+  "median_seconds_solved": 0.0006032050000612799,
+  "wall": 203.3894009590149
+ },
+ "7x7@0.25": {
+  "board": [
+   7,
+   7
+  ],
+  "time_limit": 0.25,
+  "positions": 2240,
+  "share": 0.5044642857142857,
+  "max_undrawn_solved": 58,
+  "tail_median": 56.0,
+  "n_lines": 112,
+  "median_seconds_solved": 0.0017801714999450269,
+  "wall": 29.311086893081665
+ },
+ "7x7@1.0": {
+  "board": [
+   7,
+   7
+  ],
+  "time_limit": 1.0,
+  "positions": 2240,
+  "share": 0.51875,
+  "max_undrawn_solved": 59,
+  "tail_median": 58.0,
+  "n_lines": 112,
+  "median_seconds_solved": 0.0018294024999931935,
+  "wall": 111.93271231651306
+ },
+ "7x7@4.0": {
+  "board": [
+   7,
+   7
+  ],
+  "time_limit": 4.0,
+  "positions": 2240,
+  "share": 0.5285714285714286,
+  "max_undrawn_solved": 61,
+  "tail_median": 59.0,
+  "n_lines": 112,
+  "median_seconds_solved": 0.001740837000056672,
+  "wall": 434.9495813846588
+ },
+ "10x7@0.25": {
+  "board": [
+   10,
+   7
+  ],
+  "time_limit": 0.25,
+  "positions": 3140,
+  "share": 0.4834394904458599,
+  "max_undrawn_solved": 78,
+  "tail_median": 76.0,
+  "n_lines": 157,
+  "median_seconds_solved": 0.003228395499945691,
+  "wall": 43.02431654930115
+ },
+ "10x7@1.0": {
+  "board": [
+   10,
+   7
+  ],
+  "time_limit": 1.0,
+  "positions": 3140,
+  "share": 0.49713375796178344,
+  "max_undrawn_solved": 80,
+  "tail_median": 78.0,
+  "n_lines": 157,
+  "median_seconds_solved": 0.003146151999999347,
+  "wall": 163.6038258075714
+ },
+ "10x7@4.0": {
+  "board": [
+   10,
+   7
+  ],
+  "time_limit": 4.0,
+  "positions": 3140,
+  "share": 0.5089171974522293,
+  "max_undrawn_solved": 81,
+  "tail_median": 80.0,
+  "n_lines": 157,
+  "median_seconds_solved": 0.003115622999985135,
+  "wall": 628.1921818256378
+ }
+}
