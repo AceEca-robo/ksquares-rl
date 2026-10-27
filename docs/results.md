@@ -343,3 +343,20 @@ Stopped by the rule (Elo >= 2100 and >= 90% vs hard) at gen 1.
 |---|---:|---:|---:|---:|---:|
 | Dot (az5b gen 54) | 2164 | 99% | 89% | 34% | 20-0 |
 | Dot-2 (dot2a gen 1) | 2192 | 100% | 90% | 43% | 19-1 |
+
+## Ladder on 10x7 (2026-10-28)
+
+`scripts/eval_ladder.py --config configs/eval_ladder_10x7.yaml`, 200 games
+per pair, seed 1077; strong at a node budget of 14.4k (= 0.5 s of a core on
+10x7). Full tables: docs/ladder_10x7.md, data: docs/ladder_10x7.json (the
+anchors of scripts/az_eval.py with `eval.ladder`).
+
+Elo (Bradley-Terry, random = 0): random 0, greedy 901, easy 905,
+medium 1261, hard 1493, strong 1297.
+
+Unlike 5x5, strong is not the top anchor here: it only ties Hard (49%) and
+barely beats Medium (56%), but beats greedy/easy far less often than Hard
+does (80% / 76% vs 99%): the depth it reaches in 14.4k nodes on 157 lines
+is too shallow for the opening, and its chain endgame does not make up for
+it. The ladder is non-transitive at strong, so its anchor carries a large
+error; hard (1493) is the reliable top anchor on 10x7.

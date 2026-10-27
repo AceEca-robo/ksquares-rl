@@ -776,3 +776,11 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   seed 11): 19-1 (Dot: 20-0). Caveat: one evaluation of 100 games per
   opponent, Elo error ~±60; "Dot level" is reached, not "better than Dot".
   Dot-2 for (b): runs/dot2a/gen_0001.pt.
+- 10x7 ladder done (30 min, 12 processes, during training): Elo random 0,
+  greedy 901, easy 905, medium 1261, hard 1493, strong 1297. strong at
+  14.4k nodes is not above Hard on 10x7 (49%) and is non-transitive
+  (greedy takes 19.5% from it, 0.8% from Hard). For (b) a stronger anchor
+  would help: strong with a larger budget (e.g. 4x) as a separate entry.
+- Not done tonight: launcher / app.yaml `best` per size and "boards: any"
+  in core.check/brain.fits (the app still refuses Dot-2 on 10x7);
+  selfcheck.py and the probe position sets are still 5x5.
