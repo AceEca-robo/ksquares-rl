@@ -228,8 +228,13 @@ class App:
             self.settings["gen_a"] = labels[0] if labels else None
         if self.settings["gen_b"] not in labels:
             self.settings["gen_b"] = labels[-1] if labels else None
-        if self.settings["gen_play"] not in labels:
-            self.settings["gen_play"] = None   # the best network
+        if self.settings["gen_play"] not in self.play_labels():
+            self.settings["gen_play"] = None   # the released network
+
+    def play_labels(self):
+        """The networks of "vs KSquares" and "play": None (the released one,
+        runs/best) and the accepted rounds of the app's own runs."""
+        return [None] + [g["label"] for g in self.gens if g["own"]]
 
     # --- drawing helpers ---------------------------------------------------------
 
@@ -280,7 +285,7 @@ class App:
     # --- menu ---------------------------------------------------------------------
 
     # the settings each mode uses, in this order
-    MODE_ROWS = {"ksquares": ("level", "first", "search", "board"),
+    MODE_ROWS = {"ksquares": ("gen_play", "level", "first", "search", "board"),
                  "play": ("gen_play", "first", "search", "board", "show_mine"),
                  "self": ("gen_a", "gen_b", "search", "board"),
                  "train": ()}
@@ -308,7 +313,7 @@ class App:
                 self.button(f"{key}:-1", (700, y, 60, 48), "‹", size=24)
                 label = s[key] or "—"
                 if key == "gen_play" and s[key] is None:
-                    label = self.L("gen_best", label=f"{self.best['run']} gen {self.best['gen']}") if self.best else "—"
+                    label = self.L("gen_best", gen=self.best["gen"]) if self.best else "—"
                 self.text(label, (930, y + 10), 22, FG, "midtop")
                 self.button(f"{key}:1", (1100, y, 60, 48), "›", size=24)
             else:
@@ -321,7 +326,9 @@ class App:
             self.wrap(self.message, (560, y + 26), W - 740, 20, RED)
         # common
         pg.draw.line(self.screen, FAINT, (160, 930), (W - 180, 930), 1)
-        if self.best:
+        if s["mode"] in ("ksquares", "play") and s["gen_play"]:
+            self.text(self.L("network", label=s["gen_play"]), (160, 948), 22, DIM)
+        elif self.best:
             self.text(self.L("network", label=f"{self.best['run']} gen {self.best['gen']}"), (160, 948), 22, DIM)
         else:
             self.text(self.L("network_none"), (160, 948), 22, DIM)
@@ -424,7 +431,7 @@ class App:
             i = labels.index(s[kind]) if s[kind] in labels else 0
             s[kind] = labels[(i + int(val)) % len(labels)]
         elif kind == "gen_play":
-            labels = [None] + [g["label"] for g in self.gens]   # None: the best network
+            labels = self.play_labels()
             i = labels.index(s[kind]) if s[kind] in labels else 0
             s[kind] = labels[(i + int(val)) % len(labels)]
         if self.save:
@@ -455,7 +462,7 @@ class App:
             by = {g["label"]: g for g in self.gens}
             specs = [(by[self.settings[k]]["config"], by[self.settings[k]]["path"], self.settings[k])
                      for k in ("gen_a", "gen_b")]
-        elif mode == "play" and self.settings["gen_play"]:
+        elif mode in ("play", "ksquares") and self.settings["gen_play"]:
             g = {g["label"]: g for g in self.gens}[self.settings["gen_play"]]
             specs = [(g["config"], g["path"], g["label"])]
         else:
@@ -571,6 +578,14 @@ class App:
             again = bool(pr and pr["gen"])
             self.button("train_start", (x, yy, 300, 60), self.L("tr_resume" if again else "tr_start"), True, size=24)
         yy += 84
+        # after the first accepted round: straight into a mode with this Dot
+        mine_gen = self.my_dot(name)
+        if mine_gen:
+            bw = (w - 48 - 2 * 12) // 3
+            for j, go in enumerate(("play", "self", "ksquares")):
+                self.button(f"go:{go}", (x + j * (bw + 12), yy, bw, 50), self.L(f"tr_go_{go}"), size=18, bg=BG)
+            self.text(self.L("tr_go_note", label=mine_gen), (x, yy + 58), 18, DIM)
+            yy += 94
         if self.message:
             yy = self.wrap(self.message, (x, yy), w - 48, 20, RED) + 8
         if ok:
@@ -583,12 +598,18 @@ class App:
         if pr is None:
             return
         x += 24
+        stale = tc["stale_s"]
+        quiet = pr["quiet_s"]
         if pr["running"]:
             gen = pr["gen"] + 1
             head = (self.L("tr_round_of", gen=gen, total=self.train_last(pr)) if pr["rounds"]
                     else self.L("tr_round", gen=gen))
             phase = self.L(f"tr_phase_{pr['phase'] or 'selfplay'}")
-            self.text(f"{head}: {phase}", (x, y + 18), 26, FG)
+            # the pulse: beats while the trainer writes, yellow when it has gone quiet
+            ok = quiet is None or quiet <= stale
+            beat = 0.5 + 0.5 * math.sin(time.time() * 4) if ok else 1.0
+            pg.draw.circle(self.screen, GREEN if ok else ACCENT, (x + 9, y + 34), 5 + 3 * beat)
+            self.text(f"{head}: {phase}", (x + 28, y + 18), 26, FG)
             since = self.hms(pr["since_s"] or 0)
             if pr["round_s"]:
                 eta = self.hms(pr["eta_s"]) if pr["eta_s"] is not None else self.L("tr_eta_none")
@@ -596,13 +617,20 @@ class App:
             else:
                 t = self.L("tr_times_first", r=self.hms(tc["round_minutes_gpu"] * 60), s=since)
             self.text(t, (x, y + 58), 20, DIM)
+            if quiet is not None:
+                self.text(self.L("tr_quiet", s=int(quiet)) if ok else self.L("tr_stale", s=self.hms(quiet)),
+                          (x, y + 86), 18, DIM if ok else ACCENT)
+            self.draw_inner(pr["inner"], (x, y + 118, w - 48))
         else:
             self.text(self.L("tr_idle", gen=pr["gen"]), (x, y + 18), 26, FG)
-        # the rounds, last ones
-        yy = y + 100
+        # the rounds: a timeline of dots, then the last ones in full
+        yy = y + 196
+        self.text(self.L("tr_timeline"), (x, yy), 18, DIM)
+        self.draw_rounds(pr["history"], (x, yy + 30, w - 48))
+        yy += 96
         self.text(self.L("tr_history"), (x, yy), 18, DIM)
-        yy += 30
-        for h in pr["history"][-8:]:
+        yy += 28
+        for h in pr["history"][-4:]:
             verdict = self.L("tr_accepted" if h["accepted"] else "tr_rejected")
             t = self.hms(h["seconds"]) if h["seconds"] else ""
             row = self.L("tr_row", gen=h["gen"], vs=h["vs"] if h["vs"] is not None else "?", w=h["wins"],
@@ -611,14 +639,98 @@ class App:
             self.text(verdict, (x + w - 48, yy), 20, GREEN if h["accepted"] else DIM, "topright")
             yy += 28
         # the ladder against Hard
-        yy = y + 380
+        yy = y + 440
         self.text(self.L("tr_ladder"), (x, yy), 20, FG)
-        self.draw_ladder(pr["ladder"], (x, yy + 34, w - 48, 300))
-        # the log
-        yy = y + 760
+        self.draw_ladder(pr["ladder"], (x, yy + 30, w - 48, 250))
+        # the log: the last lines, newest at the bottom
+        yy = y + 732
         self.text(self.L("tr_log"), (x, yy), 18, DIM)
-        for k, ln in enumerate(pr["log"][-5:]):
-            self.text(ln[:84], (x, yy + 28 + k * 26), 16, FAINT, mono=True)
+        for k, ln in enumerate(pr["log"][-10:]):
+            self.text(ln[:96], (x, yy + 26 + k * 17), 14, FAINT, mono=True)
+        # left, at the bottom: the self-play game followed right now
+        if pr["live"]:
+            self.draw_live(pr["live"], (64, 690, 812, 320))
+
+    def draw_inner(self, inner, rect):
+        """The phase's progress inside the round: a label and a bar."""
+        pg = self.pg
+        x, y, w = rect
+        if inner is None:
+            self.text(self.L("tr_in_wait"), (x, y), 20, DIM)
+            return
+        n, of = inner["done"], max(1, inner["of"])
+        if inner["phase"] == "gate":
+            w_, l_, _ = inner["score"] or (0, 0, 0)
+            label = self.L("tr_in_gate", n=n, of=of, w=w_, l=l_)
+        else:
+            label = self.L(f"tr_in_{inner['phase']}", n=n, of=of)
+        self.text(label, (x, y), 20, FG)
+        bar = pg.Rect(x, y + 32, w, 16)
+        pg.draw.rect(self.screen, BG, bar, border_radius=8)
+        pg.draw.rect(self.screen, VISIT, (bar.x, bar.y, max(16, bar.w * min(1.0, n / of)), bar.h), border_radius=8)
+        self.text(f"{100 * n / of:.0f}%", (x + w, y), 20, DIM, "topright")
+
+    def draw_rounds(self, history, rect):
+        """A dot per round, accepted green, rejected grey, the match % below."""
+        pg = self.pg
+        x, y, w = rect
+        step = 46
+        shown = history[-max(1, w // step):]
+        for k, h in enumerate(shown):
+            cx = x + 12 + k * step
+            pg.draw.circle(self.screen, GREEN if h["accepted"] else FAINT, (cx, y + 20), 9)
+            self.text(str(h["gen"]), (cx, y + 4), 13, DIM, "midbottom")
+            self.text(f"{100 * h['score']:.0f}%", (cx, y + 34), 14, FG if h["accepted"] else DIM, "midtop")
+        if not shown:
+            self.text("—", (x, y + 10), 18, FAINT)
+
+    def draw_live(self, live, rect):
+        """The self-play game az_train.py follows (live.json), on a small board."""
+        from sim.board import Board
+
+        x, y, w, h = rect
+        key = (live["gen"], live["game"], len(live["moves"]))
+        if getattr(self, "_live", (None,))[0] != key:
+            b = Board(live["w"], live["h"])
+            for mv in live["moves"]:
+                if b.lines[mv] or b.done:
+                    break
+                b.step(mv)
+            self._live = (key, b, BoardView(live["w"], live["h"], (x, y + 34, h - 34, h - 34)))
+        _, b, view = self._live
+        self.text(self.L("tr_live", game=live["game"] + 1, gen=live["gen"]), (x, y), 20, DIM)
+        self.draw_board(view, b, small=True)
+        if live["moves"]:   # the last line, in the accent colour
+            a, c = view.ends(live["moves"][-1])
+            self.pg.draw.line(self.screen, ACCENT, a, c, 5)
+        who = self.L("tr_red" if b.player == 0 else "tr_blue")
+        info = self.L("tr_live_info", n=b.n_drawn, all=b.geo.n_lines, a=b.score[0], b=b.score[1], who=who)
+        for k, ln in enumerate(info.split("\n")):
+            self.text(ln, (x + h + 10, y + 60 + k * 32), 22, FG)
+
+    def my_dot(self, name):
+        """The label of the run's last accepted round (as in the generation
+        lists), or None."""
+        pr = self.train_polled[1]
+        if not pr or pr.get("_name") != name:
+            return None
+        acc = [h["gen"] for h in pr["history"] if h["accepted"]]
+        return f"{name} gen {acc[-1]}" if acc else None
+
+    def go_with_my_dot(self, mode):
+        """"Play my Dot" and the like: the mode with the last accepted round chosen."""
+        label = self.my_dot(self.settings["train_name"])
+        self.find_networks()
+        labels = [g["label"] for g in self.gens]
+        if label not in labels:
+            return
+        if mode == "self":
+            rel = f"{self.best['run']} gen {self.best['gen']}" if self.best else None
+            self.settings["gen_a"] = label
+            self.settings["gen_b"] = rel if rel in labels else labels[-1]
+        else:
+            self.settings["gen_play"] = label
+        self.start(mode)
 
     def train_last(self, pr):
         return train._planned_last(self.settings["train_name"], pr)
@@ -667,6 +779,8 @@ class App:
         elif kind == "train_stop":
             train.stop(s["train_name"])
             self.train_polled = (0.0, None)
+        elif kind == "go":
+            self.go_with_my_dot(val)
         if self.save:
             core.save_settings(s)
 

@@ -190,11 +190,14 @@ def progress(name, cfg):
     "seconds"}], "round_s" (median of the finished rounds), "eta_s" (to the
     planned last round, None without a limit), "since_s" (in the current
     round), "ladder" [(gen, raw % vs hard, mcts % vs hard)], "log" (last
-    lines of train.log)}."""
+    lines of train.log), "inner" (inside the round, from progress.jsonl:
+    {"phase", "done", "of", "score" [w, l, t] or None} or None), "quiet_s"
+    (seconds since train.log or progress.jsonl last changed), "live" (the
+    self-play game followed: live.json, or None)}."""
     d = run_dir(name)
     out = {"running": running() == name, "stopping": os.path.exists(os.path.join(d, "STOP")),
            "gen": 0, "phase": None, "history": [], "round_s": None, "eta_s": None, "since_s": None,
-           "ladder": [], "log": [], "rounds": 0}
+           "ladder": [], "log": [], "rounds": 0, "inner": None, "quiet_s": None, "live": None}
     try:
         with open(LOCK) as f:
             lk = json.load(f)
@@ -252,10 +255,48 @@ def progress(name, cfg):
                 pass
     try:
         with open(os.path.join(d, "train.log"), errors="replace") as f:
-            out["log"] = [ln.rstrip() for ln in f.readlines()[-6:]]
+            out["log"] = [ln.rstrip() for ln in f.readlines()[-10:]]
     except OSError:
         pass
+    out["inner"] = inner(d, out["gen"] + 1, out["phase"])
+    stamps = [os.path.getmtime(p) for p in (os.path.join(d, f) for f in ("train.log", "progress.jsonl"))
+              if os.path.exists(p)]
+    if stamps:
+        out["quiet_s"] = max(0.0, time.time() - max(stamps))
+    if out["running"] and out["phase"] == "selfplay":
+        try:
+            with open(os.path.join(d, "live.json")) as f:
+                lv = json.load(f)
+            if lv["gen"] == out["gen"] + 1:
+                out["live"] = lv
+        except (OSError, ValueError, KeyError):
+            pass
     return out
+
+
+def inner(d, gen, phase):
+    """The phase's progress from progress.jsonl (az_train.py): the first record
+    gives "of", the tasks' last records are summed."""
+    recs = []
+    try:
+        with open(os.path.join(d, "progress.jsonl")) as f:
+            for ln in f:
+                try:
+                    recs.append(json.loads(ln))
+                except ValueError:   # a line being written
+                    pass
+    except OSError:
+        return None
+    if not recs or recs[0].get("gen") != gen or recs[0].get("phase") != phase or "of" not in recs[0]:
+        return None
+    last = {}
+    for r in recs[1:]:
+        if r.get("phase") == phase and "task" in r:
+            last[r["task"]] = r
+    score = None
+    if any("score" in r for r in last.values()):
+        score = [sum(r.get("score", [0, 0, 0])[k] for r in last.values()) for k in range(3)]
+    return {"phase": phase, "done": sum(r["done"] for r in last.values()), "of": recs[0]["of"], "score": score}
 
 
 def _planned_last(name, out):

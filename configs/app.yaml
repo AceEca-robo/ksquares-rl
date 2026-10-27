@@ -37,3 +37,4 @@ train:                            # "Train your own Dot" (launcher/train.py)
   min_vram_gb: 4
   min_disk_gb: 1                  # az5b: 182 MB after 87 rounds (buffer, checkpoints, logs)
   round_minutes_gpu: 11           # RTX 4060 Laptop, az5b median: the forecast before the first round
+  stale_s: 60                     # no new line in train.log / progress.jsonl for this long: the yellow warning

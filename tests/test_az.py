@@ -139,12 +139,18 @@ def test_selfplay_and_train_smoke(tmp_path):
            "selfplay": {"sims": 16, "temp_moves": 3},
            "train": {"batch_size": 16, "symmetries": True}}
     ev = Evaluator(AZNet(2, 2, blocks=1, channels=8), "cpu")
-    samples, stats = selfplay(ev, cfg, n_games=6, concurrent=4, seed=0)
+    done, seen = [], []
+    samples, stats = selfplay(ev, cfg, n_games=6, concurrent=4, seed=0, progress=lambda k, sec: done.append(k),
+                              watch=lambda g, moves, board: seen.append((g, len(moves), board.n_drawn)))
+    assert done == [1, 2, 3, 4, 5, 6] and seen and all(n == d for _, n, d in seen)
+    assert [n for g, n, _ in seen if g == seen[0][0]] == list(range(1, 1 + sum(g == seen[0][0] for g, _, _ in seen)))
     assert stats["games"] == 6 and len(samples["z"]) == stats["positions"] > 0
     assert set(np.unique(samples["z"])) <= {-1, 0, 1}
     assert np.allclose(samples["pi"].astype(np.float32).sum(1), 1, atol=1e-2)
-    w, l, t, _ = match([ev, ev], cfg, sims=8, temp_moves=2, n_games=4, concurrent=3, seed=0)
-    assert w + l + t == 4
+    scores = []
+    w, l, t, _ = match([ev, ev], cfg, sims=8, temp_moves=2, n_games=4, concurrent=3, seed=0,
+                       progress=scores.append)
+    assert w + l + t == 4 and [sum(o[:3]) for o in scores] == [1, 2, 3, 4] and scores[-1][:3] == (w, l, t)
 
     import sys
     sys.path.insert(0, "scripts")

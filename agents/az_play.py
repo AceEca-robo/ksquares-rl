@@ -29,9 +29,11 @@ def make_mcts(evaluate, mcfg: dict, rng, leaves_per_tree: int = 1, noise: bool =
                 leaves_per_tree=leaves_per_tree, virtual_loss=mcfg["virtual_loss"], rng=rng)
 
 
-def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, progress=None):
+def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, progress=None, watch=None):
     """Play ``n_games`` self-play games; returns (samples dict, stats dict).
-    ``progress(finished games, seconds)`` is called after every quarter."""
+    ``progress(finished games, seconds)`` is called after every finished game;
+    ``watch(game number, lines drawn so far, board)`` after every move of one
+    game followed at a time (the next one when it ends)."""
     w, h = cfg["board"]
     sp = cfg["selfplay"]
     rng = np.random.default_rng(seed)
@@ -40,23 +42,28 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
     # sims: a fixed count, or [lo, hi] drawn uniformly per game and move
     lo, hi = (sp["sims"], sp["sims"]) if isinstance(sp["sims"], int) else sp["sims"]
     started = 0
-    live = []  # [board, records [(state, pi, player)], plies]
+    live = []  # [board, records [(state, pi, player)], plies, moves, game number]
     t0 = time.perf_counter()
     n_moves = n_search = 0
     lengths, first_wins = [], 0
     while live or started < n_games:
         while len(live) < concurrent and started < n_games:
-            live.append([Board(w, h), [], 0])
+            live.append([Board(w, h), [], 0, [], started])
             started += 1
+        watched = live[0][4]
         roots = mcts.search([g[0] for g in live], rng.integers(lo, hi + 1, len(live)), noise=True)
         nxt = []
         for g, root in zip(live, roots):
-            board, recs, plies = g
+            board, recs, plies, moves, _ = g
             if len(root.moves) > 1:
                 recs.append((state_arrays(board), visit_policy(root, board.geo.n_lines), board.player))
                 n_search += 1
             temp = 1.0 if plies < sp["temp_moves"] else 0.0
-            board.step(choose_move(root, temp, rng))
+            mv = choose_move(root, temp, rng)
+            board.step(mv)
+            moves.append(int(mv))
+            if watch and g[4] == watched:
+                watch(g[4], moves, board)
             n_moves += 1
             g[2] += 1
             res = result_for_mover(board)
@@ -69,7 +76,7 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
             m0 = board.score[0] - board.score[1]
             first_wins += winner == 0
             lengths.append(g[2])
-            if progress and len(lengths) % max(1, n_games // 4) == 0:
+            if progress:
                 progress(len(lengths), time.perf_counter() - t0)
             for (lines, sides, owner, diff, first), pi, player in recs:
                 cols["lines"].append(lines)
@@ -95,9 +102,10 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
 
 
 def match(evaluators, cfg: dict, sims: int, temp_moves: int, n_games: int, concurrent: int, seed: int,
-          first_offset: int = 0):
+          first_offset: int = 0, progress=None):
     """evaluators[0] vs evaluators[1]; game g: evaluators[(g + first_offset) % 2]
-    moves first. Returns (wins of 0, wins of 1, ties, box margin of 0)."""
+    moves first. Returns (wins of 0, wins of 1, ties, box margin of 0);
+    ``progress(that tuple so far)`` is called after every finished game."""
     w, h = cfg["board"]
     rng = np.random.default_rng(seed)
     searchers = [make_mcts(e, cfg["mcts"], rng) for e in evaluators]
@@ -126,5 +134,7 @@ def match(evaluators, cfg: dict, sims: int, temp_moves: int, n_games: int, concu
             s1 = sum(board.score) - s0
             out[3] += s0 - s1
             out[0 if s0 > s1 else 1 if s1 > s0 else 2] += 1
+            if progress:
+                progress(tuple(out))
         live = nxt
     return tuple(out)

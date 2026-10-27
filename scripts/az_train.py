@@ -13,6 +13,14 @@ Checkpoints in ``run_dir``: ``state.json`` (generation, best, history),
 ``gen_XXXX.pt`` for every accepted net. Everything is written atomically at
 the end of every phase, so the run resumes from the last finished phase.
 
+Progress inside a round, for the app (launcher/train.py): ``progress.jsonl``
+starts afresh with every phase ({"gen", "phase", "of": games or steps}), then
+gets {"gen", "phase", "task", "done"[, "score": [wins, losses, ties]]} from
+the workers and the training at most once a second per writer (task 0 and
+the last record of a task always); ``live.json`` is the self-play game
+followed by worker task 0 after every move: {"gen", "game", "moves", "w",
+"h", "time"}.
+
 Safe stop: create ``run_dir/STOP``; the loop saves and exits after the
 current phase (a STOP file found at start-up is removed) and also stops the evaluator (scripts/az_eval.py), which it
 starts in the background whenever an accepted net has no evaluation yet.
@@ -60,24 +68,61 @@ def _evaluator(path):
     return cache[key]
 
 
+class Progress:
+    """Appends this writer's records to run/progress.jsonl, at most one a second
+    (``force``: always)."""
+
+    def __init__(self, run, gen: int, phase: str, task: int):
+        self.path, self.base, self.last = Path(run) / "progress.jsonl", {"gen": gen, "phase": phase, "task": task}, 0.0
+
+    def __call__(self, done: int, force: bool = False, **rec) -> None:
+        now = time.time()
+        if force or now - self.last >= 1.0:
+            self.last = now
+            with open(self.path, "a") as f:
+                f.write(json.dumps({"time": now, **self.base, "done": done, **rec}) + "\n")
+
+
+def phase_start(run: Path, gen: int, phase: str, of: int) -> None:
+    """A new progress.jsonl for this phase."""
+    save_text(run / "progress.jsonl", json.dumps({"time": time.time(), "gen": gen, "phase": phase, "of": of}) + "\n")
+
+
+def save_text(path: Path, text: str) -> None:
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(text)
+    os.replace(tmp, path)
+
+
 def _selfplay_task(args):
     from agents.az_play import selfplay
-    path, n_games, seed = args
+    path, n_games, seed, run, gen, task = args
     cfg = _W["cfg"]
+    rec = Progress(run, gen, "selfplay", task)
+    w, h = cfg["board"]
 
     def progress(k, sec):
-        print(f"[{time.strftime('%H:%M:%S')}]   worker {os.getpid()}: {k}/{n_games} games, {sec:.0f} s", flush=True)
+        rec(k, force=k == n_games)
+        if k % max(1, n_games // 4) == 0:
+            print(f"[{time.strftime('%H:%M:%S')}]   worker {os.getpid()}: {k}/{n_games} games, {sec:.0f} s", flush=True)
 
-    return selfplay(_evaluator(path), cfg, n_games, cfg["selfplay"]["games_per_worker"], seed, progress)
+    def watch(game, moves, board):
+        save_text(Path(run) / "live.json", json.dumps({"gen": gen, "game": game, "moves": moves, "w": w, "h": h,
+                                                       "time": time.time()}))
+
+    return selfplay(_evaluator(path), cfg, n_games, cfg["selfplay"]["games_per_worker"], seed, progress,
+                    watch if task == 0 else None)
 
 
 def _match_task(args):
     from agents.az_play import match
-    path_a, path_b, n_games, seed, offset = args
+    path_a, path_b, n_games, seed, offset, run, gen, task = args
     cfg = _W["cfg"]
     g = cfg["gating"]
+    rec = Progress(run, gen, "gate", task)
     return match([_evaluator(path_a), _evaluator(path_b)], cfg, g["sims"], g["temp_moves"], n_games,
-                 cfg["selfplay"]["games_per_worker"], seed, offset)
+                 cfg["selfplay"]["games_per_worker"], seed, offset,
+                 lambda o: rec(sum(o[:3]), force=sum(o[:3]) == n_games, score=list(o[:3])))
 
 
 # --- replay buffer --------------------------------------------------------------
@@ -119,14 +164,16 @@ class Buffer:
 
 # --- training -------------------------------------------------------------------
 
-def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int) -> dict:
+def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int, progress=None) -> dict:
     tc = cfg["train"]
     dev = cfg["device"]
     syms = codec.syms if tc["symmetries"] else codec.syms[:1]
     net.train()
     tot = {"policy": 0.0, "value": 0.0, "score": 0.0}
     sw = tc.get("score_weight", 0.0)
-    for _ in range(steps):
+    for step in range(steps):
+        if progress:
+            progress(step, force=step == 0)
         s = buf.sample(rng, tc["batch_size"])
         x = codec.encode(s["lines"], s["sides"], s["owner"], s["diff"].astype(np.float32), s["first"])
         B = len(x)
@@ -158,6 +205,8 @@ def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int)
         tot["policy"] += lp.item()
         tot["value"] += lv.item()
     net.eval()
+    if progress:
+        progress(steps, force=True)
     return {k: v / steps for k, v in tot.items()}
 
 
@@ -286,7 +335,9 @@ class Run:
         sp = self.cfg["selfplay"]
         best = str(self.run / "best.pt")
         t0 = time.time()
-        tasks = [(best, n, int(self.rng.integers(2**31))) for n in split(sp["games_per_gen"], sp["workers"]) if n]
+        phase_start(self.run, gen, "selfplay", sp["games_per_gen"])
+        tasks = [(best, n, int(self.rng.integers(2**31)), str(self.run), gen, i)
+                 for i, n in enumerate(k for k in split(sp["games_per_gen"], sp["workers"]) if k)]
         stats = []
         for samples, st in pool.imap_unordered(_selfplay_task, tasks):
             self.buf.add(samples)
@@ -308,7 +359,9 @@ class Run:
             log(self.run, f"gen {gen} train: buffer {self.buf.n} < {tc['min_buffer']}, skipped")
             return
         t0 = time.time()
-        loss = train_steps(self.net, self.opt, self.buf, self.codec, self.cfg, self.rng, tc["steps_per_gen"])
+        phase_start(self.run, gen, "train", tc["steps_per_gen"])
+        loss = train_steps(self.net, self.opt, self.buf, self.codec, self.cfg, self.rng, tc["steps_per_gen"],
+                           Progress(self.run, gen, "train", 0))
         dt = time.time() - t0
         save_atomic(self.net.state_dict(), self.run / "candidate.pt")
         log(self.run, f"gen {gen} train: {tc['steps_per_gen']} steps, {dt:.0f} s, policy {loss['policy']:.3f}, "
@@ -320,11 +373,13 @@ class Run:
         if not cand.exists():
             save_atomic(self.net.state_dict(), cand)
         t0 = time.time()
+        phase_start(self.run, gen, "gate", g["games"])
         tasks, off = [], 0
         # few large batches: under GPU time slicing the cost is per call
         for n in split(g["games"], g["tasks"]):
             if n:
-                tasks.append((str(cand), str(self.run / "best.pt"), n, int(self.rng.integers(2**31)), off % 2))
+                tasks.append((str(cand), str(self.run / "best.pt"), n, int(self.rng.integers(2**31)), off % 2,
+                              str(self.run), gen, len(tasks)))
                 off += n
         res = np.sum(pool.map(_match_task, tasks), axis=0)
         wins, losses, ties, margin = (int(v) for v in res)

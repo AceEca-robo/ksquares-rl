@@ -297,3 +297,85 @@ def test_train_screen_draws(tmp_path, monkeypatch):
         assert "train_start" not in app.buttons
     finally:
         app.pg.quit()
+
+
+def test_train_progress_inside_a_round(tmp_path, monkeypatch):
+    """The round's inside from the trainer's progress.jsonl and live.json (as
+    az_train.py writes them; the trainer is mocked by this process), drawn."""
+    import json
+    import os
+
+    from launcher import train
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import az_train
+
+    monkeypatch.setattr(train, "RUNS", str(tmp_path / "runs"))
+    monkeypatch.setattr(train, "LOCK", str(tmp_path / "runs" / ".training.json"))
+    cfg = core.app_config()
+    run = tmp_path / "runs" / "my_dot"
+    run.mkdir(parents=True)
+    (run / "train.yaml").write_text("run_dir: runs/my_dot\n")
+    (run / "train.log").write_text("".join(f"line {k}\n" for k in range(15)))
+    hist = [{"gen": 1, "accepted": True, "score": 0.7, "wins": 70, "losses": 30, "ties": 0}]
+    (run / "state.json").write_text(json.dumps({"gen": 1, "best": 1, "phase": "selfplay", "history": hist}))
+    (tmp_path / "runs" / ".training.json").write_text(json.dumps(
+        {"name": "my_dot", "pid": os.getpid(), "rounds": 5, "first_gen": 0, "started": time.time()}))
+    # self-play of round 2: two worker tasks, one followed on the board
+    az_train.phase_start(run, 2, "selfplay", 2500)
+    for task, done in ((0, 300), (1, 410), (0, 512)):
+        az_train.Progress(run, 2, "selfplay", task)(done, force=True)
+    with open(run / "progress.jsonl", "a") as f:
+        f.write('{"gen": 2, "phase": "selfp')   # a line being written
+    az_train.save_text(run / "live.json", json.dumps({"gen": 2, "game": 6, "moves": [0, 30, 5], "w": 5, "h": 5,
+                                                      "time": time.time()}))
+    pr = train.progress("my_dot", cfg)
+    assert pr["running"] and pr["inner"] == {"phase": "selfplay", "done": 922, "of": 2500, "score": None}
+    assert pr["live"]["moves"] == [0, 30, 5] and pr["quiet_s"] < 5
+    assert pr["log"] == [f"line {k}" for k in range(5, 15)]
+    # the match: the score summed over the tasks; the stale live game is dropped
+    (run / "state.json").write_text(json.dumps({"gen": 1, "best": 1, "phase": "gate", "history": hist}))
+    az_train.phase_start(run, 2, "gate", 100)
+    az_train.Progress(run, 2, "gate", 0)(20, force=True, score=[12, 8, 0])
+    az_train.Progress(run, 2, "gate", 1)(17, force=True, score=[9, 7, 1])
+    pr = train.progress("my_dot", cfg)
+    assert pr["inner"] == {"phase": "gate", "done": 37, "of": 100, "score": [21, 15, 1]} and pr["live"] is None
+    # a quiet log: the warning
+    old = time.time() - 300
+    for f in ("train.log", "progress.jsonl"):
+        os.utime(run / f, (old, old))
+    assert train.progress("my_dot", cfg)["quiet_s"] > cfg["train"]["stale_s"]
+    # the screen, with the live board
+    (run / "state.json").write_text(json.dumps({"gen": 1, "best": 1, "phase": "selfplay", "history": hist}))
+    az_train.phase_start(run, 2, "selfplay", 2500)
+    import importlib.util
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    spec = importlib.util.spec_from_file_location("launcher_app", ROOT / "scripts/launcher.py")
+    app_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(app_mod)
+    app = app_mod.App(app_mod.parse(["--lang", "ru"]), headless=True)
+    try:
+        app.settings["train_name"] = "my_dot"
+        app.start("train")
+        app.frame()
+        assert app._live[1].n_drawn == 3
+        # round 1 accepted: the buttons into the modes with it; the network lists
+        assert {"go:play", "go:self", "go:ksquares"} <= set(app.buttons)
+        monkeypatch.setattr(core, "generations", lambda cfg: [
+            {"run": "az5b", "gen": 54, "config": "configs/az5b.yaml", "path": "x", "label": "az5b gen 54",
+             "own": False},
+            {"run": "my_dot", "gen": 1, "config": "runs/my_dot/train.yaml", "path": "y", "label": "my_dot gen 1",
+             "own": True}])
+        started = []
+        monkeypatch.setattr(app, "start", started.append)
+        app.best = {"run": "az5b", "gen": 54}
+        monkeypatch.setattr(core, "best", lambda cfg: app.best)
+        app.train_click("go:self")
+        assert started == ["self"] and (app.settings["gen_a"], app.settings["gen_b"]) == ("my_dot gen 1", "az5b gen 54")
+        app.train_click("go:ksquares")
+        assert started[-1] == "ksquares" and app.settings["gen_play"] == "my_dot gen 1"
+        assert app.play_labels() == [None, "my_dot gen 1"]   # the released Dot and the own runs only
+        assert "gen_play" in app.MODE_ROWS["ksquares"] and "gen_play" in app.MODE_ROWS["play"]
+    finally:
+        app.pg.quit()

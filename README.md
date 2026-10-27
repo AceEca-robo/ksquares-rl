@@ -61,6 +61,9 @@ One pygame window with a menu (English, Russian, Ukrainian):
   grabbed into the centre; level Easy / Medium / Hard, who moves first.
 - **Play the network**: click a line; optionally see what the network
   thinks of your own moves.
+
+  In both the network is Dot from the release by default, or any accepted
+  round of your own runs (see "Train your own Dot").
 - **Network vs itself**: two generations against each other; pause, one
   move, speed.
 
@@ -121,13 +124,21 @@ checks the GPU (name, memory), the free disk and whether a training is
 already running (one at a time), then takes a run name (`my_dot` by
 default) and a number of rounds (10 by default, or no limit). The trainer
 is a process of its own: it goes on after the app is closed and the mode
-picks it up again. The mode shows the round and its phase, every round's
-match against the accepted version (accepted / rejected), the round time
-and the forecast, the win rate against the built-in opponent (KSquares
-Hard) per accepted round as a plot, and the log (`runs/<name>/train.log`).
+picks it up again. The mode shows the round and its phase with a bar inside
+it (self-play games out of 2500, training steps, the match's games and
+score), a pulse with the time since the trainer last wrote (yellow after a
+minute of silence), the self-play game being played right now on a small
+board, a timeline of the rounds (accepted / rejected, the match %) and every
+round's match against the accepted version, the round time and the
+forecast, the win rate against the built-in opponent (KSquares Hard) per
+accepted round as a plot, and the last lines of the log
+(`runs/<name>/train.log`; the trainer writes the progress inside a round to
+`progress.jsonl` and the game it follows to `live.json`). After the first
+accepted round, three buttons go straight into a mode with your Dot: play
+her, her against the released Dot, her against KSquares.
 **Stop** is the trainer's safe stop (the `STOP` file: it saves and exits
 after the current phase; **Continue** resumes). Accepted rounds join
-"Play the network" and "Network vs itself" as `my_dot gen N`.
+the network lists of the other three modes as `my_dot gen N`.
 
 ![train your own Dot](docs/app_train.png)
 

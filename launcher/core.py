@@ -163,7 +163,7 @@ def download_best(cfg, progress, cancelled=lambda: False):
 
 def generations(cfg):
     """Every accepted generation on disk, in order: [{"run", "gen", "config",
-    "path", "label"}]: the project's runs, the best network too when its run
+    "path", "label", "own"}] (own: a run of "Train your own Dot"): the project's runs, the best network too when its run
     is not on disk (a fresh clone with the downloaded one), then the app's
     own runs ("Train your own Dot", runs/<name>/train.yaml)."""
     from . import train
@@ -183,11 +183,11 @@ def generations(cfg):
             p = os.path.join(run, f"gen_{h['gen']:04d}.pt")
             if h["accepted"] and os.path.isfile(p):
                 out.append({"run": name, "gen": h["gen"], "config": c, "path": p,
-                            "label": f"{name} gen {h['gen']}"})
+                            "label": f"{name} gen {h['gen']}", "own": c in own})
     b = best(cfg)
     if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):
         k = sum(1 for g in out if g["config"] in cfg["generations"])
-        out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}"})
+        out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}", "own": False})
     return out
 
 
