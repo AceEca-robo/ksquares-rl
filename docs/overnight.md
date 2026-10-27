@@ -736,3 +736,36 @@ Ideas for later:
   apt packages itself (only the missing ones), torch by the driver's CUDA
   version (cu130 / cu126 / CPU with a warning), and ends with
   scripts/selfcheck.py.
+
+## 2026-10-28 (night) — part 2 starts: C tree, Dot-2, judge on 10x7
+
+Plan agreed (docs/plan_part2.md, "Decisions"): goal "does the
+understanding of parity transfer from 5x5 to 10x7 without further
+training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
+>= 90% vs Hard.
+
+- C tree walk (agents/csrc/mcts_tree.c, cffi, built on first use into
+  agents/_mcts_tree*.so; the Python walk stays as fallback / reference).
+  Nodes stay Python objects, the C side shares their N/W/P arrays; the
+  test checks identical N, W, n and evaluation counts on 3x3/5x5/10x7 with
+  1 and 8 leaves per tree. Untrained Dot, batch 192: 10x7 3.0k -> 15.5k
+  sims/s, 5x5 19.1k -> 30.7k (docs/results.md).
+- Order changed slightly: the training-side parametrisation of step 2
+  (board mix, per-size buffers) went in before Dot-2 so that step 4 could
+  start at 01:05; ladder anchors, judge, calibration followed while the
+  distillation ran.
+- Dot-2 (AZNet2): Dot's body + global pooling in blocks 2 and 4 (zero-init
+  bias, so Dot's body gives identical features — tested), convolutional
+  heads, phase plane. 0.51M parameters. 12.4k sims/s on 10x7 (batch 192).
+- Distillation (scripts/distill.py, 30k steps, 27 min): held-out argmax
+  agreement with Dot 81%, value MSE to the game result 0.605 (Dot 0.610).
+- Judge with a time limit: on 10x7 1 s per position covers 50% of the
+  positions of a hard-vs-hard game (the last 78 of 157 lines); 0.25 s 48%,
+  4 s 51%. 5x5: 57% (as max_undrawn 34). Unclear: net games may have more
+  junctions late than Hard's; re-measure on Dot-2 games.
+- strong on 10x7: 28.9k nodes per CPU second -> node budget 14.4k for the
+  ladder (load-independent, unlike the 5x5 ladder's 0.5 s wall clock).
+- Reference over the bridge with az_vs_hard.py: Dot gen 54, 20 games,
+  seed 11: 20-0.
+- Stop rule note: on az5b's history it would have fired at gen 38 (Elo
+  2116, 100% vs hard); az5b's longest reject streak was 5.

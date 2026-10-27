@@ -314,3 +314,22 @@ gen 11 and sits at 79–88% through az5b. A one-ply search with the value
 alone picks a winning move in 80–84% from az5b gen 46 on; MCTS 200 rises
 just behind the value curve to 87–92% (strong 94.7).
 
+
+## Part 2: speed of the C tree walk (2026-10-28)
+
+`scripts/az_bench.py`, one process, RTX 4060 Laptop, 200 sims, sims/s:
+
+| net | board | batch | Python tree | C tree |
+|---|---|---:|---:|---:|
+| Dot untrained | 5x5 | 64 | 16,800 | 29,000 |
+| Dot untrained | 5x5 | 192 | 19,100 | 30,700 |
+| Dot untrained | 10x7 | 64 | 3,190 | 14,900 |
+| Dot untrained | 10x7 | 192 | 3,010 | 15,500 |
+| Dot gen 54 | 5x5 | 192 | 21,700 | 34,400 |
+| Dot-2 untrained | 5x5 | 192 | — | 30,000 |
+| Dot-2 untrained | 7x7 | 192 | — | 20,500 |
+| Dot-2 untrained | 10x7 | 192 | — | 12,400 |
+| Dot-2 untrained | 10x10 | 192 | — | 9,000 |
+
+Self-play of dot2a (3 workers, 5x5): 41k evaluations/s (az5b: ~17k).
+Judge coverage per size: docs/judge_coverage.md.
