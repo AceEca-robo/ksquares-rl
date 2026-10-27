@@ -333,3 +333,13 @@ just behind the value curve to 87–92% (strong 94.7).
 
 Self-play of dot2a (3 workers, 5x5): 41k evaluations/s (az5b: ~17k).
 Judge coverage per size: docs/judge_coverage.md.
+
+## Dot-2 on 5x5, step (a) (2026-10-28)
+
+Distilled from Dot (scripts/distill.py), then AlphaZero (configs/dot2a.yaml).
+Stopped by the rule (Elo >= 2100 and >= 90% vs hard) at gen 1.
+
+| net | MCTS 200 Elo | vs hard (sim) | vs strong | raw vs strong | vs KSquares Hard, bridge |
+|---|---:|---:|---:|---:|---:|
+| Dot (az5b gen 54) | 2164 | 99% | — | 34% | 20-0 |
+| Dot-2 (dot2a gen 1) | 2192 | 100% | 90% | 43% | 19-1 |

@@ -769,3 +769,10 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   seed 11: 20-0.
 - Stop rule note: on az5b's history it would have fired at gen 38 (Elo
   2116, 100% vs hard); az5b's longest reject streak was 5.
+- Step (a) ended by the stop rule after 2 generations (01:36): gen 1
+  accepted 57-43 vs the distilled student, MCTS 200 ladder Elo 2192
+  (Dot gen 54: 2164), vs hard 100%, vs strong 90%; raw policy vs strong
+  43%. Gen 2 rejected (44%). Over the bridge (az_vs_hard.py, 20 games,
+  seed 11): 19-1 (Dot: 20-0). Caveat: one evaluation of 100 games per
+  opponent, Elo error ~±60; "Dot level" is reached, not "better than Dot".
+  Dot-2 for (b): runs/dot2a/gen_0001.pt.
