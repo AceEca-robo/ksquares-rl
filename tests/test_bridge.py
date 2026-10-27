@@ -42,3 +42,15 @@ def test_illegal_moves_are_rejected(bridge):
     assert sum(st["scores"]) == 9
     with pytest.raises(ValueError, match="not an external"):
         bridge.step(0)
+
+
+def test_without_a_session_bus(monkeypatch):
+    """No D-Bus session bus (ssh, a container): the game gets a private one,
+    gone with the game."""
+    monkeypatch.delenv("DBUS_SESSION_BUS_ADDRESS", raising=False)
+    with KSquaresBridge() as br:
+        bus = br._res["dbus"]
+        assert bus is not None and bus.poll() is None
+        st = br.reset(3, 3, ai=[False, True], difficulty=2, seed=1)
+        assert not st["done"]
+    assert bus.poll() is not None

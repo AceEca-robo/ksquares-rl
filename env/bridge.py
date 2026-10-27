@@ -58,6 +58,11 @@ def _stop(res):
             proc.kill()
             proc.wait()
         res["proc"] = None
+    bus = res.get("dbus")
+    if bus is not None:
+        bus.terminate()
+        bus.wait()
+        res["dbus"] = None
     if res.get("home"):
         shutil.rmtree(res["home"], ignore_errors=True)
         res["home"] = None
@@ -114,6 +119,10 @@ class KSquaresBridge:
             if hash_seed is not None:
                 env["QT_HASH_SEED"] = str(hash_seed)
             env.update(extra_env)
+            if not env.get("DBUS_SESSION_BUS_ADDRESS"):
+                # KSquares quits at once without a D-Bus session bus (KDBusService),
+                # e.g. over ssh or in a container: a private one for this game
+                env["DBUS_SESSION_BUS_ADDRESS"] = self._private_bus()
             self._res["proc"] = subprocess.Popen(
                 [str(self.binary)], env=env, stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -131,6 +140,16 @@ class KSquaresBridge:
         hello = self._recv()
         if hello.get("type") != "hello" or hello.get("version") != 1:
             raise RuntimeError(f"unexpected greeting {hello}")
+
+    def _private_bus(self):
+        bus = subprocess.Popen(["dbus-daemon", "--session", "--nofork", "--print-address=1"],
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                               text=True, preexec_fn=_die_with_parent)
+        self._res["dbus"] = bus
+        addr = bus.stdout.readline().strip()
+        if not addr:
+            raise RuntimeError("dbus-daemon did not start")
+        return addr
 
     def _send(self, obj):
         self._res["conn"].sendall(json.dumps(obj).encode() + b"\n")

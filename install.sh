@@ -45,7 +45,7 @@ PKGS=(build-essential cmake extra-cmake-modules gettext git
       libkf5kdegames-dev libkf5widgetsaddons-dev libkf5xmlgui-dev libkf5completion-dev
       xvfb xdotool x11-utils ffmpeg
       python3 python3-venv
-      fonts-dejavu-core fontconfig ca-certificates)
+      fonts-dejavu-core fontconfig ca-certificates dbus)
 missing=()
 for p in "${PKGS[@]}"; do
     # python3-venv: any package that makes `python3 -m venv` work will do
