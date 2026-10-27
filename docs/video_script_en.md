@@ -102,9 +102,10 @@ neither has on its own."
 ## Scene 7. The ceiling (5:50–6:18)
 
 **Voice:** "On the last night Dot went through almost fifty more rounds.
-Each new version beat the one before. But against the game and the judge,
-her strength stopped growing. Dot had learned to beat herself — not the
-game. We stopped the training: there was no one left to learn from. What
+Each new version beat the one before. But against
+the built-in opponent and the judge the results did not change — Dot
+was already beating them, and she got no stronger. She was learning to
+beat her own earlier versions, not to play better. We stopped the training: there was no one left to learn from. What
 went into the app is not the last Dot, but the strongest one."
 
 ## Scene 8. Play Dot (6:18–6:48)
