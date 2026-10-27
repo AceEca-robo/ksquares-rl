@@ -341,5 +341,5 @@ Stopped by the rule (Elo >= 2100 and >= 90% vs hard) at gen 1.
 
 | net | MCTS 200 Elo | vs hard (sim) | vs strong | raw vs strong | vs KSquares Hard, bridge |
 |---|---:|---:|---:|---:|---:|
-| Dot (az5b gen 54) | 2164 | 99% | — | 34% | 20-0 |
+| Dot (az5b gen 54) | 2164 | 99% | 89% | 34% | 20-0 |
 | Dot-2 (dot2a gen 1) | 2192 | 100% | 90% | 43% | 19-1 |
