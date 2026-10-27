@@ -38,10 +38,19 @@ def main() -> None:
     ap.add_argument("--batches", type=int, nargs="+", default=[1, 8, 32, 64, 128])
     ap.add_argument("--sims", type=int, default=200)
     ap.add_argument("--leaves", type=int, default=1, help="leaves per tree per round")
+    ap.add_argument("--backend", default="auto", choices=["auto", "c", "py"], help="tree walk")
+    ap.add_argument("--board", type=int, nargs=2, help="w h (default: the config's board)")
+    ap.add_argument("--net", help="checkpoint to load (default: untrained)")
     a = ap.parse_args()
     cfg = load_config(a.config)
     torch.set_num_threads(1)
-    ev = Timed(Evaluator(make_net(cfg), cfg["device"]))
+    if a.board:
+        cfg["board"] = a.board
+    net = make_net(cfg)
+    if a.net:
+        ck = torch.load(a.net, map_location="cpu")
+        net.load_state_dict(ck["net"] if "net" in ck else ck)
+    ev = Timed(Evaluator(net, cfg["device"]))
     w, h = cfg["board"]
     rng = random.Random(0)
     print(f"| games (batch) | leaves/tree | sims/s | net share | ms per net call | mean batch |")
@@ -54,6 +63,8 @@ def main() -> None:
                 b.step(rng.choice(b.legal_moves()))
             boards.append(b)
         mcts = make_mcts(ev, cfg["mcts"], np.random.default_rng(0), leaves_per_tree=a.leaves)
+        if a.backend == "py":
+            mcts.cmod = None
         mcts.search(boards[:2], 8)  # warm-up
         ev.t, ev.calls, mcts.n_evals = 0.0, 0, 0
         t0 = time.perf_counter()

@@ -204,3 +204,33 @@ def test_mcts_per_board_sims():
     boards = [random_board(3, 3, 6, rng) for _ in range(3)]
     roots = MCTS(rollout, rng=np.random.default_rng(0)).search(boards, [5, 20, 40])
     assert [int(r.N.sum()) for r in roots] == [5, 20, 40]
+
+
+def _hashed_net(boards):
+    """Deterministic stand-in for a network: priors and value from the lines."""
+    pri, val = [], []
+    for b in boards:
+        r = np.random.default_rng(int.from_bytes(bytes(b.lines), "little") % 2**32)
+        pri.append(r.random(b.geo.n_lines))
+        val.append(r.uniform(-1, 1))
+    return np.array(pri), np.array(val)
+
+
+@pytest.mark.parametrize("w,h", [(3, 3), (5, 5), (10, 7)])
+@pytest.mark.parametrize("leaves", [1, 8])
+def test_mcts_c_tree_matches_python(w, h, leaves):
+    from agents.mcts_c import load
+    if load() is None:
+        pytest.skip("no C compiler / cffi")
+    rng = random.Random(w * h + leaves)
+    boards = [random_board(w, h, rng.randrange(0, 2 * w * h), rng) for _ in range(6)]
+    sims = [50, 100, 200, 7, 300, 64]
+    out = []
+    for backend in ("py", "c"):
+        m = MCTS(_hashed_net, leaves_per_tree=leaves, rng=np.random.default_rng(1), backend=backend)
+        roots = m.search(boards, sims, noise=True)
+        out.append(([None if r.moves is None else (r.N.tolist(), r.W.tolist(), r.n) for r in roots], m.n_evals))
+        # the children list is kept for the Python readers (PV walks)
+        r = next(r for r in roots if r.moves is not None and len(r.moves) > 1)
+        assert r.children[int(np.argmax(r.N))] is not None
+    assert out[0] == out[1]
