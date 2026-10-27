@@ -1,4 +1,5 @@
-"""Node budget for strong equivalent to its time limit (configs/az5b.yaml).
+"""Node budget for strong equivalent to its time limit (configs/az5b.yaml;
+``--board 10 7`` for configs/eval_ladder_10x7.yaml).
 
 Plays strong (time limit) against Hard and records, for every search that
 ran into the limit, the nodes searched and the CPU time of this process.
@@ -25,19 +26,20 @@ def main() -> None:
     ap.add_argument("--games", type=int, default=12)
     ap.add_argument("--time-limit", type=float, default=0.5)
     ap.add_argument("--seed", type=int, default=99)
+    ap.add_argument("--board", type=int, nargs=2, default=[5, 5], metavar=("W", "H"))
     a = ap.parse_args()
     rates, hit_nodes = [], []
     for g in range(a.games):
         strong = StrongAgent(a.seed + g, time_limit=a.time_limit)
         hard = make_agent("hard", a.seed + g)
-        b = Board(5, 5)
+        b = Board(*a.board)
         first = g % 2
         while not b.done:
             if b.player == first:
                 c0, t0 = time.process_time(), time.perf_counter()
                 ln = strong.act(b)
                 cpu, wall = time.process_time() - c0, time.perf_counter() - t0
-                eng = strong._engines[(5, 5)]
+                eng = strong._engines[tuple(a.board)]
                 if not strong.last[3] and wall >= 0.95 * a.time_limit:  # stopped by the limit
                     rates.append(eng.nodes / cpu)
                     hit_nodes.append(eng.nodes)

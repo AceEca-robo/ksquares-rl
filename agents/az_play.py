@@ -3,6 +3,10 @@
 Positions are stored compactly (lines, box sides, owners relative to the
 mover, score difference, mover-is-first) and encoded with ``Codec.encode``
 when training. Player 0 always moves first in these games.
+
+Board sizes: a call plays one size, ``size`` or else ``cfg["board"]``;
+``board_mix(cfg)`` gives the sizes and weights of a run (``cfg["boards"]``:
+a list of {size: [w, h], weight}, default the one ``board``).
 """
 
 from __future__ import annotations
@@ -23,18 +27,27 @@ def state_arrays(board: Board):
             rel, me - op, int(board.player == 0))
 
 
+def board_mix(cfg: dict) -> list[tuple[tuple[int, int], float]]:
+    if cfg.get("boards"):
+        mix = [(tuple(b["size"]), float(b["weight"])) for b in cfg["boards"]]
+        tot = sum(w for _, w in mix)
+        return [(wh, w / tot) for wh, w in mix]
+    return [(tuple(cfg["board"]), 1.0)]
+
+
 def make_mcts(evaluate, mcfg: dict, rng, leaves_per_tree: int = 1, noise: bool = False) -> MCTS:
     return MCTS(evaluate, c_puct=mcfg["c_puct"], fpu_reduction=mcfg["fpu_reduction"],
                 dirichlet_alpha=mcfg["dirichlet_alpha"], dirichlet_eps=mcfg["dirichlet_eps"] if noise else 0.0,
                 leaves_per_tree=leaves_per_tree, virtual_loss=mcfg["virtual_loss"], rng=rng)
 
 
-def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, progress=None, watch=None):
+def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, progress=None, watch=None,
+             size=None):
     """Play ``n_games`` self-play games; returns (samples dict, stats dict).
     ``progress(finished games, seconds)`` is called after every finished game;
     ``watch(game number, lines drawn so far, board)`` after every move of one
     game followed at a time (the next one when it ends)."""
-    w, h = cfg["board"]
+    w, h = size or cfg["board"]
     sp = cfg["selfplay"]
     rng = np.random.default_rng(seed)
     mcts = make_mcts(evaluate, cfg["mcts"], rng, noise=True)
@@ -102,11 +115,11 @@ def selfplay(evaluate, cfg: dict, n_games: int, concurrent: int, seed: int, prog
 
 
 def match(evaluators, cfg: dict, sims: int, temp_moves: int, n_games: int, concurrent: int, seed: int,
-          first_offset: int = 0, progress=None):
+          first_offset: int = 0, progress=None, size=None):
     """evaluators[0] vs evaluators[1]; game g: evaluators[(g + first_offset) % 2]
     moves first. Returns (wins of 0, wins of 1, ties, box margin of 0);
     ``progress(that tuple so far)`` is called after every finished game."""
-    w, h = cfg["board"]
+    w, h = size or cfg["board"]
     rng = np.random.default_rng(seed)
     searchers = [make_mcts(e, cfg["mcts"], rng) for e in evaluators]
     started = 0

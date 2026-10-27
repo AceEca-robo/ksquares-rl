@@ -234,3 +234,127 @@ def test_mcts_c_tree_matches_python(w, h, leaves):
         r = next(r for r in roots if r.moves is not None and len(r.moves) > 1)
         assert r.children[int(np.argmax(r.N))] is not None
     assert out[0] == out[1]
+
+
+# --- Dot-2 ------------------------------------------------------------------------
+
+SIZES2 = [(5, 5), (7, 7), (10, 7), (10, 10)]
+
+
+def _transformed(b, lperm):
+    """Board with the drawn lines of b moved by a symmetry (owners ignored)."""
+    t = Board(b.geo.w, b.geo.h)
+    for k in range(b.geo.n_lines):
+        if b.lines[lperm[k]]:
+            t.lines[k] = 1
+            for bx in t.geo.line_boxes[k]:
+                t.sides[bx] += 1
+    return t
+
+
+@pytest.mark.parametrize("wh", SIZES2)
+def test_dot2_encode_commutes_with_symmetry(wh):
+    from agents.az_net import N_PLANES_2
+    rng = random.Random(wh[0] * 31 + wh[1])
+    c = Codec(*wh, planes=N_PLANES_2)
+    assert len(c.syms) == (8 if wh[0] == wh[1] else 4)
+    n = c.n_lines
+    for _ in range(5):
+        b = random_board(*wh, rng.randrange(n), rng)
+        x = c.encode_boards([b]).reshape(1, N_PLANES_2, -1)
+        assert np.allclose(x[0, 11], (n - sum(b.lines)) / n)
+        for cperm, lperm in c.syms:
+            y = c.encode_boards([_transformed(b, lperm)]).reshape(1, N_PLANES_2, -1)
+            for p in (0, 1, 10, 11):
+                assert np.array_equal(x[0, p, cperm], y[0, p])
+            # the policy permutation round-trips: a line-indexed vector moved
+            # with lperm sits on the moved grid cells
+            v = rng.sample(range(1000), n)
+            grid = np.zeros(c.n_cells)
+            grid[c.line_cell] = v
+            assert np.array_equal(grid[cperm][c.line_cell], np.array(v)[lperm])
+
+
+@pytest.mark.parametrize("wh", SIZES2)
+def test_dot2_shapes_any_size(wh):
+    from agents.az_net import AZNet2
+    net = AZNet2(blocks=2, channels=16, gpool_blocks=(1,), head_ch=8).eval()
+    c = Codec(*wh, planes=net.planes)
+    b = random_board(*wh, c.n_lines // 3, random.Random(3))
+    p, v, s = net(torch.from_numpy(c.encode_boards([b, Board(*wh)])))
+    assert p.shape == (2, c.n_lines) and v.shape == (2,) and s.shape == (2,)
+    pri, val = Evaluator(net, "cpu")([b, Board(*wh)])
+    assert pri.shape == (2, c.n_lines) and np.allclose(pri.sum(1), 1, atol=1e-5)
+    assert pri[0][np.frombuffer(bytes(b.lines), dtype=np.uint8) == 1].max() < 1e-6
+
+
+def test_dot2_evaluator_mixed_sizes():
+    from agents.az_net import AZNet2
+    net = AZNet2(blocks=1, channels=8, gpool_blocks=(0,), head_ch=8)
+    ev = Evaluator(net, "cpu")
+    rng = random.Random(6)
+    boards = [random_board(*wh, 5, rng) for wh in [(5, 5), (10, 7), (5, 5), (7, 7)]]
+    pri, val = ev(boards)
+    for b, p, v in zip(boards, pri, val):
+        p1, v1 = ev([b])
+        assert len(p) == b.geo.n_lines
+        assert np.allclose(p, p1[0], atol=1e-6) and abs(v - v1[0]) < 1e-6
+
+
+def test_dot2_body_from_dot_keeps_features():
+    """Pooling biases start at zero: Dot's body gives the same features in
+    Dot-2 (the phase plane has zero weight)."""
+    from agents.az_net import N_PLANES_2, AZNet2, GPoolBlock, load_dot_body
+    torch.manual_seed(0)
+    dot = AZNet(5, 5, blocks=3, channels=16).eval()
+    for m in dot.modules():  # non-trivial BN statistics
+        if isinstance(m, torch.nn.BatchNorm2d):
+            m.running_mean.uniform_(-0.5, 0.5)
+            m.running_var.uniform_(0.5, 2)
+    net2 = AZNet2(blocks=3, channels=16, gpool_blocks=(1,)).eval()
+    new = load_dot_body(net2, dot.state_dict())
+    assert not any(k.startswith("stem") for k in new)
+    assert all(k.startswith("body.1.g") or not k.startswith("body") for k in new)
+    b = random_board(5, 5, 25, random.Random(8))
+    x1 = torch.from_numpy(Codec(5, 5).encode_boards([b]))
+    x2 = torch.from_numpy(Codec(5, 5, planes=N_PLANES_2).encode_boards([b]))
+    y1 = dot.body(dot.stem(x1))
+    y2 = net2.stem(x2)
+    for blk in net2.body:
+        y2 = blk(y2, x2[:, 10:11]) if isinstance(blk, GPoolBlock) else blk(y2)
+    assert torch.allclose(y1, y2, atol=1e-5)
+
+
+def test_dot2_multi_size_training_round(tmp_path):
+    """Two board sizes through self-play, per-size buffers and training."""
+    from agents.az_net import AZNet2
+    from agents.az_play import board_mix, selfplay
+
+    import sys
+    sys.path.insert(0, "scripts")
+    from az_train import Buffer, Run, train_steps
+
+    cfg = {"boards": [{"size": [2, 2], "weight": 3}, {"size": [3, 2], "weight": 1}], "device": "cpu", "seed": 0,
+           "mcts": {"c_puct": 1.5, "fpu_reduction": 0.2, "dirichlet_alpha": 0.3, "dirichlet_eps": 0.25,
+                    "virtual_loss": 1.0},
+           "selfplay": {"sims": 6, "temp_moves": 3},
+           "train": {"batch_size": 8, "symmetries": True, "score_weight": 0.25}}
+    mix = board_mix(cfg)
+    assert mix == [((2, 2), 0.75), ((3, 2), 0.25)]
+    net = AZNet2(blocks=1, channels=8, gpool_blocks=(0,), head_ch=8)
+    ev = Evaluator(net, "cpu")
+    bufs, codecs = [], []
+    for wh, _ in mix:
+        samples, _ = selfplay(ev, cfg, n_games=2, concurrent=2, seed=1, size=wh)
+        c = Codec(*wh, planes=net.planes)
+        assert samples["lines"].shape[1] == c.n_lines and samples["owner"].shape[1] == c.n_boxes
+        b = Buffer(50, c.n_lines, c.n_boxes)
+        b.add(samples)
+        bufs.append(b)
+        codecs.append(c)
+    loss = train_steps(net, torch.optim.SGD(net.parameters(), lr=0.01), bufs, codecs, cfg,
+                       np.random.default_rng(0), 4, weights=[w for _, w in mix])
+    assert np.isfinite(loss["policy"]) and loss["score"] > 0
+    r = Run.__new__(Run)
+    r.mix = mix
+    assert r.split_by_mix(10) == [8, 2] and r.split_by_mix(3) == [2, 1]

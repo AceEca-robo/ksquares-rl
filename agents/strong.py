@@ -419,12 +419,14 @@ def line_mask(board: Board) -> int:
     return sum(1 << i for i, x in enumerate(board.lines) if x)
 
 
-def exact_move_values(eng: Engine, board: Board, node_limit: int | None):
+def exact_move_values(eng: Engine, board: Board, node_limit: int | None, time_limit: float | None = None):
     """Exact net future boxes for the mover after every legal move, solved to
-    the end (no depth limit, no heuristic); None if over ``node_limit`` nodes."""
+    the end (no depth limit, no heuristic); None if over ``node_limit`` nodes
+    or ``time_limit`` seconds (wall clock)."""
     L = line_mask(board)
     out = {}
     eng.node_limit = node_limit
+    eng.deadline = None if time_limit is None else time.perf_counter() + time_limit
     eng.nodes = 0
     try:
         for ln in range(board.geo.n_lines):
@@ -437,6 +439,7 @@ def exact_move_values(eng: Engine, board: Board, node_limit: int | None):
         return None
     finally:
         eng.node_limit = None
+        eng.deadline = None
     return out
 
 class StrongAgent:

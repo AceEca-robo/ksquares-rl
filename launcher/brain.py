@@ -71,7 +71,7 @@ class Brain:
         score = None
         if net.s_fc is not None:
             with torch.no_grad():
-                x = torch.from_numpy(self.ev.codec.encode_boards([board])).to(self.ev.device)
+                x = torch.from_numpy(self.ev.codec_for(board.geo.w, board.geo.h).encode_boards([board])).to(self.ev.device)
                 score = float(net(x)[2].float()[0]) * board.geo.n_boxes
         out = {"player": board.player, "policy": pri[0], "value": float(val[0]), "score": score,
                "sims": sims, "visits": None, "q": None, "pv": [], "move": int(np.argmax(pri[0])),
@@ -100,28 +100,39 @@ def _pv(root, n):
     return pv
 
 
+def solver_params(scfg: dict, w: int, h: int) -> tuple:
+    """(max_undrawn, node_limit, time_limit) for a board size: the defaults
+    of the app's ``solver`` section, overridden by ``solver.sizes["WxH"]``."""
+    p = {"max_undrawn": scfg.get("max_undrawn"), "node_limit": scfg.get("node_limit"),
+         "time_limit": scfg.get("time_limit")}
+    p.update((scfg.get("sizes") or {}).get(f"{w}x{h}", {}))
+    return p["max_undrawn"], p["node_limit"], p["time_limit"]
+
+
 class Solver:
     """Exact verdicts in the chain fight; one engine (and its table) per game."""
 
-    def __init__(self, w: int, h: int, max_undrawn: int, node_limit: int):
+    def __init__(self, w: int, h: int, max_undrawn: int | None, node_limit: int | None,
+                 time_limit: float | None = None):
         import sys
 
         from agents.strong import Engine
 
         sys.setrecursionlimit(max(sys.getrecursionlimit(), 10000))
         self.eng = Engine(w, h)
-        self.max_undrawn, self.node_limit = max_undrawn, node_limit
+        # max_undrawn None: try every position, bounded by the limits only
+        self.max_undrawn, self.node_limit, self.time_limit = max_undrawn, node_limit, time_limit
 
     def correct(self, board):
         """(correct lines, all moves equal?) or None when not solved."""
         from agents.strong import exact_move_values
 
         undrawn = board.geo.n_lines - board.n_drawn
-        if undrawn > self.max_undrawn:
+        if self.max_undrawn is not None and undrawn > self.max_undrawn:
             return None
         if len(self.eng.tt) > 1_500_000:
             self.eng.tt.clear()
-        vals = exact_move_values(self.eng, board, self.node_limit)
+        vals = exact_move_values(self.eng, board, self.node_limit, self.time_limit)
         if vals is None:
             return None
         me, op = board.score[board.player], board.score[board.player ^ 1]

@@ -1,0 +1,15 @@
+# Ladder on 10x7 for scripts/eval_ladder.py: the Elo anchors of 10x7
+# (scripts/az_eval.py reads `json`). Every pair plays `games` games, the
+# first mover alternating.
+seed: 1077
+games: 200
+board: [10, 7]
+processes: 12
+json: docs/ladder_10x7.json
+agents: [random, greedy, easy, medium, hard, strong]
+params:
+  strong:
+    node_budget: 14400   # = 0.5 s of one core on 10x7 (calibrate_strong.py
+                         # --board 10 7: median 28.9k nodes per CPU second,
+                         # 5x5: 46k); a budget, not wall clock, so the ladder
+                         # does not depend on the load of the training

@@ -155,7 +155,7 @@ def snapshot(rc, pc, gen):
     score = [None] * len(boards)
     if net.s_fc is not None:
         with torch.no_grad():
-            x = torch.from_numpy(ev.codec.encode_boards(boards)).to(ev.device)
+            x = torch.from_numpy(ev.codec_for(boards[0].geo.w, boards[0].geo.h).encode_boards(boards)).to(ev.device)
             score = (net(x)[2].float().cpu().numpy() * boards[0].geo.n_boxes).tolist()
     # value of every child position, from the mover's view (exact when decided)
     kids = [[(ln, b.clone()) for ln in range(b.geo.n_lines) if not b.lines[ln]] for b in boards]

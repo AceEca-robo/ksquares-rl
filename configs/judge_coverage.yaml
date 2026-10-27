@@ -1,0 +1,10 @@
+# Coverage of the judge (launcher/brain.py Solver) per board size
+# (scripts/judge_coverage.py): games of `players`, every position offered
+# to the solver as the app does (one solver per game, positions in order),
+# with each time limit and no max_undrawn / node limit.
+seed: 1028
+games: 20
+players: [hard, hard]
+processes: 10
+time_limits: [0.25, 1.0, 4.0]   # seconds per position (wall clock)
+boards: [[5, 5], [7, 7], [10, 7]]

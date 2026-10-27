@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import itertools
+import json
 import math
 import os
 import random
@@ -85,6 +86,10 @@ def main() -> None:
                 sp[2] = max(sp[2], tmax[k])
     wall = time.time() - t0
     w, h = cfg["board"]
+    if cfg.get("json"):  # wins per ordered pair, the Elo anchors of scripts/az_eval.py
+        (ROOT / cfg["json"]).write_text(json.dumps({
+            "board": [w, h], "games": cfg["games"], "seed": cfg["seed"], "params": cfg.get("params") or {},
+            "pairs": [[a, b, res[(a, b)]["w"], res[(a, b)]["l"], res[(a, b)]["t"]] for a, b in pairs]}, indent=1))
     print(f"Board {w}x{h}, {cfg['games']} games per pair, seed {cfg['seed']}, {procs} processes, "
           f"wall {wall / 60:.1f} min.\n")
     print("| A vs B | games | A wins | B wins | ties | A win % (±95%) | mean margin A−B | first-mover wins % |")

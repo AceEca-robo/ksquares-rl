@@ -1,4 +1,4 @@
-"""AlphaZero training loop on 5x5 (configs/az5.yaml).
+"""AlphaZero training loop (configs/az5.yaml, configs/dot2a.yaml).
 
 One generation: self-play with the best net (worker processes, each running
 many games in lock step with batched GPU inference) -> replay buffer of the
@@ -20,6 +20,17 @@ the workers and the training at most once a second per writer (task 0 and
 the last record of a task always); ``live.json`` is the self-play game
 followed by worker task 0 after every move: {"gen", "game", "moves", "w",
 "h", "time"}.
+
+Board sizes (``cfg["boards"]``, agents/az_play.py ``board_mix``): self-play
+and gating games are split over the sizes by weight, every worker task
+plays one size; one replay buffer per size (``buffer.npz`` with a single
+size, else ``buffer_WxH.npz``), every training batch from one size drawn
+by weight.
+
+Stop rule (``cfg["stop"]``, optional): the loop ends after ``max_rejects``
+rejected generations in a row, or when an accepted generation's evaluation
+(scripts/az_eval.py) reaches MCTS ladder Elo >= ``elo`` and a win share
+>= ``hard`` against hard.
 
 Safe stop: create ``run_dir/STOP``; the loop saves and exits after the
 current phase (a STOP file found at start-up is removed) and also stops the evaluator (scripts/az_eval.py), which it
@@ -43,7 +54,8 @@ import torch.nn.functional as F
 
 from _common import ROOT, load_config
 
-from agents.az_net import Codec, Evaluator, make_net
+from agents.az_net import Codec, Evaluator, make_net, net_planes
+from agents.az_play import board_mix
 
 # --- worker processes -----------------------------------------------------------
 
@@ -96,10 +108,10 @@ def save_text(path: Path, text: str) -> None:
 
 def _selfplay_task(args):
     from agents.az_play import selfplay
-    path, n_games, seed, run, gen, task = args
+    path, n_games, seed, run, gen, task, size = args
     cfg = _W["cfg"]
     rec = Progress(run, gen, "selfplay", task)
-    w, h = cfg["board"]
+    w, h = size
 
     def progress(k, sec):
         rec(k, force=k == n_games)
@@ -110,25 +122,27 @@ def _selfplay_task(args):
         save_text(Path(run) / "live.json", json.dumps({"gen": gen, "game": game, "moves": moves, "w": w, "h": h,
                                                        "time": time.time()}))
 
-    return selfplay(_evaluator(path), cfg, n_games, cfg["selfplay"]["games_per_worker"], seed, progress,
-                    watch if task == 0 else None)
+    samples, stats = selfplay(_evaluator(path), cfg, n_games, cfg["selfplay"]["games_per_worker"], seed, progress,
+                              watch if task == 0 else None, size=size)
+    return size, samples, stats
 
 
 def _match_task(args):
     from agents.az_play import match
-    path_a, path_b, n_games, seed, offset, run, gen, task = args
+    path_a, path_b, n_games, seed, offset, run, gen, task, size = args
     cfg = _W["cfg"]
     g = cfg["gating"]
     rec = Progress(run, gen, "gate", task)
     return match([_evaluator(path_a), _evaluator(path_b)], cfg, g["sims"], g["temp_moves"], n_games,
                  cfg["selfplay"]["games_per_worker"], seed, offset,
-                 lambda o: rec(sum(o[:3]), force=sum(o[:3]) == n_games, score=list(o[:3])))
+                 lambda o: rec(sum(o[:3]), force=sum(o[:3]) == n_games, score=list(o[:3])), size=size)
 
 
 # --- replay buffer --------------------------------------------------------------
 
-FIELDS = {"lines": (np.uint8, 60), "sides": (np.uint8, 25), "owner": (np.int8, 25), "diff": (np.int8, None),
-          "first": (np.uint8, None), "pi": (np.float16, 60), "z": (np.int8, None), "margin": (np.int8, None)}
+# per position; "lines"/"pi" have one entry per line, "sides"/"owner" one per box
+FIELDS = {"lines": np.uint8, "sides": np.uint8, "owner": np.int8, "diff": np.int16, "first": np.uint8,
+          "pi": np.float16, "z": np.int8, "margin": np.int16}
 
 
 class Buffer:
@@ -136,7 +150,7 @@ class Buffer:
         self.cap, self.n, self.pos = cap, 0, 0
         shape = {"lines": n_lines, "sides": n_boxes, "owner": n_boxes, "pi": n_lines}
         self.a = {k: np.zeros((cap,) + ((shape[k],) if k in shape else ()), dtype=t)
-                  for k, (t, _) in FIELDS.items()}
+                  for k, t in FIELDS.items()}
 
     def add(self, s: dict) -> None:
         m = len(s["z"])
@@ -164,16 +178,23 @@ class Buffer:
 
 # --- training -------------------------------------------------------------------
 
-def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int, progress=None) -> dict:
+def train_steps(net, opt, bufs, codecs, cfg: dict, rng, steps: int, progress=None, weights=None) -> dict:
+    """``bufs``/``codecs``: one Buffer/Codec, or lists of them (one per board
+    size, each batch from one size drawn with ``weights``)."""
     tc = cfg["train"]
     dev = cfg["device"]
-    syms = codec.syms if tc["symmetries"] else codec.syms[:1]
+    if isinstance(bufs, Buffer):
+        bufs, codecs = [bufs], [codecs]
+    weights = np.full(len(bufs), 1 / len(bufs)) if weights is None else np.asarray(weights) / np.sum(weights)
     net.train()
     tot = {"policy": 0.0, "value": 0.0, "score": 0.0}
     sw = tc.get("score_weight", 0.0)
     for step in range(steps):
         if progress:
             progress(step, force=step == 0)
+        j = int(rng.choice(len(bufs), p=weights)) if len(bufs) > 1 else 0
+        buf, codec = bufs[j], codecs[j]
+        syms = codec.syms if tc["symmetries"] else codec.syms[:1]
         s = buf.sample(rng, tc["batch_size"])
         x = codec.encode(s["lines"], s["sides"], s["owner"], s["diff"].astype(np.float32), s["first"])
         B = len(x)
@@ -189,7 +210,7 @@ def train_steps(net, opt, buf: Buffer, codec: Codec, cfg: dict, rng, steps: int,
         pi = torch.from_numpy(pi).to(dev)
         z = torch.from_numpy(s["z"].astype(np.float32)).to(dev)
         logits, v, sc = net(x)
-        legal = x[:, 1].flatten(1)[:, net.line_cell] > 0
+        legal = x[:, 1].flatten(1)[:, net.line_cells(codec.rows, codec.cols)] > 0
         logp = F.log_softmax(logits.masked_fill(~legal, -1e9), 1)
         lp = -(pi * logp).sum(1).mean()
         lv = F.mse_loss(v, z)
@@ -240,15 +261,15 @@ class Run:
         self.run = ROOT / cfg["run_dir"]
         self.run.mkdir(parents=True, exist_ok=True)
         self.max_gens = generations
-        w, h = cfg["board"]
-        self.codec = Codec(w, h)
+        self.mix = board_mix(cfg)
         torch.manual_seed(cfg["seed"])
         torch.backends.cudnn.benchmark = True
         self.net = make_net(cfg).to(cfg["device"])
+        self.codecs = [Codec(w, h, net_planes(self.net)) for (w, h), _ in self.mix]
         tc = cfg["train"]
         self.opt = torch.optim.SGD(self.net.parameters(), lr=tc["lr"], momentum=tc["momentum"],
                                    weight_decay=tc["weight_decay"], nesterov=True)
-        self.buf = Buffer(cfg["buffer_size"], self.codec.n_lines, self.codec.n_boxes)
+        self.bufs = [Buffer(cfg["buffer_size"], c.n_lines, c.n_boxes) for c in self.codecs]
         self.state = {"gen": 0, "best": 0, "history": [], "phase": "selfplay"}
         self.eval_proc = None
         if (self.run / "STOP").exists():  # left over from the last safe stop
@@ -259,10 +280,11 @@ class Run:
             ck = torch.load(self.run / "trainer.pt", map_location=cfg["device"])
             self.net.load_state_dict(ck["net"])
             self.opt.load_state_dict(ck["opt"])
-            if (self.run / "buffer.npz").exists():
-                self.buf.load(self.run / "buffer.npz")
+            for buf, path in zip(self.bufs, self.buf_paths()):
+                if path.exists():
+                    buf.load(path)
             log(self.run, f"resumed: gen {self.state['gen']} phase {self.state['phase']}, best gen "
-                          f"{self.state['best']}, buffer {self.buf.n}")
+                          f"{self.state['best']}, buffer {self.buf_n()}")
         else:
             if cfg.get("init_from"):
                 sd = torch.load(ROOT / cfg["init_from"], map_location=cfg["device"])
@@ -275,9 +297,53 @@ class Run:
             self.save()
         self.rng = np.random.default_rng([cfg["seed"], self.state["gen"], 1])
 
+    def buf_paths(self) -> list[Path]:
+        if len(self.mix) == 1:
+            return [self.run / "buffer.npz"]
+        return [self.run / f"buffer_{w}x{h}.npz" for (w, h), _ in self.mix]
+
+    def buf_n(self) -> str:
+        return "/".join(str(b.n) for b in self.bufs)
+
+    def save_buffers(self) -> None:
+        for buf, path in zip(self.bufs, self.buf_paths()):
+            buf.save(path)
+
+    def stop_rule(self) -> str | None:
+        """Why the run should end by cfg["stop"], or None."""
+        sc = self.cfg.get("stop")
+        if not sc:
+            return None
+        hist = self.state["history"]
+        k = sc.get("max_rejects")
+        if k and len(hist) >= k and not any(h["accepted"] for h in hist[-k:]):
+            return f"{k} rejected generations in a row"
+        if sc.get("elo") is None:
+            return None
+        from az_eval import fit_anchors, fit_one
+        anchors = fit_anchors()
+        for h in hist:
+            p = self.run / "eval" / f"gen_{h['gen']:04d}.json"
+            if h["accepted"] and p.exists():
+                e = json.loads(p.read_text())["mcts"]
+                elo = fit_one(e, anchors)
+                hard = e.get("hard")
+                share = (hard[0] + hard[2] / 2) / sum(hard) if hard else 0.0
+                if elo >= sc["elo"] and share >= sc.get("hard", 0.0):
+                    return f"gen {h['gen']}: MCTS Elo {elo:.0f}, {100 * share:.0f}% vs hard"
+        return None
+
     def save(self) -> None:
         save_atomic({"net": self.net.state_dict(), "opt": self.opt.state_dict()}, self.run / "trainer.pt")
         save_atomic(self.state, self.run / "state.json")
+
+    def split_by_mix(self, n: int) -> list[int]:
+        """n games over the board sizes by weight (largest remainder)."""
+        raw = [n * w for _, w in self.mix]
+        out = [int(r) for r in raw]
+        for i in sorted(range(len(raw)), key=lambda i: out[i] - raw[i])[:n - sum(out)]:
+            out[i] += 1
+        return out
 
     def stop_requested(self) -> bool:
         return (self.run / "STOP").exists()
@@ -303,11 +369,15 @@ class Run:
                 self.maybe_eval()
                 if self.stop_requested():
                     break
+                why = self.stop_rule()
+                if why:
+                    log(self.run, f"stop rule: {why}", stop=why)
+                    break
                 gen = self.state["gen"] + 1
                 if self.state["phase"] == "selfplay":
                     self.selfplay(pool, gen)
                     self.state["phase"] = "train"
-                    self.buf.save(self.run / "buffer.npz")
+                    self.save_buffers()
                     self.save()
                     if self.stop_requested():
                         break
@@ -336,11 +406,15 @@ class Run:
         best = str(self.run / "best.pt")
         t0 = time.time()
         phase_start(self.run, gen, "selfplay", sp["games_per_gen"])
-        tasks = [(best, n, int(self.rng.integers(2**31)), str(self.run), gen, i)
-                 for i, n in enumerate(k for k in split(sp["games_per_gen"], sp["workers"]) if k)]
+        tasks = []
+        for (wh, _), n_size in zip(self.mix, self.split_by_mix(sp["games_per_gen"])):
+            for n in split(n_size, sp["workers"]):
+                if n:
+                    tasks.append((best, n, int(self.rng.integers(2**31)), str(self.run), gen, len(tasks), wh))
         stats = []
-        for samples, st in pool.imap_unordered(_selfplay_task, tasks):
-            self.buf.add(samples)
+        index = {wh: i for i, (wh, _) in enumerate(self.mix)}
+        for wh, samples, st in pool.imap_unordered(_selfplay_task, tasks):
+            self.bufs[index[tuple(wh)]].add(samples)
             stats.append(st)
         dt = time.time() - t0
         evals = sum(s["evals"] for s in stats)
@@ -348,20 +422,22 @@ class Run:
                "positions": sum(s["positions"] for s in stats), "evals": evals, "seconds": dt,
                "sims_per_s": evals / dt, "worker_sims_per_s": [s["evals"] / s["seconds"] for s in stats],
                "mean_len": float(np.mean([s["mean_len"] for s in stats])),
-               "first_wins": sum(s["first_wins"] for s in stats), "buffer": self.buf.n}
+               "first_wins": sum(s["first_wins"] for s in stats), "buffer": [b.n for b in self.bufs]}
         log(self.run, f"gen {gen} self-play: {rec['games']} games, {rec['positions']} positions, "
                       f"{dt:.0f} s, {rec['sims_per_s']:.0f} evals/s, first mover won {rec['first_wins']}, "
-                      f"buffer {self.buf.n}", **rec)
+                      f"buffer {self.buf_n()}", **rec)
 
     def train(self, gen: int) -> None:
         tc = self.cfg["train"]
-        if self.buf.n < tc["min_buffer"]:
-            log(self.run, f"gen {gen} train: buffer {self.buf.n} < {tc['min_buffer']}, skipped")
+        ready = [i for i, b in enumerate(self.bufs) if b.n >= tc["min_buffer"]]
+        if not ready:
+            log(self.run, f"gen {gen} train: buffer {self.buf_n()} < {tc['min_buffer']}, skipped")
             return
         t0 = time.time()
         phase_start(self.run, gen, "train", tc["steps_per_gen"])
-        loss = train_steps(self.net, self.opt, self.buf, self.codec, self.cfg, self.rng, tc["steps_per_gen"],
-                           Progress(self.run, gen, "train", 0))
+        loss = train_steps(self.net, self.opt, [self.bufs[i] for i in ready], [self.codecs[i] for i in ready],
+                           self.cfg, self.rng, tc["steps_per_gen"], Progress(self.run, gen, "train", 0),
+                           [self.mix[i][1] for i in ready])
         dt = time.time() - t0
         save_atomic(self.net.state_dict(), self.run / "candidate.pt")
         log(self.run, f"gen {gen} train: {tc['steps_per_gen']} steps, {dt:.0f} s, policy {loss['policy']:.3f}, "
@@ -376,11 +452,12 @@ class Run:
         phase_start(self.run, gen, "gate", g["games"])
         tasks, off = [], 0
         # few large batches: under GPU time slicing the cost is per call
-        for n in split(g["games"], g["tasks"]):
-            if n:
-                tasks.append((str(cand), str(self.run / "best.pt"), n, int(self.rng.integers(2**31)), off % 2,
-                              str(self.run), gen, len(tasks)))
-                off += n
+        for (wh, _), n_size in zip(self.mix, self.split_by_mix(g["games"])):
+            for n in split(n_size, g["tasks"]):
+                if n:
+                    tasks.append((str(cand), str(self.run / "best.pt"), n, int(self.rng.integers(2**31)), off % 2,
+                                  str(self.run), gen, len(tasks), wh))
+                    off += n
         res = np.sum(pool.map(_match_task, tasks), axis=0)
         wins, losses, ties, margin = (int(v) for v in res)
         n = wins + losses + ties

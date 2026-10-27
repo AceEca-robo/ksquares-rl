@@ -1,0 +1,29 @@
+# Distillation of Dot-2 from Dot on 5x5 (scripts/distill.py), step (a) of
+# docs/plan_part2.md. The student's stem and body start from the teacher.
+seed: 2810
+device: cuda
+board: [5, 5]
+teacher: runs/az5b/gen_0054.pt   # Dot
+teacher_net: {blocks: 6, channels: 64, score_head: true}
+data: runs/az5b/buffer.npz       # 500k self-play positions of az5b
+run_dir: runs/dot2_distill
+holdout: 10000                   # positions kept out of training
+
+net:                             # the student, as in configs/dot2a.yaml
+  arch: dot2
+  gpool_blocks: [2, 4]
+  head_channels: 32
+  blocks: 6
+  channels: 64
+  score_head: true
+
+train:
+  steps: 30000
+  batch_size: 512
+  lr: 0.001                      # Adam, cosine to 0
+  heads_only_steps: 2000         # body frozen first, so the new heads do not wreck it
+  weight_decay: 0.0001
+  value_weight: 1.0              # MSE to the teacher's value
+  score_weight: 0.25             # MSE to the teacher's score head
+  symmetries: true
+  log_every: 1000

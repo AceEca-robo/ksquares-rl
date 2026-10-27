@@ -19,6 +19,9 @@ fixed anchors. Every pair gets one virtual game split half/half so that
 ``publish: false`` in the run config (the app's own runs) keeps only the
 eval JSONs: no docs/, no probes, no runs/best update.
 
+``probes: false`` / ``update_best: false`` skip the probe snapshots / the
+update of runs/best (Dot-2 runs: the app's net stays Dot).
+
 ``--report`` only rebuilds the table and plot.
 """
 
@@ -257,9 +260,11 @@ def main() -> None:
                 continue   # a run of the app's "Train your own Dot": nothing goes to docs/ or runs/best
             report(cfg)
             # policy / value / PV snapshots of the fixed probe set (docs/probes)
-            subprocess.run([sys.executable, str(ROOT / "scripts/az_probe_maps.py"), "--config", a.config])
+            if cfg.get("probes", True):
+                subprocess.run([sys.executable, str(ROOT / "scripts/az_probe_maps.py"), "--config", a.config])
             # the app's network: runs/best/best.pt -> the last accepted generation
-            subprocess.run([sys.executable, str(ROOT / "scripts/update_best.py")])
+            if cfg.get("update_best", True):
+                subprocess.run([sys.executable, str(ROOT / "scripts/update_best.py")])
 
 
 if __name__ == "__main__":

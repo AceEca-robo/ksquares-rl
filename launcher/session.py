@@ -38,7 +38,7 @@ class Analyst:
 
     def __init__(self, w, h, scfg):
         self.solver = None
-        self.args = (w, h, scfg["max_undrawn"], scfg["node_limit"])
+        self.args = (w, h, *brain.solver_params(scfg, w, h))
         self.results = {}
         self.q = queue.LifoQueue()
         self._stop = threading.Event()
