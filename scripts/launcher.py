@@ -591,7 +591,8 @@ class App:
         if ok:
             d = os.path.relpath(train.run_dir(name), ROOT)
             yy = self.wrap(self.L("tr_files", dir=d + "/", log=f"{d}/train.log"), (x, yy), w - 48, 18) + 6
-            self.wrap(self.L("tr_gens_note", name=name), (x, yy), w - 48, 18)
+            yy = self.wrap(self.L("tr_gens_note", name=name), (x, yy), w - 48, 18)
+        left_end = yy
         # right: the progress
         x, y, w = 940, 100, 940
         pg.draw.rect(self.screen, PANEL, (x, y, w, 930), border_radius=14)
@@ -650,7 +651,8 @@ class App:
             self.text(ln[:cols], (x, yy + 26 + k * 18), 14, FAINT, mono=True)
         # left, at the bottom: the self-play game followed right now
         if pr["live"]:
-            self.draw_live(pr["live"], (64, 690, 812, 320))
+            top = max(690, left_end + 20)
+            self.draw_live(pr["live"], (64, top, 812, 1010 - top))
 
     def draw_inner(self, inner, rect):
         """The phase's progress inside the round: a label and a bar."""

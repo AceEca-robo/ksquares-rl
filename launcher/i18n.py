@@ -233,7 +233,7 @@ STRINGS = {
     "solving": {"en": "solving exactly…", "ru": "точный расчёт…", "uk": "точний розрахунок…"},
     "no_verdict": {"en": "too early for an exact verdict", "ru": "для точного вердикта ещё рано",
                    "uk": "для точного вердикту ще зарано"},
-    "verdict_policy": {"en": "policy alone: {ok}", "ru": "одна политика: {ok}", "uk": "сама політика: {ok}"},
+    "verdict_policy": {"en": "without thinking: {ok}", "ru": "без раздумий: {ok}", "uk": "без роздумів: {ok}"},
     "right": {"en": "right", "ru": "верно", "uk": "правильно"},
     "wrong": {"en": "wrong", "ru": "неверно", "uk": "неправильно"},
     "human_move": {"en": "Your move: the network gave it {p:.0f}% ({rank} of {n})",
