@@ -201,8 +201,9 @@ estimate.
 
 ## Videos
 
-Coming soon.
-<!-- TODO: links to the videos once they are published -->
+- English: [Dot learns Dots and Boxes with AlphaZero](https://youtu.be/xuTt9ruvtEE)
+- Russian: coming soon
+<!-- TODO: link to the Russian video once it is published -->
 
 ## License
 
