@@ -385,3 +385,8 @@ Gen 0 row: docs/transfer.md (200 games per rung there). Gating of gens
 17-22 vs gen 16: 51, 18, 49, 19, 47, 32%. Search gains ~300 Elo over the
 raw policy once 10x7 is in the mix; the raw policy hardly moves. Gen 16 is
 the app's 10x7 network (runs/best10x7).
+
+Gen 16 vs the real KSquares Hard over the bridge (scripts/az_vs_hard.py,
+10x7, MCTS 200, 8 leaves per round, first mover alternating): **19-0-1**
+(lost none; margins +2 to +28 boxes). Before 10x7 training (dot2a gen 1)
+the same protocol gave 3-17.

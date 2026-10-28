@@ -844,7 +844,9 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Bridge games of dot2c gen 16 vs the real Hard: dot2s was stopped with
   run_dir/STOP between phases, 20 games played, dot2s restarted; the pause
   was added to state.json `started` (and `paused_s`) so that it does not
-  eat dot2s's 24 h.
+  eat dot2s's 24 h. Result: 19-0-1 (dot2a gen 1 before: 3-17). The pause
+  was 79 s; dot2s resumed at gen 14 (train phase). With a calibrated V the
+  8 leaves per round no longer hurt on 10x7.
 - App: a best network per board size (`best_sizes` in configs/app.yaml;
   scripts/update_best.py links runs/best10x7 -> dot2c gen 16). The menu
   lists the generations of the selected board only (dot2a on 5x5, dot2c /
