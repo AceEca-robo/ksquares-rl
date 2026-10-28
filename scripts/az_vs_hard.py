@@ -30,6 +30,7 @@ def main() -> None:
     ap.add_argument("--checkpoint", required=True)
     ap.add_argument("--board", type=int, nargs=2, help="w h (default: the config's board)")
     ap.add_argument("--json")
+    ap.add_argument("--leaves", type=int, help="leaves per tree per round (default: mcts.leaves_per_tree)")
     a = ap.parse_args()
     cfg = load_config(a.config)
     bc = cfg["bridge_eval"]
@@ -38,7 +39,7 @@ def main() -> None:
     net.load_state_dict(torch.load(ROOT / a.checkpoint, map_location="cpu"))
     ev = Evaluator(net, cfg["device"])
     rng = np.random.default_rng(bc["seed"])
-    mcts = make_mcts(ev, cfg["mcts"], rng, leaves_per_tree=cfg["mcts"]["leaves_per_tree"])
+    mcts = make_mcts(ev, cfg["mcts"], rng, leaves_per_tree=a.leaves or cfg["mcts"]["leaves_per_tree"])
     res = {"wins": 0, "losses": 0, "ties": 0, "games": []}
     with KSquaresBridge() as br:
         for g in range(bc["games"]):
@@ -60,7 +61,8 @@ def main() -> None:
     print(f"{w}x{h}, {a.checkpoint}, MCTS {bc['sims']}: {res['wins']}-{res['losses']}-{res['ties']} "
           f"({100 * (res['wins'] + res['ties'] / 2) / n:.0f}%) vs KSquares Hard over the bridge")
     if a.json:
-        (ROOT / a.json).write_text(json.dumps({"board": [w, h], "checkpoint": a.checkpoint, **bc, **res}, indent=1))
+        (ROOT / a.json).write_text(json.dumps({"board": [w, h], "checkpoint": a.checkpoint, **bc,
+                                               "leaves": a.leaves or cfg["mcts"]["leaves_per_tree"], **res}, indent=1))
 
 
 if __name__ == "__main__":

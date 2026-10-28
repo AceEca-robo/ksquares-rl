@@ -169,6 +169,8 @@ def anchors_for(cfg):
     """The anchors of the run's board: ``eval.ladder`` (an eval_ladder.py
     JSON) or the 5x5 ladder."""
     path = cfg["eval"].get("ladder")
+    if isinstance(path, list):  # ladders still being measured are left out
+        path = [p for p in path if (ROOT / p).exists()]
     return fit_anchors(*load_ladder(path)) if path else fit_anchors()
 
 
