@@ -307,6 +307,9 @@ def cmd_report(cfg):
         if f"chance/{bname}" in probe:
             L.append(f"| {bname} | | baselines: random move {100 * probe[f'chance/{bname}']:.0f}%, "
                      + ", ".join(base) + " | | | |")
+    concl = ROOT / "docs/transfer_conclusions.md"  # written by hand from the tables
+    if concl.exists():
+        L += ["", concl.read_text().rstrip()]
     (ROOT / "docs/transfer.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 

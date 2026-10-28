@@ -784,3 +784,40 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Not done tonight: launcher / app.yaml `best` per size and "boards: any"
   in core.check/brain.fits (the app still refuses Dot-2 on 10x7);
   selfcheck.py and the probe position sets are still 5x5.
+
+## 2026-10-28 (night 2) — step (b) transfer, step (c) dot2c started
+
+- Transfer of Dot-2 gen 1 (5x5 only) to 7x7 and 10x7: docs/transfer.md
+  (scripts/transfer.py, configs/transfer.yaml). Raw policy on 10x7 Elo
+  1369 > medium 1237 (hard 1420); the value head does not transfer (calls
+  winning moves losses), so MCTS is worse than the raw policy against
+  strong opponents. Parity probe on 10x7: policy 69%, but greedy/Hard 66 /
+  64%: no evidence of parity beyond "play the safe line".
+- The judge as reference: the app's 1 s solves no parity position on 10x7
+  (0/29 in 6 hard games at 1-6 safe lines; 8 s: 4/29, only with 1-2 safe
+  lines). The 10x7 set uses 15 s and 1-2 safe lines (304 positions from
+  1000 games), 7x7 4 s (500). The 5x5 set is reported also on its 1-2
+  safe line subset (216) for comparability.
+- Bridge vs sim mystery solved: 10x7 vs the real Hard 3-17 with 8 leaves
+  per round, 6-14 with 1 leaf; in the simulator the same protocol gives
+  the same (1/12, 4/12). Batched evaluation (1 leaf) gives 47%. With a
+  miscalibrated V, virtual loss over 8 leaves hurts.
+- Ladders: strong4 (4x node budget) added. 10x7 anchors with it: hard
+  1420, strong 1267, strong4 1462 (strong4 beats hard 66%). 7x7 ladder
+  (new): medium 1280, hard 1500, strong 1628, strong4 1757.
+- Deviation from the order: dot2c was started at 03:22 while the (b)
+  games were still running (strong4 games ~1 s per move made (b) last until
+  08:31). All opponents run on node budgets, so the load does not change
+  the (b) results; only the parity set generation (wall-clock judge) ran
+  on a loaded machine.
+- Bug fixed on the way: az_eval's report crashed when a ladder file of
+  eval.ladder did not exist yet (the dot2c evaluator died once after gen 1;
+  az_train restarts it).
+- dot2c (curriculum, configs/dot2c.yaml): phase 1 (7x7 0.7 / 5x5 0.3,
+  gens 1-8): accepted 1, 2, 3, 5, 7; 10x7 MCTS Elo flat ~1410-1490.
+  Phase 2 (10x7 0.6 / 7x7 0.3 / 5x5 0.1) from gen 9: gen 9 and 10
+  accepted, MCTS Elo 1682 / 1645 (vs hard 90 / 94%), raw unchanged.
+  Gens 11-13 rejected. ~25 min per generation.
+- Ideas for later: the az agent's 8 leaves per round should be checked on
+  every size before using it in the app on 10x7; a 10x7 parity set from
+  the net's own games; strong with a bigger budget as the 10x7 top anchor.
