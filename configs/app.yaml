@@ -41,6 +41,8 @@ ksquares_window: [760, 800]
 record_fps: 20
 train:                            # "Train your own Dot" (launcher/train.py)
   base_config: configs/az5b.yaml  # copied to runs/<name>/train.yaml: run_dir, from scratch, no docs
+  base_configs:                   # per board "WxH" picked in the menu, overrides base_config
+    10x7: configs/dot2s.yaml      # Dot-2 from scratch on 10x7 (rounds take ~1 h on an RTX 4060)
   default_name: my_dot
   rounds_choices: [5, 10, 25, 50, 0]   # 0 = until stopped
   rounds_default: 10

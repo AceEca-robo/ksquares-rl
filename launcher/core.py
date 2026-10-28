@@ -221,9 +221,8 @@ def check(mode, size, lang, cfg):
         return i18n.t(lang, "err_size_net", w=size[0], h=size[1], dir=best_section(cfg, size)["dir"])
     if b is None:
         return NO_NET
-    trained = tuple(load_yaml(b["config"])["board"])
-    if tuple(size) != trained:
-        return i18n.t(lang, "err_size", w=size[0], h=size[1], tw=trained[0], th=trained[1])
+    if tuple(load_yaml(b["config"])["board"]) != tuple(size):   # no network of this board configured
+        return i18n.t(lang, "err_size_net", w=size[0], h=size[1], dir=best_section(cfg, size)["dir"])
     if mode == "ksquares":
         if not os.access(GAME, os.X_OK):
             return i18n.t(lang, "err_no_game")

@@ -573,6 +573,15 @@ class App:
         if not ok:
             yy = self.wrap(self.L("tr_name_bad"), (x, yy + 58), w - 48, 18, RED) - 58
         yy += 66
+        # board: a run keeps the board it started on
+        self.text(self.L("tr_board"), (x, yy + 10), 22, DIM)
+        fixed = train.run_board(name) if ok else None
+        for j, (bw_, bh_) in enumerate(self.cfg["board_sizes"]):
+            act = (bw_, bh_) == fixed if fixed else s["size"] == j
+            self.button(f"size:{j}", (x + 220 + j * 132, yy, 120, 48), f"{bw_}×{bh_}", act, size=20, bg=BG)
+        if fixed:
+            yy = self.wrap(self.L("tr_board_fixed", w=fixed[0], h=fixed[1]), (x, yy + 58), w - 48, 18, DIM) - 58
+        yy += 80
         # rounds
         self.text(self.L("tr_rounds"), (x, yy + 10), 22, DIM)
         for j, n in enumerate(tc["rounds_choices"]):
@@ -741,6 +750,10 @@ class App:
         labels = [g["label"] for g in self.gens]
         if label not in labels:
             return
+        size = next(g["size"] for g in self.gens if g["label"] == label)
+        if list(size) in [list(b) for b in self.cfg["board_sizes"]]:
+            self.settings["size"] = [list(b) for b in self.cfg["board_sizes"]].index(list(size))
+            self.best = core.best(self.cfg, size)
         if mode == "self":
             rel = f"{self.best['run']} gen {self.best['gen']}" if self.best else None
             self.settings["gen_a"] = label
@@ -784,10 +797,14 @@ class App:
         self.name_focus = kind == "name"
         if kind == "rounds":
             s["train_rounds"] = int(val)
+        elif kind == "size":
+            s["size"] = int(val)
+            self.find_networks()
         elif kind == "train_start":
             self.machine = train.machine(self.cfg)
             try:
-                train.start(s["train_name"], s["train_rounds"], self.cfg)
+                train.start(s["train_name"], s["train_rounds"], self.cfg,
+                            size=train.run_board(s["train_name"]) or self.board_size())
                 self.message = None
             except Exception as e:
                 self.message = self.L("tr_err_start", error=str(e))

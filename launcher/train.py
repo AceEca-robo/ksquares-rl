@@ -101,26 +101,45 @@ def running():
     return None
 
 
-def write_config(name, cfg, device):
-    """runs/<name>/train.yaml from the base config; an existing one is kept
-    (the run resumes with what it started with)."""
+def base_config(cfg, size=None):
+    """The config a new run on board `size` (w, h) starts from."""
+    tc = cfg["train"]
+    if size is not None:
+        return (tc.get("base_configs") or {}).get(f"{size[0]}x{size[1]}", tc["base_config"])
+    return tc["base_config"]
+
+
+def run_board(name):
+    """(w, h) of an existing run's train.yaml, or None for a new run."""
+    try:
+        return tuple(core.load_yaml(os.path.join(run_dir(name), "train.yaml"))["board"])
+    except (OSError, KeyError, TypeError):
+        return None
+
+
+def write_config(name, cfg, device, size=None):
+    """runs/<name>/train.yaml from the base config of board `size`; an
+    existing one is kept (the run resumes with what it started with)."""
     import yaml
 
     d = run_dir(name)
     path = os.path.join(d, "train.yaml")
     if os.path.isfile(path):
         return path
-    rc = core.load_yaml(cfg["train"]["base_config"])
+    base = base_config(cfg, size)
+    rc = core.load_yaml(base)
+    for k in ("compare_plot", "bridge_eval"):   # the project's own docs and bridge games
+        rc.pop(k, None)
     rc.update(run_dir=os.path.relpath(d, core.ROOT), init_from=None, device=device, publish=False)
     os.makedirs(d, exist_ok=True)
     with open(path + ".tmp", "w") as f:
-        f.write(f"# The app's \"Train your own Dot\": {cfg['train']['base_config']} from scratch.\n")
+        f.write(f"# The app's \"Train your own Dot\": {base} from scratch.\n")
         yaml.safe_dump(rc, f, sort_keys=False)
     os.replace(path + ".tmp", path)
     return path
 
 
-def start(name, rounds, cfg, device=None, argv=None):
+def start(name, rounds, cfg, device=None, argv=None, size=None):
     """Start the trainer for runs/<name> (rounds 0: until stopped) detached
     from the app; returns its pid. argv replaces the command (tests)."""
     if not valid_name(name):
@@ -129,7 +148,7 @@ def start(name, rounds, cfg, device=None, argv=None):
         raise RuntimeError(f"already training: {running()}")
     if device is None:
         device = "cuda" if gpu() else "cpu"
-    conf = write_config(name, cfg, device)
+    conf = write_config(name, cfg, device, size)
     d = run_dir(name)
     try:
         os.remove(os.path.join(d, "STOP"))

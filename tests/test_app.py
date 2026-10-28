@@ -21,7 +21,7 @@ def test_strings_complete():
     for key, v in i18n.STRINGS.items():
         assert set(v) == set(i18n.LANGS), key
     assert i18n.t("ru", "mode_self") == "Сеть против себя"
-    assert "10×7" in i18n.t("uk", "err_size", w=10, h=7, tw=5, th=5)
+    assert "10×7" in i18n.t("uk", "err_size_net", w=10, h=7, dir="runs/best10x7")
 
 
 def test_desktop_entry():
@@ -388,3 +388,22 @@ def test_train_progress_inside_a_round(tmp_path, monkeypatch):
         assert "gen_play" in app.MODE_ROWS["ksquares"] and "gen_play" in app.MODE_ROWS["play"]
     finally:
         app.pg.quit()
+
+
+def test_train_base_config_per_size(tmp_path, monkeypatch):
+    from launcher import train
+
+    cfg = core.app_config()
+    assert train.base_config(cfg, (10, 7)) == "configs/dot2s.yaml"
+    assert train.base_config(cfg, (5, 5)) == cfg["train"]["base_config"]
+    monkeypatch.setattr(train, "run_dir", lambda name: str(tmp_path / name))
+    conf = train.write_config("big", cfg, "cpu", (10, 7))
+    rc = core.load_yaml(conf)
+    assert rc["board"] == [10, 7] and "compare_plot" not in rc and rc["publish"] is False
+    assert train.run_board("big") == (10, 7) and train.run_board("none") is None
+
+
+def test_check_10x7_has_no_size_refusal():
+    cfg = core.app_config()
+    err = core.check("play", (10, 7), "en", cfg)
+    assert err is None or "trained on" not in str(err)

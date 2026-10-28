@@ -2,7 +2,7 @@
 desktop entry, in English (the default), Russian and Ukrainian.
 
     t("ru", "mode_self")              -> "Сеть против себя"
-    t("uk", "err_size", w=10, ...)    -> "..."
+    t("uk", "err_size_net", w=10, ...) -> "..."
 
 A value is either a string (str.format with the keyword arguments) or a
 function of them.
@@ -102,6 +102,10 @@ STRINGS = {
                     "ru": "Имя: латинские буквы, цифры, _ и -, до 32 знаков, не имя прогона проекта.",
                     "uk": "Ім'я: латинські літери, цифри, _ і -, до 32 знаків, не ім'я прогону проєкту."},
     "tr_rounds": {"en": "Rounds", "ru": "Раундов", "uk": "Раундів"},
+    "tr_board": {"en": "Board", "ru": "Доска", "uk": "Дошка"},
+    "tr_board_fixed": {"en": "This run trains on {w}×{h}; a new name starts a run on another board.",
+                       "ru": "Этот запуск учится на {w}×{h}; новое имя начнёт запуск на другой доске.",
+                       "uk": "Цей запуск навчається на {w}×{h}; нове ім'я почне запуск на іншій дошці."},
     "tr_unlimited": {"en": "no limit", "ru": "без ограничения", "uk": "без обмеження"},
     "tr_start": {"en": "Start ▸", "ru": "Начать ▸", "uk": "Почати ▸"},
     "tr_resume": {"en": "Continue ▸", "ru": "Продолжить ▸", "uk": "Продовжити ▸"},
@@ -281,12 +285,6 @@ STRINGS = {
                     "uk": "Контрольна сума файлу не збіглася; його не збережено."},
     "dl_err_net": {"en": "The download failed: {error}", "ru": "Скачать не удалось: {error}",
                    "uk": "Завантажити не вдалося: {error}"},
-    "err_size": {"en": "The network was trained on {tw}×{th}; it cannot play {w}×{h}: its heads are tied "
-                       "to the board size. Pick {tw}×{th}.",
-                 "ru": "Сеть обучена на {tw}×{th} и не может играть на {w}×{h}: её головы привязаны "
-                       "к размеру доски. Выберите {tw}×{th}.",
-                 "uk": "Мережу навчено на {tw}×{th}, і вона не може грати на {w}×{h}: її голови прив'язані "
-                       "до розміру дошки. Виберіть {tw}×{th}."},
     "err_size_net": {"en": "No network for {w}×{h} yet ({dir} is missing).",
                      "ru": "Для {w}×{h} пока нет сети (нет {dir}).",
                      "uk": "Для {w}×{h} поки немає мережі (немає {dir})."},

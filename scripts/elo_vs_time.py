@@ -1,4 +1,4 @@
-"""Ladder Elo with search (MCTS) against hours of training, several runs on
+"""Ladder Elo with search (MCTS) and without (raw policy) against hours of training, several runs on
 one axis: docs/<name>.png and docs/<name>.md.
 
     python scripts/elo_vs_time.py --configs configs/dot2c.yaml configs/dot2s.yaml --name dot2c_vs_dot2s
@@ -73,13 +73,15 @@ def main() -> None:
             continue
         hrs, elo = [p[1] for p in pts], [p[2] for p in pts]
         ax.plot(hrs, elo, color=color, lw=2, marker="o", ms=6, label=f"{name} (MCTS {cfgs[0]['eval']['sims']})")
+        ax.plot(hrs, [p[3] for p in pts], color=color, lw=1.5, ls="--", marker="o", ms=4, mfc="white",
+                label=f"{name} (raw policy, no search)")
         best = max(pts, key=lambda p: p[2])
         ax.annotate(f"gen {best[0]}: {best[2]:.0f}", (best[1], best[2]), textcoords="offset points",
                     xytext=(6, 6), fontsize=9, color="#333330")
     w, h = cfgs[0]["board"]
     ax.set_xlabel("hours of training")
     ax.set_ylabel("Elo on the ladder (random = 0)")
-    ax.set_title(f"{w}x{h}: " + " vs ".join(n for n, _ in runs) + ", Elo with search")
+    ax.set_title(f"{w}x{h}: " + " vs ".join(n for n, _ in runs) + ", Elo with search (solid) and without (dashed)")
     ax.grid(color="#e6e6e1", lw=0.6)
     ax.spines[["top", "right"]].set_visible(False)
     ax.legend(loc="lower right", frameon=False)
