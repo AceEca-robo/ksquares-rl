@@ -34,7 +34,8 @@ kept over phase changes; sizes without weight in the phase are not
 played or trained on.
 
 Stop rule (``cfg["stop"]``, optional): the loop ends after ``max_rejects``
-rejected generations in a row (within the current curriculum phase), after
+rejected generations in a row (within the current curriculum phase; with
+``rejects_from_gen`` only generations from that one on count), after
 ``max_hours`` of wall clock since the run started, or when an accepted generation's evaluation
 (scripts/az_eval.py) reaches MCTS ladder Elo >= ``elo`` and a win share
 >= ``hard`` against hard.
@@ -346,7 +347,8 @@ class Run:
             return f"{sc['max_hours']} h of wall clock"
         # rejects count within the phase of the next generation
         ph = self.phase()
-        hist_ph = [h for h in hist if self.phase(h["gen"]) == ph]
+        g0 = sc.get("rejects_from_gen", 1)
+        hist_ph = [h for h in hist if self.phase(h["gen"]) == ph and h["gen"] >= g0]
         k = sc.get("max_rejects")
         if k and len(hist_ph) >= k and not any(h["accepted"] for h in hist_ph[-k:]):
             return f"{k} rejected generations in a row"

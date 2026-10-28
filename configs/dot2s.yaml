@@ -45,7 +45,9 @@ train:
   min_buffer: 20000      # do not train before this many positions
 
 stop:                    # scripts/az_train.py stops the run after
-  max_rejects: 6         # this many rejected generations in a row 
+  max_rejects: 6         # this many rejected generations in a row,
+  rejects_from_gen: 5    # counting only gens >= 5: a random-init net may fail
+                         # the first gatings (dot2c counts from gen 1)
   max_hours: 24          # or this budget of wall clock
 
 gating:

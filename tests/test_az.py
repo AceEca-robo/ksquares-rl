@@ -373,3 +373,9 @@ def test_dot2_multi_size_training_round(tmp_path):
     r.state["history"].append({"gen": 4, "accepted": False})
     r.state["gen"] = 4
     assert "rejected" in r.stop_rule()
+    # rejects_from_gen: earlier generations do not count
+    r.cfg["stop"]["rejects_from_gen"] = 4
+    assert r.stop_rule() is None
+    r.state["history"].append({"gen": 5, "accepted": False})
+    r.state["gen"] = 5
+    assert "rejected" in r.stop_rule()

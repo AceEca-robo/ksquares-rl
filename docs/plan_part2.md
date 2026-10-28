@@ -161,3 +161,8 @@ snapshot. Expect ~0.5 GB per run, ~1.5-2 GB for all of part 2. Free: 31 GB.
   game it covers is measured and recorded.
 - Stopping rule for (a): 6 rejected generations in a row, or the level
   above reached.
+- Step (c): both arms stop on 6 rejected generations in a row or 24 h.
+  Difference: in dot2s (from scratch) only generations >= 5 count toward
+  the 6 rejects (`stop.rejects_from_gen: 5`), since a random-init net may
+  fail the first gatings and an early stop would void the comparison;
+  dot2c counts from gen 1 (within each curriculum phase).
