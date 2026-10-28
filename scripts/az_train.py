@@ -27,8 +27,15 @@ plays one size; one replay buffer per size (``buffer.npz`` with a single
 size, else ``buffer_WxH.npz``), every training batch from one size drawn
 by weight.
 
+Curriculum (``cfg["curriculum"]``, optional): a list of phases
+{until_gen: N or null, boards: [...]}; generation g uses the first phase
+with g <= until_gen. Buffers exist for every size of any phase and are
+kept over phase changes; sizes without weight in the phase are not
+played or trained on.
+
 Stop rule (``cfg["stop"]``, optional): the loop ends after ``max_rejects``
-rejected generations in a row, or when an accepted generation's evaluation
+rejected generations in a row (within the current curriculum phase), after
+``max_hours`` of wall clock since the run started, or when an accepted generation's evaluation
 (scripts/az_eval.py) reaches MCTS ladder Elo >= ``elo`` and a win share
 >= ``hard`` against hard.
 
@@ -261,16 +268,23 @@ class Run:
         self.run = ROOT / cfg["run_dir"]
         self.run.mkdir(parents=True, exist_ok=True)
         self.max_gens = generations
-        self.mix = board_mix(cfg)
+        phases = cfg.get("curriculum") or [{"until_gen": None, "boards": cfg.get("boards"),
+                                            "board": cfg.get("board")}]
+        self.phases = phases
+        self.sizes = []
+        for ph in phases:
+            for wh, _ in board_mix(ph):
+                if wh not in self.sizes:
+                    self.sizes.append(wh)
         torch.manual_seed(cfg["seed"])
         torch.backends.cudnn.benchmark = True
         self.net = make_net(cfg).to(cfg["device"])
-        self.codecs = [Codec(w, h, net_planes(self.net)) for (w, h), _ in self.mix]
+        self.codecs = [Codec(w, h, net_planes(self.net)) for w, h in self.sizes]
         tc = cfg["train"]
         self.opt = torch.optim.SGD(self.net.parameters(), lr=tc["lr"], momentum=tc["momentum"],
                                    weight_decay=tc["weight_decay"], nesterov=True)
         self.bufs = [Buffer(cfg["buffer_size"], c.n_lines, c.n_boxes) for c in self.codecs]
-        self.state = {"gen": 0, "best": 0, "history": [], "phase": "selfplay"}
+        self.state = {"gen": 0, "best": 0, "history": [], "phase": "selfplay", "started": time.time()}
         self.eval_proc = None
         if (self.run / "STOP").exists():  # left over from the last safe stop
             (self.run / "STOP").unlink()
@@ -298,9 +312,22 @@ class Run:
         self.rng = np.random.default_rng([cfg["seed"], self.state["gen"], 1])
 
     def buf_paths(self) -> list[Path]:
-        if len(self.mix) == 1:
+        if len(self.sizes) == 1:
             return [self.run / "buffer.npz"]
-        return [self.run / f"buffer_{w}x{h}.npz" for (w, h), _ in self.mix]
+        return [self.run / f"buffer_{w}x{h}.npz" for w, h in self.sizes]
+
+    def phase(self, gen: int | None = None) -> int:
+        gen = self.state["gen"] + 1 if gen is None else gen
+        for i, ph in enumerate(self.phases):
+            if ph.get("until_gen") is None or gen <= ph["until_gen"]:
+                return i
+        return len(self.phases) - 1
+
+    @property
+    def mix(self) -> list[tuple[tuple[int, int], float]]:
+        """(size, weight) for every buffer size in the current phase (0: unused)."""
+        w = dict(board_mix(self.phases[self.phase()]))
+        return [(wh, w.get(wh, 0.0)) for wh in self.sizes]
 
     def buf_n(self) -> str:
         return "/".join(str(b.n) for b in self.bufs)
@@ -315,8 +342,13 @@ class Run:
         if not sc:
             return None
         hist = self.state["history"]
+        if sc.get("max_hours") and time.time() - self.state.setdefault("started", time.time()) > 3600 * sc["max_hours"]:
+            return f"{sc['max_hours']} h of wall clock"
+        # rejects count within the phase of the next generation
+        ph = self.phase()
+        hist_ph = [h for h in hist if self.phase(h["gen"]) == ph]
         k = sc.get("max_rejects")
-        if k and len(hist) >= k and not any(h["accepted"] for h in hist[-k:]):
+        if k and len(hist_ph) >= k and not any(h["accepted"] for h in hist_ph[-k:]):
             return f"{k} rejected generations in a row"
         if sc.get("elo") is None:
             return None
@@ -341,7 +373,7 @@ class Run:
         """n games over the board sizes by weight (largest remainder)."""
         raw = [n * w for _, w in self.mix]
         out = [int(r) for r in raw]
-        for i in sorted(range(len(raw)), key=lambda i: out[i] - raw[i])[:n - sum(out)]:
+        for i in sorted((i for i in range(len(raw)) if raw[i] > 0), key=lambda i: out[i] - raw[i])[:n - sum(out)]:
             out[i] += 1
         return out
 
@@ -429,7 +461,7 @@ class Run:
 
     def train(self, gen: int) -> None:
         tc = self.cfg["train"]
-        ready = [i for i, b in enumerate(self.bufs) if b.n >= tc["min_buffer"]]
+        ready = [i for i, b in enumerate(self.bufs) if b.n >= tc["min_buffer"] and self.mix[i][1] > 0]
         if not ready:
             log(self.run, f"gen {gen} train: buffer {self.buf_n()} < {tc['min_buffer']}, skipped")
             return

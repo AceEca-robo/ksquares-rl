@@ -356,5 +356,20 @@ def test_dot2_multi_size_training_round(tmp_path):
                        np.random.default_rng(0), 4, weights=[w for _, w in mix])
     assert np.isfinite(loss["policy"]) and loss["score"] > 0
     r = Run.__new__(Run)
-    r.mix = mix
+    r.phases = [{"until_gen": 2, "board": [2, 2]}, {"until_gen": None, "boards": cfg["boards"]}]
+    r.sizes = [(2, 2), (3, 2)]
+    r.state = {"gen": 0, "history": []}
+    assert r.mix == [((2, 2), 1.0), ((3, 2), 0.0)] and r.split_by_mix(5) == [5, 0]
+    r.state["gen"] = 2
+    assert r.phase() == 1 and r.mix == mix
     assert r.split_by_mix(10) == [8, 2] and r.split_by_mix(3) == [2, 1]
+    # 6 rejects count within a phase only
+    r.cfg = {"stop": {"max_rejects": 2}}
+    r.state["history"] = [{"gen": 1, "accepted": False}, {"gen": 2, "accepted": False}]
+    assert r.stop_rule() is None
+    r.state["history"].append({"gen": 3, "accepted": False})
+    r.state["gen"] = 3
+    assert r.stop_rule() is None
+    r.state["history"].append({"gen": 4, "accepted": False})
+    r.state["gen"] = 4
+    assert "rejected" in r.stop_rule()
