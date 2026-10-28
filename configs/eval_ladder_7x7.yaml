@@ -1,0 +1,14 @@
+# Ladder on 7x7 for scripts/eval_ladder.py (Elo anchors of 7x7, step (b)).
+seed: 777
+games: 200
+board: [7, 7]
+processes: 6
+json: docs/ladder_7x7.json
+agents: [random, greedy, easy, medium, hard, strong, strong4]
+pairs: [[greedy, random], [easy, random], [medium, random], [hard, random], [strong, random],
+        [greedy, easy], [medium, greedy], [hard, greedy], [strong, greedy],
+        [medium, easy], [hard, easy], [strong, easy], [hard, medium], [strong, medium], [strong, hard],
+        [strong4, medium], [strong4, hard], [strong4, strong]]
+params:
+  strong: {node_budget: 29800}                 # = 0.5 s of a core on 7x7 (calibrate_strong.py --board 7 7)
+  strong4: {agent: strong, node_budget: 119200}

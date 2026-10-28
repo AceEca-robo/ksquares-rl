@@ -5,6 +5,9 @@ easy, medium, hard — the KSquares AI port (sim.ksquares_ai), each instance
     with its own glibc rand() state seeded with ``seed`` (in the real game
     all computer seats share one process-wide state)
 strong — agents.strong (params: time_limit, max_depth, tt_limit, node_budget)
+
+Any other name may be an alias with ``agent=<one of the above>`` in its
+params (e.g. ``strong4: {agent: strong, node_budget: ...}``).
 """
 
 from __future__ import annotations
@@ -16,7 +19,9 @@ from sim.ksquares_ai import GlibcRand, make_ai
 NAMES = ("random", "greedy", "easy", "medium", "hard", "strong")
 
 
-def make_agent(name: str, seed: int, **params):
+def make_agent(name: str, seed: int, agent: str | None = None, **params):
+    if agent is not None:
+        name = agent
     if name == "random":
         return RandomAgent(seed)
     if name == "greedy":

@@ -1,0 +1,13 @@
+# strong x4 as an extra rung of the 10x7 ladder (scripts/eval_ladder.py):
+# only its pairs with medium, hard and strong (enough to place it; each of
+# its moves costs ~1 s). Merged with docs/ladder_10x7.json for the anchors.
+seed: 1078
+games: 200
+board: [10, 7]
+processes: 10
+json: docs/ladder_10x7_s4.json
+agents: [medium, hard, strong, strong4]
+pairs: [[strong4, medium], [strong4, hard], [strong4, strong]]
+params:
+  strong: {node_budget: 14400}                 # as in eval_ladder_10x7.yaml
+  strong4: {agent: strong, node_budget: 57600} # 4x: = 2 s of a core on 10x7

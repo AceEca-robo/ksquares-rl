@@ -1,0 +1,47 @@
+# Step (b) of docs/plan_part2.md: Dot-2 trained on 5x5 only, on bigger
+# boards without further training (scripts/transfer.py -> docs/transfer.md).
+seed: 1029
+device: cuda
+processes: 8                     # CPU workers for the opponents' moves
+
+nets:                            # name -> run config (net + mcts) and checkpoint
+  dot2: {config: configs/dot2a.yaml, checkpoint: runs/dot2a/gen_0001.pt}
+  untrained: {config: configs/dot2a.yaml, checkpoint: null, init_seed: 0}   # random weights
+
+boards:
+  10x7:
+    ladder: [docs/ladder_10x7.json, docs/ladder_10x7_s4.json]
+    params:
+      strong: {node_budget: 14400}
+      strong4: {agent: strong, node_budget: 57600}
+    positions: docs/transfer_parity_10x7.json
+    gen: {time_limit: 15.0}      # the app's 1 s solves no parity position on 10x7 (0/29 in 6 hard games)
+  7x7:
+    ladder: [docs/ladder_7x7.json]
+    params:
+      strong: {node_budget: 29800}
+      strong4: {agent: strong, node_budget: 119200}
+    positions: docs/transfer_parity_7x7.json
+    gen: {time_limit: 4.0}
+  5x5:                           # reference: the parity probe of part 1
+    positions: docs/parity_probe_positions.json   # 1-6 safe lines; the report also gives the 1-2 subset
+
+play:                            # ladder games of every net on 10x7 and 7x7
+  games: 200                     # per opponent and mode, first mover alternating
+  sims: 200                      # mode mcts: no noise, temperature 0
+  opponents: [random, greedy, easy, medium, hard, strong, strong4]
+  skip: {untrained: [strong4]}   # ~1 s per strong4 move; the untrained net loses to greedy
+
+positions:                       # parity positions (long chain rule) per size
+  n: 500
+  games: 1000                    # source games, pairs below, first mover alternating
+  pairs: [[hard, hard], [medium, hard], [greedy, hard], [easy, medium], [medium, medium]]
+  max_safe: 2                    # no capture, 1..2 safe lines left: with more, the judge solves
+                                 # almost nothing on 10x7 even in 20 s (6 games: 0/18 at 3-6 safe lines)
+  parity_per_game: 2
+  time_limit: 1.0                # default; per board in boards.*.gen
+  processes: 10
+
+probe:
+  sims: 200
+  baselines: [hard, greedy, strong]

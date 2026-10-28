@@ -115,10 +115,16 @@ def _p(d):
     return 1.0 / (1.0 + 10 ** (-d / 400))
 
 
-def load_ladder(path):
-    """Wins and games per pair from an eval_ladder.py JSON (ties count half)."""
-    d = json.loads((ROOT / path).read_text())
-    return {(a, b): w + t / 2 for a, b, w, l, t in d["pairs"]}, d["games"]
+def load_ladder(paths):
+    """Wins and games per pair from eval_ladder.py JSONs (one path or a list;
+    ties count half). All files must use the same games per pair."""
+    out, games = {}, None
+    for path in [paths] if isinstance(paths, str) else paths:
+        d = json.loads((ROOT / path).read_text())
+        assert games in (None, d["games"])
+        games = d["games"]
+        out.update({(a, b): w + t / 2 for a, b, w, l, t in d["pairs"]})
+    return out, games
 
 
 def fit_anchors(ladder=None, games=None):
@@ -126,8 +132,10 @@ def fit_anchors(ladder=None, games=None):
     above); Elo with random = 0."""
     if ladder is None:
         ladder, games = LADDER, LADDER_GAMES
-    idx = {a: i for i, a in enumerate(ANCHORS)}
-    n = len(ANCHORS)
+    names = [a for a in ANCHORS if any(a in p for p in ladder)]
+    names += sorted({x for p in ladder for x in p} - set(names))
+    idx = {a: i for i, a in enumerate(names)}
+    n = len(names)
     W = np.full((n, n), 0.5)  # W[i, j] = wins of i over j, incl. the virtual half game
     np.fill_diagonal(W, 0)
     for (a, b), wins in ladder.items():
@@ -141,7 +149,7 @@ def fit_anchors(ladder=None, games=None):
         if np.max(np.abs(np.log(g_new / g))) < 1e-12:
             break
         g = g_new
-    return {a: 400 * math.log10(g[idx[a]]) for a in ANCHORS}
+    return {a: 400 * math.log10(g[idx[a]]) for a in names}
 
 
 def fit_one(results, anchors):
@@ -183,7 +191,7 @@ def report(cfg):
              "Elo: Bradley-Terry vs the fixed ladder anchors, random = 0. "
              f"strong here: {cfg['eval'].get('params', {}).get('strong', {})}.", "",
              f"Anchor Elo (from the ladder in {cfg['eval'].get('ladder') or 'docs/results.md'}): "
-             + ", ".join(f"{a} {anchors[a]:.0f}" for a in ANCHORS) + ".", "",
+             + ", ".join(f"{a} {v:.0f}" for a, v in anchors.items()) + ".", "",
              "| gen | gating % | " + " | ".join(f"raw vs {o}" for o in opps) + " | raw Elo | "
              + " | ".join(f"mcts vs {o}" for o in opps) + " | mcts Elo |",
              "|---:|---:|" + "---:|" * (2 * len(opps) + 2)]
