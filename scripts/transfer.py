@@ -236,7 +236,7 @@ def cmd_report(cfg):
          "saw another size); **untrained** = Dot-2 with random weights (what the architecture gives for free).",
          ""]
     for bname, bc in cfg["boards"].items():
-        if "ladder" not in bc:
+        if "ladder" not in bc or not all((ROOT / p).exists() for p in bc["ladder"]):
             continue
         anchors = fit_anchors(*load_ladder(bc["ladder"]))
         opps = cfg["play"]["opponents"]
@@ -257,22 +257,27 @@ def cmd_report(cfg):
                 elo = fit_one({o: v for o, v in r.items() if o in anchors}, anchors) if r else float("nan")
                 L.append(f"| {net} | {mode} | " + " | ".join(cells) + f" | {elo:.0f} |")
         L.append("")
-    bridge = sorted(OUT.glob("bridge_*.json"))
+    bridge = sorted(OUT.glob("bridge_*.json")) + sorted(OUT.glob("leaves1_*.json"))
     if bridge:
         L += ["## Against the real KSquares Hard (bridge)", "",
               "`scripts/az_vs_hard.py`, MCTS 200, first mover alternating, the game's srand = 11 + game.", "",
-              "| net | board | wins-losses-ties | score % |", "|---|---|---:|---:|"]
+              "| net | board | leaves per round | wins-losses-ties | score % |", "|---|---|---:|---:|---:|"]
         for p in bridge:
             d = json.loads(p.read_text())
             n = d["wins"] + d["losses"] + d["ties"]
-            L.append(f"| {p.stem.split('_')[1]} | {d['board'][0]}x{d['board'][1]} | {d['wins']}-{d['losses']}-"
+            L.append(f"| {p.stem.split('_')[1]} | {d['board'][0]}x{d['board'][1]} | {d.get('leaves', 8)} | "
+                     f"{d['wins']}-{d['losses']}-"
                      f"{d['ties']} | {100 * (d['wins'] + d['ties'] / 2) / n:.0f} |")
         L.append("")
     L += ["## Parity probe", "",
-          "Positions where nothing can be taken, 1-6 safe lines remain and the move decides the result "
-          "(long chain rule). 10x7 / 7x7: new sets from games of ladder agents, exact values by the judge "
-          f"(strong engine to the end, {cfg['positions']['time_limit']} s per position; only positions it "
-          "solved); 5x5: the 1000 positions of docs/parity_probe_positions.json. Policy: the argmax is a "
+          "Positions where nothing can be taken, safe lines remain and the move decides the result "
+          "(long chain rule). 10x7 / 7x7: new sets from games of ladder agents with "
+          f"1-{cfg['positions']['max_safe']} safe lines, exact values by the judge (strong engine to the end; "
+          + ", ".join(f"{b} {(bc.get('gen') or {}).get('time_limit', cfg['positions']['time_limit'])} s"
+                      for b, bc in cfg["boards"].items() if bc.get("gen"))
+          + " per position; only positions it solved: with more safe lines, or the app's 1 s, it solves almost "
+          "none on 10x7); 5x5: the 1000 positions of docs/parity_probe_positions.json (1-6 safe lines), "
+          f"and its subset with 1-{cfg['positions']['max_safe']} safe lines. Policy: the argmax is a "
           "correct move. V after the move: the sign of the value head after every legal move is right "
           "(balanced: mean of the shares over winning and over losing moves; 50 = blind). MCTS: the move of "
           f"{cfg['probe']['sims']} simulations is correct. 95% Wilson intervals for policy and MCTS.", "",

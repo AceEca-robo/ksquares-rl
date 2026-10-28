@@ -1,0 +1,40 @@
+{
+ "board": [
+  10,
+  7
+ ],
+ "games": 200,
+ "seed": 1078,
+ "params": {
+  "strong": {
+   "node_budget": 14400
+  },
+  "strong4": {
+   "agent": "strong",
+   "node_budget": 57600
+  }
+ },
+ "pairs": [
+  [
+   "strong4",
+   "medium",
+   138,
+   50,
+   12
+  ],
+  [
+   "strong4",
+   "hard",
+   132,
+   61,
+   7
+  ],
+  [
+   "strong4",
+   "strong",
+   137,
+   52,
+   11
+  ]
+ ]
+}
