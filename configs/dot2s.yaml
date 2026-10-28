@@ -7,6 +7,9 @@ run_dir: runs/dot2s
 device: cuda
 probes: false            # az_eval.py: no docs/probes snapshots (5x5 Dot scripts)
 update_best: false       # az_eval.py: runs/best (the app's net) stays Dot
+compare_plot:            # az_eval.py: docs/dot2c_vs_dot2s.png, Elo against hours of training
+  configs: [configs/dot2c.yaml, configs/dot2s.yaml]
+  name: dot2c_vs_dot2s
 
 net:
   arch: dot2             # AZNet2: convolutional heads, global pooling

@@ -360,3 +360,28 @@ does (80% / 76% vs 99%): the depth it reaches in 14.4k nodes on 157 lines
 is too shallow for the opening, and its chain endgame does not make up for
 it. The ladder is non-transitive at strong, so its anchor carries a large
 error; hard (1493) is the reliable top anchor on 10x7.
+
+## dot2c: Dot-2 curriculum 5x5 -> 7x7 -> 10x7, step (c) (2026-10-28)
+
+configs/dot2c.yaml, from dot2a gen 1. Phase 1 (gens 1-8): 7x7 0.7 / 5x5
+0.3; phase 2 (gen 9 on): 10x7 0.6 / 7x7 0.3 / 5x5 0.1. Stopped by the
+rule after gen 22 (gens 17-22 rejected in a row), 8.0 h of wall clock
+(of the 24 h budget).
+Every accepted generation on the 10x7 ladder, 100 games per cell (full
+table: docs/dot2c_ladder.md; anchors medium 1237, hard 1420, strong4
+1462). Hours: summed self-play + train + gate time (docs/dot2c_vs_dot2s.md).
+
+| gen | hours | gating % | raw Elo | MCTS Elo | MCTS vs hard | MCTS vs strong |
+|---:|---:|---:|---:|---:|---:|---:|
+| 0 (dot2a gen 1, no 10x7 training) | 0 | — | 1369 | 1322 | — | — |
+| 1 | 0.3 | 61 | 1440 | 1425 | 48 | 72 |
+| 7 | 2.5 | 57 | 1411 | 1489 | 62 | 72 |
+| 9 (first with 10x7) | 3.2 | 62 | 1431 | 1682 | 90 | 95 |
+| 10 | 3.7 | 62 | 1462 | 1645 | 94 | 89 |
+| 14 | 5.2 | 56 | 1481 | 1600 | 84 | 84 |
+| **16** | 5.9 | 63 | 1457 | **1755** | **96** | **100** |
+
+Gen 0 row: docs/transfer.md (200 games per rung there). Gating of gens
+17-22 vs gen 16: 51, 18, 49, 19, 47, 32%. Search gains ~300 Elo over the
+raw policy once 10x7 is in the mix; the raw policy hardly moves. Gen 16 is
+the app's 10x7 network (runs/best10x7).

@@ -292,6 +292,11 @@ def main() -> None:
             # the app's network: runs/best/best.pt -> the last accepted generation
             if cfg.get("update_best", True):
                 subprocess.run([sys.executable, str(ROOT / "scripts/update_best.py")])
+            # Elo against hours of training next to other runs (scripts/elo_vs_time.py)
+            if cfg.get("compare_plot"):
+                cp = cfg["compare_plot"]
+                subprocess.run([sys.executable, str(ROOT / "scripts/elo_vs_time.py"),
+                                "--configs", *cp["configs"], "--name", cp["name"]])
 
 
 if __name__ == "__main__":

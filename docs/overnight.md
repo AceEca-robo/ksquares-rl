@@ -821,3 +821,37 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Ideas for later: the az agent's 8 leaves per round should be checked on
   every size before using it in the app on 10x7; a 10x7 parity set from
   the net's own games; strong with a bigger budget as the 10x7 top anchor.
+
+## 2026-10-28 (day) — dot2c done, dot2s running, 10x7 in the app
+
+- dot2c stopped by the rule at 11:21: gens 17-22 rejected in a row vs gen
+  16 (51, 18, 49, 19, 47, 32%). 8.0 h of the 24 h budget, 22 gens. Best:
+  gen 16, MCTS Elo 1755 on the 10x7 ladder (96% vs hard, 100% vs strong);
+  raw Elo stays ~1430-1480 over the whole run. Table: docs/results.md.
+  The two gating scores of 18-19% look like training breakdowns rather
+  than noise; not investigated.
+- dot2s (configs/dot2s.yaml, from scratch on 10x7 only, same
+  hyperparameters) started automatically at 11:22. Change agreed before
+  the start: rejects count toward the 6-in-a-row rule only from gen 5
+  (`stop.rejects_from_gen`), since a random net may fail the first
+  gatings; it did (gens 1, 2: 0 and 3%).
+- Elo against hours of training, dot2c and dot2s on one axis:
+  scripts/elo_vs_time.py -> docs/dot2c_vs_dot2s.png/.md. Hours are summed
+  self-play + train + gate time, so pauses do not count; az_eval.py
+  redraws it after every dot2s evaluation (`compare_plot` in dot2s.yaml).
+  At equal hours (~4 h) dot2s gen 11 is at 1146, dot2c at ~1650; dot2c's
+  head start (Dot, distillation, dot2a) is not counted in its hours.
+- Bridge games of dot2c gen 16 vs the real Hard: dot2s was stopped with
+  run_dir/STOP between phases, 20 games played, dot2s restarted; the pause
+  was added to state.json `started` (and `paused_s`) so that it does not
+  eat dot2s's 24 h.
+- App: a best network per board size (`best_sizes` in configs/app.yaml;
+  scripts/update_best.py links runs/best10x7 -> dot2c gen 16). The menu
+  lists the generations of the selected board only (dot2a on 5x5, dot2c /
+  dot2s on 10x7). Screenshots: docs/app_menu_10x7.png,
+  docs/app_ksquares_10x7.png (a win 38:32 vs Hard), _mid.png.
+- Unclear: one 10x7 KSquares session in the app showed a black game
+  window for the whole game (the game itself ran, 41:29); a rerun and a
+  standalone check were fine. Not reproduced. Also `--moves N` with
+  --screenshot did not stop the game early on either board (it waits for
+  the judge's verdict); pre-existing.

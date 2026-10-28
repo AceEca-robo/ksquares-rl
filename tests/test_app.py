@@ -70,7 +70,7 @@ def test_chains():
     assert a["loops"] == [4] and a["chains"] == [] and a["long"] == 0
 
 
-def test_net_tied_to_board_size():
+def test_net_tied_to_board_size(tmp_path):
     """The heads are fully connected over the 11 x 11 grid: a 5x5 net cannot
     evaluate 10x7, and the app says so before a game starts."""
     torch = pytest.importorskip("torch")
@@ -82,8 +82,17 @@ def test_net_tied_to_board_size():
         net(x)
     cfg = core.app_config()
     if core.best(cfg) is not None:
-        msg = core.check("play", (10, 7), "en", cfg)
+        main_only = {**cfg, "best_sizes": {}}   # 10x7 has its own network (best_sizes): without it
+        msg = core.check("play", (10, 7), "en", main_only)
         assert msg and "10×7" in msg
+        rc = tmp_path / "run.yaml"   # a run that never started: no link is made
+        rc.write_text((ROOT / "configs/dot2s.yaml").read_text().replace("run_dir: runs/dot2s", f"run_dir: {tmp_path / 'run'}"))
+        missing = {**cfg, "best_sizes": {"10x7": {"run_config": str(rc), "gen": None, "dir": str(tmp_path / "best")}}}
+        assert str(tmp_path / "best") in core.check("play", (10, 7), "en", missing)
+    b = core.best(cfg, (10, 7))
+    if b is not None:
+        assert core.check("play", (10, 7), "en", cfg) is None
+        assert core.load_yaml(b["config"])["board"] == [10, 7]
 
 
 def _have_ksquares():
@@ -315,7 +324,7 @@ def test_train_progress_inside_a_round(tmp_path, monkeypatch):
     cfg = core.app_config()
     run = tmp_path / "runs" / "my_dot"
     run.mkdir(parents=True)
-    (run / "train.yaml").write_text("run_dir: runs/my_dot\n")
+    (run / "train.yaml").write_text("run_dir: runs/my_dot\nboard: [5, 5]\n")
     (run / "train.log").write_text("".join(f"line {k}\n" for k in range(15)))
     hist = [{"gen": 1, "accepted": True, "score": 0.7, "wins": 70, "losses": 30, "ties": 0}]
     (run / "state.json").write_text(json.dumps({"gen": 1, "best": 1, "phase": "selfplay", "history": hist}))
@@ -364,13 +373,13 @@ def test_train_progress_inside_a_round(tmp_path, monkeypatch):
         assert {"go:play", "go:self", "go:ksquares"} <= set(app.buttons)
         monkeypatch.setattr(core, "generations", lambda cfg: [
             {"run": "az5b", "gen": 54, "config": "configs/az5b.yaml", "path": "x", "label": "az5b gen 54",
-             "own": False},
+             "own": False, "size": (5, 5)},
             {"run": "my_dot", "gen": 1, "config": "runs/my_dot/train.yaml", "path": "y", "label": "my_dot gen 1",
-             "own": True}])
+             "own": True, "size": (5, 5)}])
         started = []
         monkeypatch.setattr(app, "start", started.append)
         app.best = {"run": "az5b", "gen": 54}
-        monkeypatch.setattr(core, "best", lambda cfg: app.best)
+        monkeypatch.setattr(core, "best", lambda cfg, size=None: app.best)
         app.train_click("go:self")
         assert started == ["self"] and (app.settings["gen_a"], app.settings["gen_b"]) == ("my_dot gen 1", "az5b gen 54")
         app.train_click("go:ksquares")

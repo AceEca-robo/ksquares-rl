@@ -220,10 +220,17 @@ class App:
         self.name_focus = False
         self.train_polled = (0.0, None)
 
+    def board_size(self):
+        return tuple(self.cfg["board_sizes"][self.settings["size"]])
+
+    def gen_labels(self):
+        """The generations that play the board size picked in the menu."""
+        return [g["label"] for g in self.gens if g["size"] == self.board_size()]
+
     def find_networks(self):
         self.gens = core.generations(self.cfg)
-        self.best = core.best(self.cfg)
-        labels = [g["label"] for g in self.gens]
+        self.best = core.best(self.cfg, self.board_size())
+        labels = self.gen_labels()
         if self.settings["gen_a"] not in labels:
             self.settings["gen_a"] = labels[0] if labels else None
         if self.settings["gen_b"] not in labels:
@@ -234,7 +241,7 @@ class App:
     def play_labels(self):
         """The networks of "vs KSquares" and "play": None (the released one,
         runs/best) and the accepted rounds of the app's own runs."""
-        return [None] + [g["label"] for g in self.gens if g["own"]]
+        return [None] + [g["label"] for g in self.gens if g["own"] and g["size"] == self.board_size()]
 
     # --- drawing helpers ---------------------------------------------------------
 
@@ -313,7 +320,10 @@ class App:
                 self.button(f"{key}:-1", (700, y, 60, 48), "‹", size=24)
                 label = s[key] or "—"
                 if key == "gen_play" and s[key] is None:
-                    label = self.L("gen_best", gen=self.best["gen"]) if self.best else "—"
+                    own_link = core.best_section(self.cfg, self.board_size()) is not self.cfg["best"]
+                    label = ("—" if not self.best else
+                             self.L("gen_best_size", run=self.best["run"], gen=self.best["gen"]) if own_link
+                             else self.L("gen_best", gen=self.best["gen"]))
                 self.text(label, (930, y + 10), 22, FG, "midtop")
                 self.button(f"{key}:1", (1100, y, 60, 48), "›", size=24)
             else:
@@ -424,10 +434,11 @@ class App:
             s["sims"] = int(val)
         elif kind == "size":
             s["size"] = int(val)
+            self.find_networks()   # the generations and the best network of that board
         elif kind == "mine":
             s["show_mine"] = val == "1"
-        elif kind in ("gen_a", "gen_b") and self.gens:
-            labels = [g["label"] for g in self.gens]
+        elif kind in ("gen_a", "gen_b") and self.gen_labels():
+            labels = self.gen_labels()
             i = labels.index(s[kind]) if s[kind] in labels else 0
             s[kind] = labels[(i + int(val)) % len(labels)]
         elif kind == "gen_play":
@@ -457,7 +468,10 @@ class App:
         if err:
             self.message = err
             return
-        self.best = core.best(self.cfg)
+        self.best = core.best(self.cfg, size)
+        if mode == "self" and not (self.settings["gen_a"] in self.gen_labels() and self.settings["gen_b"] in self.gen_labels()):
+            self.message = self.L("err_size_net", w=size[0], h=size[1], dir=core.best_section(self.cfg, size)["dir"])
+            return
         if mode == "self":
             by = {g["label"]: g for g in self.gens}
             specs = [(by[self.settings[k]]["config"], by[self.settings[k]]["path"], self.settings[k])

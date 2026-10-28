@@ -9,9 +9,17 @@ best:
     size: 2207519
     run: az5b                     # what it is: az5b gen 54
     gen: 54
-generations:                      # pickable in "network vs itself"
+best_sizes:                       # the best network per other board size ("WxH"), as best (no download)
+  10x7:
+    run_config: configs/dot2c.yaml  # Dot-2, curriculum 5x5 -> 7x7 -> 10x7
+    gen: 16                         # pinned: MCTS Elo 1755 on the 10x7 ladder (docs/dot2c_ladder.md)
+    dir: runs/best10x7
+generations:                      # pickable in "network vs itself" (the menu shows those of the board size)
   - configs/az5.yaml
   - configs/az5b.yaml
+  - configs/dot2a.yaml            # Dot-2 on 5x5
+  - configs/dot2c.yaml            # Dot-2 on 10x7: curriculum
+  - configs/dot2s.yaml            # Dot-2 on 10x7: from scratch
 board_sizes: [[5, 5], [10, 7]]
 sims_choices: [0, 50, 200, 800]   # 0 = no search, the policy's argmax
 sims_default: 200

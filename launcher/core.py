@@ -98,9 +98,20 @@ def save_settings(s):
 
 # --- networks -----------------------------------------------------------------
 
-def best(cfg):
-    """{"run", "gen", "config", "path"} of runs/best/best.pt (refreshed from
-    the run's state first), or None."""
+def best_section(cfg, size=None):
+    """configs/app.yaml's section of the best network for a board size:
+    ``best_sizes["WxH"]``, else ``best``."""
+    if size is not None:
+        bc = (cfg.get("best_sizes") or {}).get(f"{size[0]}x{size[1]}")
+        if bc is not None:
+            return bc
+    return cfg["best"]
+
+
+def best(cfg, size=None):
+    """{"run", "gen", "config", "path"} of runs/best/best.pt, or of the
+    board size's own link (``best_sizes``; refreshed from the run's state
+    first), or None."""
     import sys
 
     sys.path.insert(0, os.path.join(ROOT, "scripts"))
@@ -109,7 +120,7 @@ def best(cfg):
         update(cfg)
     except Exception:
         pass   # a read-only checkout: use the link as it is
-    d = os.path.join(ROOT, cfg["best"]["dir"])
+    d = os.path.join(ROOT, best_section(cfg, size)["dir"])
     try:
         with open(os.path.join(d, "best.json")) as f:
             info = json.load(f)
@@ -163,7 +174,7 @@ def download_best(cfg, progress, cancelled=lambda: False):
 
 def generations(cfg):
     """Every accepted generation on disk, in order: [{"run", "gen", "config",
-    "path", "label", "own"}] (own: a run of "Train your own Dot"): the project's runs, the best network too when its run
+    "path", "label", "own", "size"}] (size: the run's board; own: a run of "Train your own Dot"): the project's runs, the best network too when its run
     is not on disk (a fresh clone with the downloaded one), then the app's
     own runs ("Train your own Dot", runs/<name>/train.yaml)."""
     from . import train
@@ -183,11 +194,12 @@ def generations(cfg):
             p = os.path.join(run, f"gen_{h['gen']:04d}.pt")
             if h["accepted"] and os.path.isfile(p):
                 out.append({"run": name, "gen": h["gen"], "config": c, "path": p,
-                            "label": f"{name} gen {h['gen']}", "own": c in own})
+                            "label": f"{name} gen {h['gen']}", "own": c in own, "size": tuple(rc["board"])})
     b = best(cfg)
     if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):
         k = sum(1 for g in out if g["config"] in cfg["generations"])
-        out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}", "own": False})
+        out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}", "own": False,
+                       "size": tuple(load_yaml(b["config"])["board"])})
     return out
 
 
@@ -204,7 +216,9 @@ def check(mode, size, lang, cfg):
             return i18n.t(lang, "err_no_module", name={"yaml": "PyYAML", "PIL": "Pillow"}.get(name, name))
     if mode == "train":
         return None   # needs no network: launcher/train.py checks the machine
-    b = best(cfg)
+    b = best(cfg, size)
+    if b is None and best_section(cfg, size) is not cfg["best"]:
+        return i18n.t(lang, "err_size_net", w=size[0], h=size[1], dir=best_section(cfg, size)["dir"])
     if b is None:
         return NO_NET
     trained = tuple(load_yaml(b["config"])["board"])

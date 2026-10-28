@@ -1,6 +1,7 @@
 """Point runs/best/best.pt at the last accepted generation of the run in
 configs/app.yaml (``best``), or at ``best.gen`` when that pins one, and
-describe it in runs/best/best.json.
+describe it in runs/best/best.json. The same for every board size in
+``best_sizes`` (e.g. runs/best10x7 for 10x7).
 
     python scripts/update_best.py
 
@@ -18,7 +19,13 @@ from _common import ROOT, load_config
 
 
 def update(app_cfg: dict) -> dict | None:
-    bc = app_cfg["best"]
+    """Every link of configs/app.yaml; returns the main one's (``best``) info."""
+    for bc in (app_cfg.get("best_sizes") or {}).values():
+        update_one(bc)
+    return update_one(app_cfg["best"])
+
+
+def update_one(bc: dict) -> dict | None:
     rc = load_config(ROOT / bc["run_config"])
     run = ROOT / rc["run_dir"]
     try:

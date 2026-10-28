@@ -70,6 +70,9 @@ STRINGS = {
     "gen_play": {"en": "Network", "ru": "Сеть", "uk": "Мережа"},
     "gen_best": {"en": "Dot (gen {gen}, from the release)", "ru": "Dot (gen {gen}, из релиза)",
                  "uk": "Dot (gen {gen}, з релізу)"},
+    "gen_best_size": {"en": "Dot-2 ({run} gen {gen}, the best on this board)",
+                      "ru": "Dot-2 ({run} gen {gen}, лучшая на этой доске)",
+                      "uk": "Dot-2 ({run} gen {gen}, найкраща на цій дошці)"},
     # --- "Train your own Dot" ------------------------------------------------------
     "tr_machine": {"en": "This computer", "ru": "Этот компьютер", "uk": "Цей комп'ютер"},
     "tr_gpu": {"en": "GPU: {name}, {mem:.1f} GB", "ru": "Видеокарта: {name}, {mem:.1f} ГБ",
@@ -284,6 +287,9 @@ STRINGS = {
                        "к размеру доски. Выберите {tw}×{th}.",
                  "uk": "Мережу навчено на {tw}×{th}, і вона не може грати на {w}×{h}: її голови прив'язані "
                        "до розміру дошки. Виберіть {tw}×{th}."},
+    "err_size_net": {"en": "No network for {w}×{h} yet ({dir} is missing).",
+                     "ru": "Для {w}×{h} пока нет сети (нет {dir}).",
+                     "uk": "Для {w}×{h} поки немає мережі (немає {dir})."},
     "err_no_game": {"en": "KSquares is not built: run ./install.sh.", "ru": "KSquares не собран: запустите ./install.sh.",
                     "uk": "KSquares не зібрано: запустіть ./install.sh."},
     "err_no_tool": {"en": "Missing {tools}. Install: sudo apt install {pkgs}",
