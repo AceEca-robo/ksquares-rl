@@ -14,6 +14,22 @@ best_sizes:                       # the best network per other board size ("WxH"
     run_config: configs/dot2c.yaml  # Dot-2, curriculum 5x5 -> 7x7 -> 10x7
     gen: 16                         # pinned: MCTS Elo 1755 on the 10x7 ladder (docs/dot2c_ladder.md)
     dir: runs/best10x7
+    download:                       # fetched with best's when runs/best10x7/best.pt is missing
+      url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.2/best10x7.pt
+      sha256: 071d2a05e919357efb7fcba402d0e8b3c8692075fb7fffebf843235b928dde3b
+      size: 2083639
+      run: dot2c
+      gen: 16
+release_generations:              # more release networks, fetched with the best ones; listed in the menus
+  - config: configs/dot2s.yaml    # Dot-2 from scratch on 10x7, the run's best (12-8 vs the real Hard)
+    dir: runs/release
+    file: dot2s_gen_0039.pt
+    download:
+      url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.2/dot2s_gen_0039.pt
+      sha256: b86925a58110a1f6634946adf9703b705181626400de3e79fe86e55e1d5b22dd
+      size: 2083639
+      run: dot2s
+      gen: 39
 generations:                      # pickable in "network vs itself" (the menu shows those of the board size)
   - configs/az5.yaml
   - configs/az5b.yaml

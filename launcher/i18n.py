@@ -267,12 +267,12 @@ STRINGS = {
                      "uk": "Мережа: ще не завантажена"},
     # --- the download dialog ------------------------------------------------------
     "dl_title": {"en": "Download the network?", "ru": "Скачать сеть?", "uk": "Завантажити мережу?"},
-    "dl_text": {"en": "There is no trained network here yet (runs/best/best.pt). The app can download "
-                      "{label}, the ladder best ({size} MB), from the project's release: {url}",
-                "ru": "Обученной сети здесь пока нет (runs/best/best.pt). Приложение может скачать "
-                      "{label}, лучшую на лестнице ({size} МБ), из релиза проекта: {url}",
-                "uk": "Навченої мережі тут поки немає (runs/best/best.pt). Застосунок може завантажити "
-                      "{label}, найкращу на драбині ({size} МБ), з релізу проєкту: {url}"},
+    "dl_text": {"en": "There are no trained networks here yet (runs/). The app can download "
+                      "the best ones, {label} ({size} MB), from the project's release: {url}",
+                "ru": "Обученных сетей здесь пока нет (runs/). Приложение может скачать "
+                      "лучшие, {label} ({size} МБ), из релиза проекта: {url}",
+                "uk": "Навчених мереж тут поки немає (runs/). Застосунок може завантажити "
+                      "найкращі, {label} ({size} МБ), з релізу проєкту: {url}"},
     "dl_yes": {"en": "Download", "ru": "Скачать", "uk": "Завантажити"},
     "dl_retry": {"en": "Try again", "ru": "Ещё раз", "uk": "Ще раз"},
     "dl_no": {"en": "Not now", "ru": "Не сейчас", "uk": "Не зараз"},

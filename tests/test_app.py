@@ -37,16 +37,22 @@ def test_download_best(tmp_path, monkeypatch):
     src = tmp_path / "release.pt"
     src.write_bytes(b"weights" * 1000)
     cfg = core.app_config()
+    for it in core.release_items(cfg):
+        it["download"].update(url=src.as_uri(), size=src.stat().st_size,
+                              sha256=hashlib.sha256(src.read_bytes()).hexdigest())
     dl = cfg["best"]["download"]
-    dl.update(url=src.as_uri(), size=src.stat().st_size,
-              sha256=hashlib.sha256(src.read_bytes()).hexdigest())
     monkeypatch.setattr(core, "ROOT", str(tmp_path / "clone"))
+    n = len(core.missing_downloads(cfg))
+    assert n == 3   # az5b, dot2c (10x7 best), dot2s gen 39
     seen = []
     core.download_best(cfg, lambda done, total: seen.append(done))
+    assert core.missing_downloads(cfg) == []
     best = tmp_path / "clone" / cfg["best"]["dir"]
     assert (best / "best.pt").read_bytes() == src.read_bytes()
-    assert seen[-2:] == [src.stat().st_size, None]
+    assert seen[-2:] == [n * src.stat().st_size, None]
     assert core.json.loads((best / "best.json").read_text())["gen"] == dl["gen"]
+    rel = tmp_path / "clone" / "runs/release/dot2s_gen_0039.json"
+    assert core.json.loads(rel.read_text())["run"] == "dot2s"
     (best / "best.pt").unlink()
     dl["sha256"] = "0" * 64
     with pytest.raises(ValueError):

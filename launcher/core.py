@@ -134,42 +134,63 @@ class Cancelled(Exception):
     pass
 
 
+def release_items(cfg):
+    """The release's networks: [{"download", "dir", "file", "config"}] for
+    ``best``, every ``best_sizes`` entry with a ``download``, and the
+    ``release_generations`` (extra generations offered in the menus)."""
+    out = [{"download": cfg["best"]["download"], "dir": cfg["best"]["dir"], "file": "best.pt",
+            "config": cfg["best"]["run_config"]}]
+    for bc in (cfg.get("best_sizes") or {}).values():
+        if bc.get("download"):
+            out.append({"download": bc["download"], "dir": bc["dir"], "file": "best.pt", "config": bc["run_config"]})
+    for g in cfg.get("release_generations") or []:
+        out.append({"download": g["download"], "dir": g["dir"], "file": g["file"], "config": g["config"]})
+    return out
+
+
+def missing_downloads(cfg):
+    """The release items not on disk (a fresh clone: all of them)."""
+    return [it for it in release_items(cfg) if not os.path.isfile(os.path.join(ROOT, it["dir"], it["file"]))]
+
+
 def download_best(cfg, progress, cancelled=lambda: False):
-    """Download the release's network (best.download in configs/app.yaml)
-    over https into runs/best/best.pt and describe it in best.json.
-    progress(done, total) is called per chunk, with done = None while the
-    checksum is checked. Raises Cancelled, ValueError (checksum mismatch)
-    or OSError."""
-    dl = cfg["best"]["download"]
-    d = os.path.join(ROOT, cfg["best"]["dir"])
-    os.makedirs(d, exist_ok=True)
-    path = os.path.join(d, "best.pt")
-    part = path + ".part"
-    h = hashlib.sha256()
-    try:
-        req = urllib.request.Request(dl["url"], headers={"User-Agent": "ksquares-rl-launcher"})
-        with urllib.request.urlopen(req, timeout=30) as r, open(part, "wb") as f:
-            total = int(r.headers.get("Content-Length") or dl["size"])
-            done = 0
-            while chunk := r.read(1 << 16):
-                if cancelled():
-                    raise Cancelled
-                f.write(chunk)
-                h.update(chunk)
-                done += len(chunk)
-                progress(done, total)
-        progress(None, total)
-        if h.hexdigest() != dl["sha256"]:
-            raise ValueError("sha256 mismatch")
-        os.replace(part, path)
-    finally:
-        if os.path.exists(part):
-            os.remove(part)
-    info = {"run": dl["run"], "gen": dl["gen"], "config": cfg["best"]["run_config"],
-            "checkpoint": dl["url"]}
-    with open(os.path.join(d, "best.json.tmp"), "w") as f:
-        json.dump(info, f, indent=1)
-    os.replace(os.path.join(d, "best.json.tmp"), os.path.join(d, "best.json"))
+    """Download the release's missing networks (missing_downloads) over https,
+    each into its dir and described in <file stem>.json (best.json for a
+    best.pt). progress(done, total) is called per chunk with the bytes of all
+    of them, with done = None while the checksums are checked. Raises
+    Cancelled, ValueError (checksum mismatch) or OSError."""
+    items = missing_downloads(cfg)
+    total = sum(it["download"]["size"] for it in items)
+    done = 0
+    for it in items:
+        dl = it["download"]
+        d = os.path.join(ROOT, it["dir"])
+        os.makedirs(d, exist_ok=True)
+        path = os.path.join(d, it["file"])
+        part = path + ".part"
+        h = hashlib.sha256()
+        try:
+            req = urllib.request.Request(dl["url"], headers={"User-Agent": "ksquares-rl-launcher"})
+            with urllib.request.urlopen(req, timeout=30) as r, open(part, "wb") as f:
+                while chunk := r.read(1 << 16):
+                    if cancelled():
+                        raise Cancelled
+                    f.write(chunk)
+                    h.update(chunk)
+                    done += len(chunk)
+                    progress(done, total)
+            progress(None, total)
+            if h.hexdigest() != dl["sha256"]:
+                raise ValueError("sha256 mismatch")
+            os.replace(part, path)
+        finally:
+            if os.path.exists(part):
+                os.remove(part)
+        info = {"run": dl["run"], "gen": dl["gen"], "config": it["config"], "checkpoint": dl["url"]}
+        meta = os.path.join(d, os.path.splitext(it["file"])[0] + ".json")
+        with open(meta + ".tmp", "w") as f:
+            json.dump(info, f, indent=1)
+        os.replace(meta + ".tmp", meta)
 
 
 def generations(cfg):
@@ -195,11 +216,18 @@ def generations(cfg):
             if h["accepted"] and os.path.isfile(p):
                 out.append({"run": name, "gen": h["gen"], "config": c, "path": p,
                             "label": f"{name} gen {h['gen']}", "own": c in own, "size": tuple(rc["board"])})
-    b = best(cfg)
-    if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):
-        k = sum(1 for g in out if g["config"] in cfg["generations"])
-        out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}", "own": False,
-                       "size": tuple(load_yaml(b["config"])["board"])})
+    # the downloaded networks of runs not on disk (a fresh clone)
+    extra = [best(cfg)] + [best(cfg, tuple(int(v) for v in k.split("x"))) for k in cfg.get("best_sizes") or {}]
+    for g in cfg.get("release_generations") or []:
+        p = os.path.join(ROOT, g["dir"], g["file"])
+        if os.path.isfile(p):
+            extra.append({"run": g["download"]["run"], "gen": g["download"]["gen"], "config": g["config"], "path": p})
+    k = sum(1 for g in out if g["config"] in cfg["generations"])
+    for b in extra:
+        if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):
+            out.insert(k, {**b, "label": f"{b['run']} gen {b['gen']}", "own": False,
+                           "size": tuple(load_yaml(b["config"])["board"])})
+            k += 1
     return out
 
 
@@ -217,7 +245,7 @@ def check(mode, size, lang, cfg):
     if mode == "train":
         return None   # needs no network: launcher/train.py checks the machine
     b = best(cfg, size)
-    if b is None and best_section(cfg, size) is not cfg["best"]:
+    if b is None and best_section(cfg, size) is not cfg["best"] and not best_section(cfg, size).get("download"):
         return i18n.t(lang, "err_size_net", w=size[0], h=size[1], dir=best_section(cfg, size)["dir"])
     if b is None:
         return NO_NET

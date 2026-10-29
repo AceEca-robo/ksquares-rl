@@ -53,6 +53,40 @@ turns that into 90% winning moves; KSquares Hard gets 49.6%, strong 94.7%.
 
 ![parity curves](docs/parity_curves.png)
 
+## Part 2: any board size
+
+Dot-2 (`agents/az_net.py`, `arch: dot2`) has convolutional heads and global
+pooling, so one network plays any board. Trained on 5x5 (dot2a), then moved
+to 10x7 three ways, all measured on the same 10x7 ladder (anchors: Medium
+1237, Hard 1420, strong4 1462; `docs/transfer.md`, `docs/results.md`):
+
+| 10x7 network | training on big boards | raw Elo | MCTS Elo | vs the real Hard (bridge, 20 games) |
+|---|---|---:|---:|---:|
+| dot2a gen 1, no retraining | none | 1369 | 1322 | 3-17 |
+| **dot2c gen 16, curriculum 5x5 -> 7x7 -> 10x7** | 5.9 h | 1457 | **1755** | **19-0-1** |
+| dot2s gen 39, from scratch on 10x7 | 14.8 h | 1406 | 1413 | 12-8 |
+
+- **Without retraining** the policy carries over (raw Elo above Medium),
+  but the value head does not: it calls almost every 10x7 position lost,
+  and search that trusts it plays *worse* than the bare policy.
+- **One round on 10x7 fixes the value**: dot2c's first generation with
+  10x7 self-play (gen 9) jumps from MCTS Elo ~1490 to 1682; gen 16 beats
+  the real KSquares Hard 19 games of 20, draws one, loses none.
+- **From scratch** dot2s needs ~10 h to reach Hard's level and stalls near
+  it (6 rejected generations in a row at gen 45); experience from the
+  small board is worth far more than the extra hours.
+
+![Elo against hours of training](docs/dot2c_vs_dot2s.png)
+
+Solid: with search (MCTS 200); dashed: the policy alone. Hours are
+self-play + training + gating time; dot2c's head start (5x5 training) is
+not counted.
+
+![the app on 10x7: the chain analysis mid-game](docs/app_10x7.png)
+
+The app plays 10x7 in every mode with dot2c gen 16; dot2s gen 39 is in the
+generation lists, and "Train your own Dot" can train on 10x7 too.
+
 ## The app
 
 One pygame window with a menu (English, Russian, Ukrainian):
@@ -80,8 +114,11 @@ only: its heads are tied to the board size.
 
 The network is `runs/best/best.pt` (az5b gen 54, pinned in
 `configs/app.yaml`). `runs/` is not in git: in a fresh clone the app offers
-to download it (2.2 MB, checked by sha256) from the
-[v0.1 release](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.1).
+to download the release networks (6.4 MB together, each checked by sha256):
+az5b gen 54 from the
+[v0.1 release](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.1),
+dot2c gen 16 (`runs/best10x7`, 10x7) and dot2s gen 39 (`runs/release`) from
+[v0.2](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.2).
 
 ## Build and run
 

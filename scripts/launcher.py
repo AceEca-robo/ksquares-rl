@@ -23,8 +23,9 @@ move. Search: none (the policy's argmax) or 50 / 200 / 800 simulations.
 The network is runs/best/best.pt: az5b gen 54, pinned by best.gen in
 configs/app.yaml (without the pin, the last accepted generation;
 scripts/update_best.py keeps the link current); in a fresh clone, without
-runs/, the menu offers to download it from the v0.1 release (best.download
-in configs/app.yaml). "network vs itself" can pick any accepted generation
+runs/, the menu offers to download the release networks (best.download,
+best_sizes.*.download and release_generations in configs/app.yaml: az5b gen
+54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2). "network vs itself" can pick any accepted generation
 of az5 and az5b on disk. Esc goes back to the menu
 from any mode (the game, its Xvfb and the worker are closed), Esc in the
 menu quits. English, Russian or Ukrainian (launcher/i18n.py), switched in
@@ -356,10 +357,11 @@ class App:
         p = pg.Rect(W / 2 - 440, H / 2 - 200, 880, 400)
         pg.draw.rect(self.screen, PANEL, p, border_radius=20)
         pg.draw.rect(self.screen, ACCENT, p, 3, border_radius=20)
-        dl = self.cfg["best"]["download"]
+        items = [it["download"] for it in core.missing_downloads(self.cfg)] or [self.cfg["best"]["download"]]
         self.text(self.L("dl_title"), (p.x + 40, p.y + 34), 34, ACCENT)
-        self.wrap(self.L("dl_text", label=f"{dl['run']} gen {dl['gen']}", size=f"{dl['size'] / 1e6:.1f}",
-                         url=dl["url"]), (p.x + 40, p.y + 94), p.w - 80, 22, FG)
+        self.wrap(self.L("dl_text", label=", ".join(f"{dl['run']} gen {dl['gen']}" for dl in items),
+                         size=f"{sum(dl['size'] for dl in items) / 1e6:.1f}",
+                         url=items[0]["url"].rsplit("/", 1)[0]), (p.x + 40, p.y + 94), p.w - 80, 22, FG)
         d = self.download
         buttons = []
         if d is None or d.result not in (None, "ok"):
