@@ -898,3 +898,16 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   "network vs itself" dot2c 16 vs dot2s 39 and "network vs KSquares" on
   10x7 headless. `--moves` now stops the KSquares mode too (the show_mine
   fix of the night covered it).
+- Part 2 video (RU draft): docs/video_script_part2_ru.md, voice-only edits
+  agreed; build in video/ (not in git): video/p2_cards.py (stills),
+  video/storyboard_part2_ru.yaml, recordings video/p2/hard_10x7_ru.mp4
+  (dot2c gen 16 vs the real Hard, seed 13, 45:25) and
+  dot2a_medium_10x7_ru.mp4 (dot2a gen 1, no search, vs Medium, 38:32; the
+  app was given dot2a as the 10x7 network by a one-off wrapper). Result
+  video/p2/ksquares_rl_part2_ru.mp4, 6:09, copied to ~/YouTube/ksquares-rl/.
+  edge-tts failed again and again with NoAudioReceived on fixed sentences
+  and then passed the same text minutes later: a service hiccup; reruns
+  with --keep finish it.
+- The black KSquares window of 10-28 showed up again (10x7, seed 12): the
+  window was white for most of the game and black near the end; the game
+  itself ran (44:26). Still not understood.
