@@ -911,3 +911,13 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - The black KSquares window of 10-28 showed up again (10x7, seed 12): the
   window was white for most of the game and black near the end; the game
   itself ran (44:26). Still not understood.
+- Part 2 video, English cut: docs/video_script_part2_en.md (translation of
+  the agreed RU script; networks Dot / Dot-2 / Dot-3, "thinking" for
+  search), en-US-GuyNeural, 5:13. EN app recordings with the same seeds
+  gave the same games (45:25, 38:32); the KSquares window went black again
+  in the Hard take, only after the last move (110.5 s on), so scene 7 ends
+  at 110.3 s. Thumbnails for part 2 (video/p2_thumbnail.py, not in git): a
+  real 10x7 position, Hard vs Hard in the simulator (seed 44) up to the
+  point where no safe line is left; chains 10 10 8 7 5 4 3. Everything
+  copied to ~/YouTube/ksquares-rl/ with RU/EN descriptions (the part 1
+  link left as a placeholder).
