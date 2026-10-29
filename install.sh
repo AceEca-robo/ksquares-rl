@@ -131,7 +131,7 @@ echo "$DATA/applications/ksquares-rl.desktop -> $BIN/ksquares-rl"
 if (cd "$ROOT/scripts" && "$PY" update_best.py) | grep -q "'gen'"; then
     ck="the network is $(readlink "$ROOT/runs/best/best.pt")"
 else
-    ck="the app offers to download the network (az5b gen 54, 2.2 MB, from the v0.1 release) on its first start"
+    ck="the app offers to download the networks (az5b gen 54 for 5x5, dot2c gen 16 and dot2s gen 39 for 10x7, 6.4 MB, from the v0.1 and v0.2 releases) on its first start"
 fi
 
 step "self-check"

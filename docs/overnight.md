@@ -882,3 +882,19 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   move). Probably the same cause as the KSquares-mode note of 10-28; not
   rechecked there. docs/app_10x7.png: move 100 with the chain analysis.
 - runs/best10x7 stays dot2c gen 16.
+
+## 2026-10-29 (day) — part 2 closed, release v0.2
+
+- dot2s's best is gen 39 (12-8 vs the real Hard; the ladder's gen 25 went
+  6-14). Release v0.2: best10x7.pt (dot2c gen 16) and dot2s_gen_0039.pt.
+  The app downloads every missing release network at once
+  (core.missing_downloads: best.download, best_sizes.*.download,
+  release_generations), az5b still from v0.1; dot2s gen 39 lands in
+  runs/release and joins the 10x7 lists.
+- README: "Part 2: any board size" (transfer table, the Elo-vs-hours plot,
+  the 10x7 screenshot).
+- install.sh from scratch in podman (ubuntu:24.04, root, --cpu, clone from
+  GitHub): 1 min 57 s, 1.2 GB; then all three downloads (checksums ok),
+  "network vs itself" dot2c 16 vs dot2s 39 and "network vs KSquares" on
+  10x7 headless. `--moves` now stops the KSquares mode too (the show_mine
+  fix of the night covered it).
