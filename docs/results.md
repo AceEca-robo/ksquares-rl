@@ -404,3 +404,22 @@ excluded). Accepted: 3 5 6 7 9 11 13 14 15 17 18 20 22 25 31 36 39.
 | dot2c (curriculum) | 16 | 5.9 | 1755 | 1457 | 19-0-1 |
 
 Anchors: medium 1237, hard 1420, strong4 1462. Plot: docs/dot2c_vs_dot2s.png.
+
+## 10x7: the app's network against Hard by number of simulations
+
+dot2c gen 16 (runs/best10x7) against Hard in the simulator, 100 games per
+row, the first mover alternating, no noise, temperature 0
+(`scripts/sims_vs_hard.py`, configs/sims_vs_hard_10x7.yaml, seed 2026,
+docs/sims_vs_hard_10x7.json). These are the app's "Search" buttons.
+
+| sims | wins | losses | ties |
+|---:|---:|---:|---:|
+| 50 | 93 | 7 | 0 |
+| 100 | 89 | 7 | 4 |
+| 200 | 96 | 3 | 1 |
+| 400 | 98 | 2 | 0 |
+
+50 sims is not clearly weaker than 200 (93 vs 96 wins, inside the noise of
+100 games), so the app keeps its default and the 50 button has no warning.
+The two lost bridge games at 50 sims in the Debian and Mint containers
+(2026-10-29, docs/overnight.md) fit a ~7% loss rate with an unlucky draw.

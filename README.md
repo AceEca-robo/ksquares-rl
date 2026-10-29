@@ -157,6 +157,9 @@ ksquares-rl             # or "KSquares RL" in the applications menu
 ./uninstall.sh [--purge]
 ```
 
+The same seed can give a different game on a GPU and on a CPU (floating
+point arithmetic differs, and the search follows); that is normal.
+
 `install.sh` installs the missing system packages with apt (the KSquares
 build dependencies, as `apt-get build-dep ksquares`: Qt 5 / KDE Frameworks 5
 dev packages, cmake; then Xvfb, xdotool, x11-utils, ffmpeg, python3-venv,

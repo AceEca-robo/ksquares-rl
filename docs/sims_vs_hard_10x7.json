@@ -1,0 +1,26 @@
+{
+ "50": {
+  "wins": 93,
+  "losses": 7,
+  "ties": 0,
+  "seconds": 24
+ },
+ "100": {
+  "wins": 89,
+  "losses": 7,
+  "ties": 4,
+  "seconds": 46
+ },
+ "200": {
+  "wins": 96,
+  "losses": 3,
+  "ties": 1,
+  "seconds": 93
+ },
+ "400": {
+  "wins": 98,
+  "losses": 2,
+  "ties": 0,
+  "seconds": 187
+ }
+}

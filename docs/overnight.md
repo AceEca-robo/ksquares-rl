@@ -935,3 +935,7 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   cause. Rerun at 200 sims, seed 13: 36:34 on both. (The same seed gave
   45:25 on the host GPU: float differences, CPU vs GPU, change the search.)
   README: a table of the checked systems.
+- 50 / 100 / 200 / 400 sims on 10x7 (scripts/sims_vs_hard.py, simulator,
+  100 games each vs Hard): 93 / 89 / 96 / 98 wins. 50 is not clearly
+  weaker, so the app's defaults stay; table in docs/results.md. README:
+  GPU and CPU games with one seed may differ.
