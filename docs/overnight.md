@@ -939,3 +939,20 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   100 games each vs Hard): 93 / 89 / 96 / 98 wins. 50 is not clearly
   weaker, so the app's defaults stay; table in docs/results.md. README:
   GPU and CPU games with one seed may differ.
+- The 10x7 routs at 50 sims (Debian 11:59, Mint 1:69), examined. 10 games
+  at 50 sims on the CPU in a fresh Mint 22 container and on the host CPU,
+  seeds 1-10: all won, identical move by move (scores and V at every net
+  move). The raw net output on three fixed positions is bitwise equal
+  (float32, matmul precision "highest", 14 threads, no TF32/bf16; torch
+  2.14.1+cpu vs +cu130 run on the CPU): the container is not the cause.
+  Seeds 11-200 on the host CPU: 17 losses of 190 (9%, as the simulator's
+  7/100), every one a rout (1:69 ... 17:53); the app's random seed
+  happened to hit two of them. In the losses the net's V does not drop in
+  one move: over 3-5 of its moves (~10 lines) it goes from slightly
+  positive to -1 (seed 121: +0.39 at line 77, +0.01 at 83, -0.90 at 88,
+  -1.00 from 98). But the exact solver (agents/strong.py) says the game is
+  already lost by 42 boxes at line 83, where V is still +0.01; positions
+  before line 83 are not solved within 120 s. So the mistake comes earlier,
+  in the middle game where nothing can check it, and V only notices once
+  the chains are fixed; after that Hard keeps control and takes whole
+  chains (25, 21, 9 lines in one turn), hence the size of the losses.
