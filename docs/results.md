@@ -390,3 +390,17 @@ Gen 16 vs the real KSquares Hard over the bridge (scripts/az_vs_hard.py,
 10x7, MCTS 200, 8 leaves per round, first mover alternating): **19-0-1**
 (lost none; margins +2 to +28 boxes). Before 10x7 training (dot2a gen 1)
 the same protocol gave 3-17.
+
+## dot2s: Dot-2 from scratch on 10x7, step (c) arm S (2026-10-29)
+
+configs/dot2s.yaml, random init, 10x7 self-play only. Stopped by 6 rejected
+generations in a row at gen 45 after ~16.5 h of training (of 24 h; pauses
+excluded). Accepted: 3 5 6 7 9 11 13 14 15 17 18 20 22 25 31 36 39.
+
+| | gen | hours | MCTS Elo | raw Elo | vs real Hard (bridge, 20 games) |
+|---|---:|---:|---:|---:|---:|
+| dot2s best by ladder | 25 | 9.6 | 1458 | 1316 | 6-14 (30%) |
+| dot2s last accepted | 39 | 14.8 | 1413 | 1406 | 12-8 (60%) |
+| dot2c (curriculum) | 16 | 5.9 | 1755 | 1457 | 19-0-1 |
+
+Anchors: medium 1237, hard 1420, strong4 1462. Plot: docs/dot2c_vs_dot2s.png.

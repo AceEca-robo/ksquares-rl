@@ -857,3 +857,28 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   standalone check were fine. Not reproduced. Also `--moves N` with
   --screenshot did not stop the game early on either board (it waits for
   the judge's verdict); pre-existing.
+
+## 2026-10-29 (night) — dot2s finished, app trains on 10x7
+
+- dot2s resumed at 01:27 in tmux `dot2s`; the 6.0 h pause (19:27-01:27) was
+  added to state.json `started` / `paused_s`. It stopped at 10:24 by the
+  rule (gens 40-45 rejected) after ~16.5 h of training. Ladder best: gen 25,
+  MCTS 1458 (just above hard 1420); gen 39 (last accepted) 1413, but its
+  raw policy reached 1406. Bridge vs the real Hard on 10x7, 20 games each,
+  played after the stop (no bridge runs between generations): gen 25 6-14,
+  gen 39 12-8. dot2c gen 16 stays far ahead (1755, 19-0-1) in ~6 h: the
+  curriculum wins clearly at equal and at triple the hours. The ladder and
+  the bridge disagree on gen 25 vs 39 (20 games, wide intervals).
+- docs/dot2c_vs_dot2s.png now draws raw-policy Elo (dashed) next to MCTS
+  Elo, with the medium / hard / strong4 lines.
+- App: "Train your own Dot" picks the board; 10x7 starts from
+  configs/dot2s.yaml (`train.base_configs`), without its compare_plot and
+  bridge_eval. An existing run keeps its train.yaml board (the panel says
+  so). The "trained on 5x5, cannot play 10x7" refusal is gone; a size
+  without a configured network says "no network for WxH yet".
+  "Play my Dot" switches the menu to the run's board.
+- Fix: `--moves` with --screenshot never stopped "network vs itself" when
+  the saved settings had show_mine on (it waited for a review of a human
+  move). Probably the same cause as the KSquares-mode note of 10-28; not
+  rechecked there. docs/app_10x7.png: move 100 with the chain analysis.
+- runs/best10x7 stays dot2c gen 16.
