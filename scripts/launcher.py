@@ -1138,7 +1138,7 @@ class App:
                     done = s.over or (a.moves and s.snap and s.snap["board"].n_drawn >= a.moves
                                       and s.snap["thought"] is not None
                                       and s.verdict(s.snap["thought"]["key"]) != "pending"
-                                      and (not s.show_mine or self.reviewing(s.snap)))
+                                      and (not (s.show_mine and s.mode == "play") or self.reviewing(s.snap)))
                     if done and self.over_at is None:
                         self.over_at = now
                         if a.screenshot:
