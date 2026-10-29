@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install ksquares-rl from this checkout (Ubuntu 22.04 / 24.04):
+# Install ksquares-rl from this checkout (Ubuntu 22.04 / 24.04, Debian 12, Mint 22):
 #   1. system packages through apt (the KSquares build dependencies, Xvfb,
 #      xdotool, ffmpeg, Python venv, fonts), only the missing ones, with sudo
 #      (or directly as root);

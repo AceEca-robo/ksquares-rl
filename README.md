@@ -124,7 +124,8 @@ dot2c gen 16 (`runs/best10x7`, 10x7) and dot2s gen 39 (`runs/release`) from
 
 Requirements:
 
-- Ubuntu 22.04 or 24.04 (x86-64), with sudo for the system packages;
+- Ubuntu 22.04 / 24.04, Debian 12 or Linux Mint 22 (x86-64; see the table
+  below), with sudo for the system packages;
 - to play: any machine, no GPU needed;
 - to train your own Dot: an NVIDIA GPU with its driver (CUDA 12.6 or
   newer as `nvidia-smi` reports it) and 4 GB of video memory or more;
@@ -134,6 +135,18 @@ Requirements:
 - time: ~2.5 minutes on a fresh Ubuntu without a GPU (measured in clean
   `ubuntu:22.04` and `ubuntu:24.04` containers, 250 MB of packages to
   download); with a GPU add the ~3 GB download of torch's CUDA build.
+
+Checked from scratch in clean podman containers (as root, only git
+installed before the clone, `./install.sh --cpu`, then the self-check, the
+network downloads, "network vs itself" on 10x7 and a full 10x7 game of
+dot2c gen 16 against the real KSquares Hard over the bridge):
+
+| system | image | checked | install | 10x7 game vs Hard |
+|---|---|---|---|---|
+| Ubuntu 22.04 | `ubuntu:22.04` | 2026-10-29 | 2 min 45 s | won 44:26 (50 sims) |
+| Ubuntu 24.04 | `ubuntu:24.04` | 2026-10-29 | 2 min 0 s | won 42:28 (50 sims) |
+| Debian 12 | `debian:12` | 2026-10-29 | 2 min 53 s | won 36:34 (200 sims, seed 13) |
+| Linux Mint 22 | `linuxmintd/mint22-amd64` | 2026-10-29 | 1 min 36 s | won 36:34 (200 sims, seed 13) |
 
 ```
 git clone https://github.com/AceEca-robo/ksquares-rl && cd ksquares-rl

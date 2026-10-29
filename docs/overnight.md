@@ -921,3 +921,17 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   point where no safe line is left; chains 10 10 8 7 5 4 3. Everything
   copied to ~/YouTube/ksquares-rl/ with RU/EN descriptions (the part 1
   link left as a placeholder).
+- install.sh from scratch on two more systems in podman (root, only git,
+  clean clone, --cpu, self-check, downloads, self-play and a full 10x7
+  game against the real Hard over the bridge): Debian 12 and Linux Mint 22
+  (the real linuxmintd/mint22-amd64 image), and again on Ubuntu 22.04 and
+  24.04. Nothing to fix: all four install (1.5–5 min, 1.1–1.2 GB) and pass.
+  The first bridge games were at 50 sims with random seeds: Ubuntu won
+  (44:26, 42:28), Debian and Mint lost badly (11:59, 1:69). The bridge
+  checks every move against the simulator, so these were real games: dot2c
+  gen 16 at 50 sims can lose control of the chains. Neither side has a
+  per-move time limit (the net searches its fixed number of sims, KSquares'
+  delay is display only), so the slow parallel containers were not the
+  cause. Rerun at 200 sims, seed 13: 36:34 on both. (The same seed gave
+  45:25 on the host GPU: float differences, CPU vs GPU, change the search.)
+  README: a table of the checked systems.
