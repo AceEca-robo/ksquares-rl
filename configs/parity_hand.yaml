@@ -1,0 +1,57 @@
+# Part 3, experiment (a) of docs/plan_part3.md: the policy head ("the hand")
+# of Dot-2 learns directly from the judge's answers on parity positions
+# (scripts/parity_hand.py -> docs/parity_hand.md).
+seed: 3031
+device: cuda
+processes: 16                    # CPU workers: the judge, the opponents' moves
+
+net:                             # the network that is fine-tuned
+  config: configs/dot2c.yaml
+  checkpoint: runs/dot2c/gen_0016.pt   # Dot-2 as in the app on 10x7 (runs/best10x7)
+
+data:                            # training sets: parity positions with the judge's answers
+  out: runs/parity_hand          # data_{size}.jsonl, appended as games finish (resumable)
+  n: 5000                        # wanted per size
+  pairs: [[hard, hard], [medium, hard], [greedy, hard], [easy, medium], [medium, medium]]
+  boards:
+    5x5:
+      heldout: docs/parity_probe_positions.json   # the probe set: never trained on
+      max_safe: 6
+      time_limit: 2.0            # seconds per position; only solved positions are kept
+      parity_per_game: 2
+      games: 4000                # upper bound; stops once n are found
+    10x7:
+      heldout: docs/transfer_parity_10x7.json
+      max_safe: 2                # with 3+ safe lines the judge solves almost nothing on 10x7
+      time_limit: 15.0
+      parity_per_game: 4
+      games: 16000
+
+train:                           # fine-tuning arms
+  val_share: 0.1                 # of each size's positions, for the learning curve (the probe sets stay held out)
+  steps: 4000
+  parity_batch: 128              # parity positions per step (sizes alternate)
+  selfplay_batch: 256            # positions from dot2c's replay buffers per step (against forgetting)
+  selfplay_buffers: {5x5: runs/dot2c/buffer_5x5.npz, 7x7: runs/dot2c/buffer_7x7.npz, 10x7: runs/dot2c/buffer_10x7.npz}
+  selfplay_weights: {5x5: 0.1, 7x7: 0.3, 10x7: 0.6}   # as dot2c phase 2
+  parity_weight: 1.0             # parity loss: -log(policy mass on the correct moves)
+  lr: 0.0005                     # Adam, policy head
+  symmetries: true
+  log_every: 250
+  arms:
+    a1: {train: head}            # policy head only; body, value / score heads frozen
+    a2: {train: all, body_lr_scale: 0.1, value_loss: true}   # body and V at 0.1x lr, self-play V loss kept
+
+eval:
+  probe_sims: 200                # MCTS on the probe sets
+  elo:                           # raw policy (no search) ladder games
+    games: 200                   # per opponent, first mover alternating
+    opponents: [greedy, medium, hard, strong]
+    boards:
+      5x5: {ladder: null, params: {strong: {node_budget: 23000}}}   # null: az_eval's 5x5 LADDER
+      10x7: {ladder: [docs/ladder_10x7.json, docs/ladder_10x7_s4.json], params: {strong: {node_budget: 14400}}}
+  routs:                         # vs the simulator's Hard on 10x7
+    games: 200
+    sims: 50                     # the app's lowest setting, where the routs were found
+    margin: 20                   # a loss by this many boxes or more is a rout
+  bridge: {games: 20}            # scripts/az_vs_hard.py with the net config's bridge_eval (MCTS 200, seed 11)

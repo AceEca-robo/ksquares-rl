@@ -70,8 +70,9 @@ def _opp_move(task):
     return ag.act(board)
 
 
-def play(evaluator, mode, opponents, cfg, pool, rng):
-    """All games of one mode at once; returns {opp: [net wins, losses, ties]}."""
+def play(evaluator, mode, opponents, cfg, pool, rng, margins=None):
+    """All games of one mode at once; returns {opp: [net wins, losses, ties]}.
+    ``margins``: a dict that gets {opp: [net boxes - opponent's, per game]}."""
     from agents.az_mcts import choose_move, result_for_mover
     from agents.az_play import make_mcts
     from sim.board import Board
@@ -105,6 +106,8 @@ def play(evaluator, mode, opponents, cfg, pool, rng):
             net = board.score[0 if net_first else 1]
             other = sum(board.score) - net
             res[opp][0 if net > other else 1 if other > net else 2] += 1
+            if margins is not None:
+                margins.setdefault(opp, []).append(net - other)
         live = nxt
     return res
 
