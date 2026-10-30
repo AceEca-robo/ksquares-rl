@@ -343,6 +343,7 @@ class App:
             self.text(self.L("network", label=f"{self.best['run']} gen {self.best['gen']}"), (160, 948), 22, DIM)
         else:
             self.text(self.L("network_none"), (160, 948), 22, DIM)
+        self.text(self.L("esc_quit"), (40, H - 26), 26, FG, "bottomleft")
         self.text(self.L("menu_keys"), (W / 2, H - 30), 20, FAINT, "midbottom")
         if self.offer or self.download is not None:
             self.draw_download()
@@ -539,7 +540,8 @@ class App:
         pr = self.train_progress()
         busy = m["running"]
         self.text(self.L("mode_train"), (40, 30), 40, ACCENT)
-        self.text(self.L("keys_train"), (40, H - 30), 18, FAINT, "bottomleft")
+        r = self.text(self.L("esc_menu"), (40, H - 26), 26, FG, "bottomleft")
+        self.text(self.L("keys_train"), (r.right + 16, H - 30), 18, DIM, "bottomleft")
         # left: the machine and the settings
         x, y, w = 40, 100, 860
         pg.draw.rect(self.screen, PANEL, (x, y, w, 930), border_radius=14)
@@ -898,7 +900,8 @@ class App:
             sc = board.score[seat] if board else 0
             turn = board is not None and not snap["over"] and board.player == seat
             self.text(f"{self.player_name(seat)}  {sc}", (x + 34, 48), 28, ACCENT if turn else FG)
-        self.text(self.L(f"keys_{'over' if s.over else s.mode}"), (MAIN[0], 1040 - 140 - 26), 18, FAINT)
+        r = self.text(self.L("esc_menu"), (MAIN[0], 1040 - 140 - 30), 24, FG)
+        self.text(self.L(f"keys_{'over' if s.over else s.mode}"), (r.right + 40, 1040 - 140 - 26), 18, FAINT)
         if s.mode == "self":
             st = self.L("speed", s=s.delay) + ("   " + self.L("paused") if s.paused else "")
             self.text(st, (MAIN[0] + MAIN[2], 1040 - 140 - 26), 18, ACCENT if s.paused else DIM, "topright")
