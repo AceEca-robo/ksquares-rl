@@ -15,7 +15,8 @@ without a capture and with 1..max_safe safe lines go to the judge with a
 time limit; only solved positions where the move decides the result are
 kept). The probe sets (5x5 docs/parity_probe_positions.json, 10x7
 docs/transfer_parity_10x7.json) are held out: positions in them are
-skipped. Every finished game is appended to runs/parity_hand/data_{size}.jsonl,
+skipped. Every finished game is appended to runs/parity_hand/data_{size}.jsonl
+(a copy of the sets used is in data/parity_hand_{size}.jsonl.gz),
 so an interrupted run resumes where it stopped.
 """
 

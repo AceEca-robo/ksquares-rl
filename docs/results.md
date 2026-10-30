@@ -423,3 +423,13 @@ docs/sims_vs_hard_10x7.json). These are the app's "Search" buttons.
 100 games), so the app keeps its default and the 50 button has no warning.
 The two lost bridge games at 50 sims in the Debian and Mint containers
 (2026-10-29, docs/overnight.md) fit a ~7% loss rate with an unlucky draw.
+
+## Part 3 (a): the policy head trained on the judge's answers (2026-10-30)
+
+Details and conclusions: docs/parity_hand.md. Base = dot2c gen 16.
+
+| net | raw probe 5x5 % | raw probe 10x7 % | raw Elo 5x5 | raw Elo 10x7 | routs, 200 sim games, MCTS 50 | bridge vs Hard |
+|---|---:|---:|---:|---:|---:|---:|
+| base | 55.1 | 67.4 | 1695 | 1450 | 11 | 19-0-1 |
+| a1 (head only) | 65.0 | 77.0 | 1668 | 1467 | 10 | 19-1-0 |
+| a2 (body 0.1x lr) | 75.5 | 87.5 | 1633 | 1488 | 14 | 19-0-1 |

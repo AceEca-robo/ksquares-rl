@@ -956,3 +956,32 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   in the middle game where nothing can check it, and V only notices once
   the chains are fixed; after that Hard keeps control and takes whole
   chains (25, 21, 9 lines in one turn), hence the size of the losses.
+
+## 2026-10-30 (day) — part 3 starts: can the hand see parity without search
+
+- App: the "Esc — back to the main menu" hint is now separate, larger and
+  white on every screen (games, training); the main menu says "Esc — quit"
+  (there Esc closes the app). EN/RU/UK.
+- Plan: docs/plan_part3.md, three hypotheses (a) fine-tune the hand on the
+  judge's answers, (b) stronger global pooling / chain count on the input,
+  (c) chain graph network (estimate only). Common metrics: raw parity probe
+  on the held-out sets, raw Elo on 5x5 and 10x7, routs vs Hard on 10x7.
+  Dot-2 here = dot2c gen 16 (the app's 10x7 net), not the video's naming.
+- Routs measured also in the simulator (200 games, MCTS 50): 20 bridge
+  games cannot see a 9% rate move. Rout = a loss by 20+ boxes.
+- Data (scripts/parity_hand.py data, configs/parity_hand.yaml): 5000 parity
+  positions per size, judge with a limit (5x5 2 s, 1-6 safe lines; 10x7
+  15 s, 1-2 safe lines), probe sets excluded. 5x5 in 2 min (2612 games),
+  10x7 in 3 h (9239 games, judge solved 7173/16486). Distribution:
+  docs/parity_hand_data.md; the sets in data/parity_hand_*.jsonl.gz (pool
+  order makes a rerun differ). 10x7 positions are late: median 80 of 157
+  lines undrawn, nearly all have 6+ long chains formed.
+- Experiment (a): docs/parity_hand.md. a1 (head only, 90 s of GPU) raw
+  probe 10x7 67 -> 77%, Elo unchanged; a2 (body at 0.1x lr, 5 min) 87.5%,
+  but 5x5 raw Elo -62 and V more pessimistic on 10x7. Routs at MCTS 50:
+  11 / 10 / 14 of 200; bridge 19-0-1 / 19-1 / 19-0-1. Verdict: partly —
+  the head learns late parity, routs (middle game) unchanged.
+- az_eval.play takes an optional `margins` dict (per-game box difference).
+- Ideas for later: middle-game training signal (net MCTS at high sims as
+  teacher, or a much longer judge on a few hundred positions); a1 + a2 with
+  a KL term to the base V; parity positions from the net's own games.
