@@ -1,0 +1,79 @@
+# Part 3 (b2) of docs/plan_part3.md: Dot-2 with the chain hint planes on
+# the input (agents/az_net.py N_PLANES_3), stem widened from dot2c gen 16
+# (new input weights zero), fine-tuned by scripts/parity_arch.py finetune,
+# then 10 rounds of self-play as dot2c phase 2.
+seed: 3102
+board: [10, 7]          # evaluation board (az_eval.py); self-play: curriculum
+run_dir: runs/parity_b2
+init_from: runs/parity_arch/b2_ft.pt   # after scripts/parity_arch.py finetune
+init_buffers_from: runs/dot2c   # dot2c's replay buffers to start with
+eval_during: false       # evaluated afterwards by scripts/parity_hand.py
+device: cuda
+probes: false            # az_eval.py: no docs/probes snapshots (5x5 Dot scripts)
+update_best: false       # az_eval.py: runs/best (the app's net) stays Dot
+
+net:
+  arch: dot2             # AZNet2: convolutional heads, global pooling
+  gpool_blocks: [2, 4]   # residual blocks with a pooled-board bias
+  planes: 17             # + chain hint planes 12-16
+  head_channels: 32
+  blocks: 6
+  channels: 64
+  score_head: true       # second value head: final score difference / boxes
+
+mcts:
+  c_puct: 1.5
+  fpu_reduction: 0.2     # unvisited child Q = parent net value - this
+  dirichlet_alpha: 0.3   # root noise in self-play only
+  dirichlet_eps: 0.25
+  virtual_loss: 1.0
+  leaves_per_tree: 8     # for single-game search (az agent); self-play uses 1
+
+selfplay:
+  workers: 3             # processes, each with its own CUDA context (~160 MB)
+  games_per_worker: 192  # concurrent games per worker = GPU batch size;
+                         # lower it if the GPU runs out of memory
+  games_per_gen: 1000    # plan_part2 §4 (c): enough generations on 10x7
+  sims: [100, 300]      # drawn uniformly per game and move
+  temp_moves: 10         # temperature 1 for the first 10 lines, then 0
+
+buffer_size: 500000      # positions per board size (the last ones)
+
+train:
+  batch_size: 512
+  steps_per_gen: 1100   # ~4 samples per new position
+  lr: 0.01               # half of az5
+  momentum: 0.9
+  weight_decay: 0.0001   # L2
+  score_weight: 0.25     # weight of the score-difference MSE
+  symmetries: true       # random one of the 8 board symmetries per sample
+  min_buffer: 20000      # do not train before this many positions
+
+curriculum:              # dot2c phase 2 only
+  - until_gen: null
+    boards: [{size: [10, 7], weight: 0.6}, {size: [7, 7], weight: 0.3}, {size: [5, 5], weight: 0.1}]
+
+stop:                    # scripts/az_train.py stops the run after
+  max_hours: 12          # the run is meant for --generations 10
+
+gating:
+  games: 100
+  sims: 200
+  temp_moves: 4          # some opening variety; no noise
+  tasks: 2               # games split over this many worker tasks
+  threshold: 0.55
+
+eval:
+  games: 100             # per opponent and mode, on 10x7
+  sims: 200
+  opponents: [greedy, medium, hard, strong]   # strong4 costs ~1 s per move: only in transfer.py
+  ladder: [docs/ladder_10x7.json, docs/ladder_10x7_s4.json]
+  processes: 6
+  params:
+    strong:
+      node_budget: 14400 # as in configs/eval_ladder_10x7.yaml
+
+bridge_eval:             # scripts/az_vs_hard.py: vs the real game's Hard
+  games: 20              # as for Dot (18/20)
+  sims: 200
+  seed: 11

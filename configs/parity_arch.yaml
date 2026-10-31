@@ -1,0 +1,64 @@
+# Part 3 (b) of docs/plan_part3.md: architecture arms b1 (pooling in all
+# blocks, 96 channels) and b2 (chain hint planes), from Dot-2 (dot2c gen 16).
+# scripts/parity_arch.py: middle-game positions with an MCTS-2000 teacher,
+# fine-tuning; then scripts/az_train.py (configs/parity_b*.yaml) for the
+# self-play rounds; the evaluation is scripts/parity_hand.py's with this
+# config (`nets`), the table goes into docs/parity_hand.md.
+seed: 3100
+device: cuda
+processes: 16                    # CPU workers for the ladder opponents
+
+teacher_net: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}
+out: runs/parity_arch            # mid_states.npz, mid_teacher.npz, teacher_check.json, {arm}_ft.pt
+
+mid:                             # middle-game positions of 10x7 from dot2c self-play
+  games: 500
+  workers: 3                     # self-play processes (configs/dot2c.yaml selfplay: sims, temperature, noise)
+  safe: [20, 40]                 # safe lines left (agents/baselines.py safe_moves)
+  n: 5000                        # training positions
+  n_val: 500                     # validation positions, from other games
+teacher:
+  sims: 2000                     # MCTS of Dot-2, no noise, dot2c's mcts settings
+  trees: 128                     # positions searched together per worker
+  leaves_per_tree: 2
+  workers: 4
+  check: [docs/transfer_parity_10x7.json]   # + the 10x7 judge validation split of part 3 (a)
+
+finetune:                        # as experiment (a2), plus the middle-game teacher
+  parity_config: configs/parity_hand.yaml   # judge sets (5x5, 10x7) and their split
+  steps: 4000
+  parity_batch: 128              # judge positions per step (sizes alternate): -log(mass on correct moves)
+  mid_batch: 128                 # teacher positions per step: CE to MCTS-2000 visits + MSE to its root value
+  selfplay_batch: 256            # dot2c replay buffers, MCTS targets and z (against forgetting)
+  lr: 0.0005                     # Adam: policy head and stem
+  body_lr_scale: 0.1             # the rest of the body and the value / score heads
+  log_every: 250
+  arms:
+    b1: {config: configs/parity_b1.yaml}
+    b2: {config: configs/parity_b2.yaml}
+
+generations: 10                  # self-play rounds per arm (scripts/az_train.py --generations)
+
+nets:                            # evaluated by scripts/parity_hand.py --config configs/parity_arch.yaml
+  base: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}
+  b1_ft: {config: configs/parity_b1.yaml, checkpoint: runs/parity_arch/b1_ft.pt}
+  b1: {config: configs/parity_b1.yaml, checkpoint: runs/parity_b1/best.pt}
+  b2_ft: {config: configs/parity_b2.yaml, checkpoint: runs/parity_arch/b2_ft.pt}
+  b2: {config: configs/parity_b2.yaml, checkpoint: runs/parity_b2/best.pt}
+
+# what scripts/parity_hand.py reads (probe sets, evaluation), as in configs/parity_hand.yaml
+data:
+  out: runs/parity_arch
+  boards:
+    5x5: {heldout: docs/parity_probe_positions.json}
+    10x7: {heldout: docs/transfer_parity_10x7.json}
+eval:
+  probe_sims: 200
+  elo:
+    games: 200
+    opponents: [greedy, medium, hard, strong]
+    boards:
+      5x5: {ladder: null, params: {strong: {node_budget: 23000}}}
+      10x7: {ladder: [docs/ladder_10x7.json, docs/ladder_10x7_s4.json], params: {strong: {node_budget: 14400}}}
+  routs: {games: 200, sims: 50, margin: 20}
+  bridge: {games: 20}

@@ -338,17 +338,22 @@ def rc_score_weight(cfg):
 # --- evaluation -------------------------------------------------------------------
 
 def nets_of(cfg, names):
-    """name -> checkpoint path: 'base' is Dot-2 as it is, others the arms."""
+    """name -> (net config, checkpoint): 'base' is Dot-2 as it is, others the
+    arms; a config with ``nets`` (part 3 b) names them there."""
+    if "nets" in cfg:
+        return {n: (cfg["nets"][n]["config"], ROOT / cfg["nets"][n]["checkpoint"]) for n in names}
     out = ROOT / cfg["data"]["out"]
-    return {n: ROOT / cfg["net"]["checkpoint"] if n == "base" else out / f"{n}.pt" for n in names}
+    return {n: (cfg["net"]["config"], ROOT / cfg["net"]["checkpoint"] if n == "base" else out / f"{n}.pt")
+            for n in names}
 
 
-def evaluator(cfg, path):
+def evaluator(cfg, net):
     import torch
 
     from agents.az_net import Evaluator, make_net
 
-    rc = load_config(ROOT / cfg["net"]["config"])
+    rc_path, path = net
+    rc = load_config(ROOT / rc_path)
     net = make_net(rc)
     net.load_state_dict(torch.load(path, map_location="cpu"))
     return Evaluator(net, cfg["device"]), rc
@@ -436,8 +441,8 @@ def cmd_bridge(cfg, names):
         if k in res:
             continue
         js = out / f"bridge_{name}.json"
-        subprocess.run([sys.executable, str(ROOT / "scripts/az_vs_hard.py"), "--config", cfg["net"]["config"],
-                        "--checkpoint", str(ck), "--json", str(js)], check=True, cwd=ROOT)
+        subprocess.run([sys.executable, str(ROOT / "scripts/az_vs_hard.py"), "--config", ck[0],
+                        "--checkpoint", str(ck[1]), "--json", str(js)], check=True, cwd=ROOT)
         res = results(cfg)[1]
         res[k] = json.loads(js.read_text())
         transfer.save(path, res)
@@ -521,6 +526,9 @@ def cmd_report(cfg):
     concl = ROOT / "docs/parity_hand_conclusions.md"  # written by hand from the tables
     if concl.exists():
         L += ["", concl.read_text().rstrip()]
+    part_b = ROOT / "docs/parity_arch.md"  # scripts/parity_arch.py report
+    if part_b.exists():
+        L += ["", part_b.read_text().rstrip()]
     (ROOT / "docs/parity_hand.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 

@@ -16,6 +16,11 @@ Encoding
     9 1 if the side to move moved first in the game, constant
     10 ones (marks the board inside the zero padding)
     11 undrawn lines / all lines (game phase), constant; Dot-2 only
+    12-16 chain hint (part 3, b2; ``N_PLANES_3``): per box the length of
+          the chain / of the loop it belongs to (/ 10, as sim/chains.py),
+          the number of long chains formed (/ 10, constant), 1 if the long
+          chain rule with the chains formed so far favours the mover
+          (constant), safe lines left (/ 40, constant)
 
     "Whose turn" is plane 9 (the identity of the mover); everything else is
     relative to the mover, so value and policy need no colour flip.
@@ -51,6 +56,7 @@ from sim.board import geometry
 
 N_PLANES = 11      # Dot
 N_PLANES_2 = 12    # Dot-2: + game phase
+N_PLANES_3 = 17    # + chain hint planes (part 3, b2)
 
 
 class Codec:
@@ -88,6 +94,46 @@ class Codec:
             lperm = cell_line[cperm[self.line_cell]]
             assert (lperm >= 0).all()
             self.syms.append((cperm, lperm))
+        # chain hint tables: the box across each side (-1: the ground), the
+        # boxes of each line (-1 padding)
+        self.box_side_line = np.array(geo.box_lines)
+        self.box_nb = np.array([[next((o for o in geo.line_boxes[ln] if o != b), -1) for ln in geo.box_lines[b]]
+                                for b in range(self.n_boxes)])
+        self.line_box2 = np.array([list(bs) + [-1] * (2 - len(bs)) for bs in geo.line_boxes])
+        self.dots = (w + 1) * (h + 1)
+
+    def chain_hint(self, lines: np.ndarray, sides: np.ndarray):
+        """Per box chain / loop length (0 elsewhere), long chains formed and
+        safe lines left, batched; the same chains as sim/chains.py."""
+        B, nb = sides.shape
+        link = sides == 2                                  # free box with two undrawn sides
+        linkp = np.concatenate([link, np.zeros((B, 1), bool)], 1)   # index -1: the ground
+        undrawn = lines[:, self.box_side_line] == 0        # (B, boxes, 4)
+        to_link = linkp[:, self.box_nb]
+        conn = link[:, :, None] & undrawn & to_link
+        big = np.int64(nb)
+        lab = np.where(link, np.arange(nb), big)
+        nbi = np.where(self.box_nb < 0, 0, self.box_nb)
+        while True:                                        # min label over connected links
+            new = np.minimum(lab, np.where(conn, lab[:, nbi], big).min(2))
+            if (new == lab).all():
+                break
+            lab = new
+        rows = np.arange(B)[:, None] * (nb + 1)
+        flat = (rows + np.minimum(lab, big)).ravel()
+        size = np.bincount(flat, minlength=B * (nb + 1)).reshape(B, nb + 1)
+        exits = (link[:, :, None] & undrawn & ~to_link).sum(2)
+        ex = np.bincount(flat, weights=exits.ravel(), minlength=B * (nb + 1)).reshape(B, nb + 1)
+        lab_c = np.minimum(lab, big)
+        bsize = np.take_along_axis(size, lab_c, 1) * link
+        loop = link & (np.take_along_axis(ex, lab_c, 1) == 0)
+        chain_len = np.where(loop, 0, bsize)
+        loop_len = np.where(loop, bsize, 0)
+        root = link & (lab == np.arange(nb)) & ~loop
+        long_chains = (root & (bsize >= 3)).sum(1)
+        sp = np.concatenate([sides, np.zeros((B, 1), sides.dtype)], 1)
+        safe = ((lines == 0) & (sp[:, self.line_box2[:, 0]] != 2) & (sp[:, self.line_box2[:, 1]] != 2)).sum(1)
+        return chain_len, loop_len, long_chains, safe
 
     def encode(self, lines: np.ndarray, sides: np.ndarray, owner: np.ndarray,
                score_diff: np.ndarray, first: np.ndarray) -> np.ndarray:
@@ -112,6 +158,13 @@ class Codec:
         x[:, 10] = 1
         if self.planes > 11:
             x[:, 11] = (self.n_lines - lines.sum(1, dtype=np.float32))[:, None] / self.n_lines
+        if self.planes > 12:
+            chain_len, loop_len, long_chains, safe = self.chain_hint(lines, sides)
+            x[:, 12, bc] = chain_len / 10
+            x[:, 13, bc] = loop_len / 10
+            x[:, 14] = (long_chains / 10)[:, None]
+            x[:, 15] = (((self.dots + long_chains) % 2 == 0) == (first > 0.5))[:, None]
+            x[:, 16] = (safe / 40)[:, None]
         return x.reshape(B, self.planes, self.rows, self.cols)
 
     def encode_boards(self, boards) -> np.ndarray:
@@ -208,10 +261,12 @@ class AZNet2(nn.Module):
     """Dot-2: ResNet body as Dot with global pooling, size-free heads."""
 
     def __init__(self, blocks: int = 6, channels: int = 64, score_head: bool = True,
-                 gpool_blocks=(2, 4), head_ch: int = 32):
+                 gpool_blocks=(2, 4), head_ch: int = 32, planes: int = N_PLANES_2):
         super().__init__()
-        self.planes = N_PLANES_2
-        self.stem = nn.Sequential(nn.Conv2d(N_PLANES_2, channels, 3, padding=1, bias=False),
+        self.planes = planes
+        if gpool_blocks == "all":
+            gpool_blocks = range(blocks)
+        self.stem = nn.Sequential(nn.Conv2d(planes, channels, 3, padding=1, bias=False),
                                   nn.BatchNorm2d(channels), nn.ReLU())
         self.body = nn.ModuleList([GPoolBlock(channels) if i in gpool_blocks else ResBlock(channels)
                                    for i in range(blocks)])
@@ -268,6 +323,41 @@ def load_dot_body(net2: AZNet2, dot_sd: dict) -> list[str]:
     return sorted(k for k in own if k not in loaded)
 
 
+def widen_from(net2: AZNet2, sd: dict) -> None:
+    """Load a smaller Dot-2 state dict (fewer input planes, channels or
+    pooled blocks) into ``net2`` so that it computes the same outputs: old
+    weights in the leading slices, new input columns of old outputs zero,
+    new output rows keep their random init (their features reach nothing
+    yet), new pooling biases zero (part 3, b1 / b2)."""
+    own = net2.state_dict()
+    for k, new in own.items():
+        old = sd.get(k)
+        if old is None or new.dim() == 0:
+            if old is not None:
+                own[k] = old.clone()
+            continue
+        if k.endswith(".g.weight"):                        # pooled bias: [mean, max, mean x size] blocks
+            ci, co = old.shape[1] // 3, new.shape[1] // 3
+            w = torch.zeros_like(new)
+            for j in range(3):
+                w[:old.shape[0], j * co:j * co + ci] = old[:, j * ci:(j + 1) * ci]
+            own[k] = w
+            continue
+        if k.endswith(".g.bias"):
+            w = torch.zeros_like(new)
+            w[:old.shape[0]] = old
+            own[k] = w
+            continue
+        w = new.clone()
+        if new.dim() >= 2:
+            w[:old.shape[0], old.shape[1]:] = 0            # old outputs ignore new inputs
+            w[:old.shape[0], :old.shape[1]] = old
+        else:
+            w[:old.shape[0]] = old
+        own[k] = w
+    net2.load_state_dict(own)
+
+
 def net_planes(net) -> int:
     return getattr(net, "planes", N_PLANES)
 
@@ -275,8 +365,9 @@ def net_planes(net) -> int:
 def make_net(cfg: dict):
     n = cfg["net"]
     if n.get("arch") == "dot2":
-        return AZNet2(n["blocks"], n["channels"], n.get("score_head", True), tuple(n.get("gpool_blocks", (2, 4))),
-                      n.get("head_channels", 32))
+        gp = n.get("gpool_blocks", (2, 4))
+        return AZNet2(n["blocks"], n["channels"], n.get("score_head", True), gp if gp == "all" else tuple(gp),
+                      n.get("head_channels", 32), n.get("planes", N_PLANES_2))
     w, h = cfg["board"]
     return AZNet(w, h, n["blocks"], n["channels"], n.get("score_head", False))
 

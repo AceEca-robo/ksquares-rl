@@ -40,6 +40,9 @@ rejected generations in a row (within the current curriculum phase; with
 (scripts/az_eval.py) reaches MCTS ladder Elo >= ``elo`` and a win share
 >= ``hard`` against hard.
 
+Replay buffers can start from another run's (``init_buffers_from``: its
+run_dir); ``eval_during: false`` skips the background evaluation.
+
 Safe stop: create ``run_dir/STOP``; the loop saves and exits after the
 current phase (a STOP file found at start-up is removed) and also stops the evaluator (scripts/az_eval.py), which it
 starts in the background whenever an accepted net has no evaluation yet.
@@ -307,6 +310,12 @@ class Run:
                 assert not unexpected, unexpected
                 log(self.run, f"initialised from {cfg['init_from']}; new (random) parameters: "
                               f"{sorted({k.split('.')[0] for k in missing})}")
+            if cfg.get("init_buffers_from"):  # replay buffers of another run (raw states: any encoding)
+                src = ROOT / cfg["init_buffers_from"]
+                for buf, path in zip(self.bufs, self.buf_paths()):
+                    if (src / path.name).exists():
+                        buf.load(src / path.name)
+                log(self.run, f"buffers from {cfg['init_buffers_from']}: {self.buf_n()}")
             save_atomic(self.net.state_dict(), self.run / "gen_0000.pt")
             save_atomic(self.net.state_dict(), self.run / "best.pt")
             self.save()
@@ -383,6 +392,8 @@ class Run:
         return (self.run / "STOP").exists()
 
     def maybe_eval(self) -> None:
+        if not self.cfg.get("eval_during", True):  # evaluated afterwards (part 3 b)
+            return
         if self.eval_proc is not None and self.eval_proc.poll() is None:
             return
         missing = [h["gen"] for h in self.state["history"] if h["accepted"]
