@@ -985,3 +985,46 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Ideas for later: middle-game training signal (net MCTS at high sims as
   teacher, or a much longer judge on a few hundred positions); a1 + a2 with
   a KL term to the base V; parity positions from the net's own games.
+
+## 2026-10-31 — part 3 (b): architecture arms b1 / b2 with a middle-game teacher
+
+- Code: chain hint planes 12-16 in Codec (`N_PLANES_3`, vectorised
+  chain / loop labelling, tested against sim/chains.py and safe_moves),
+  AZNet2 `planes`, `gpool_blocks: all`, `widen_from` (smaller Dot-2 into a
+  wider / more-planes one with the same outputs, tested); az_train
+  `init_buffers_from`, `eval_during`; scripts/parity_arch.py (mid,
+  teacher, check, finetune, bnfix, midprobe, report),
+  configs/parity_arch.yaml, parity_b1.yaml, parity_b2.yaml.
+  parity_hand.py's evaluation takes nets with their own configs (`nets`).
+- Middle game: 500 dot2c self-play games on 10x7 -> 8624 positions with
+  20-40 safe lines -> 5000 train + 500 validation (other games). Teacher
+  MCTS-2000: 6 min for 5500 positions. Its accuracy where the judge knows:
+  94.4% (probe set, 304), 89.6% (judge validation, 500).
+- BatchNorm, three tries. (1) Fine-tune in eval mode as in (a): b2's first
+  self-play candidate lost 19-81 to its start (in eval mode its V was off:
+  MSE 0.76 vs 0.63 in train mode), b1 was broken in train mode outright
+  (new channels had default statistics 0 / 1 and Adam had moved their
+  outgoing weights). (2) Train mode, separate batches for judge / teacher
+  / self-play: the net read the batch statistics (judge loss 0.16, eval
+  validation at base level). (3) One mixed batch per step and size,
+  statistics recomputed on self-play positions before and after: eval and
+  train mode agree; this is what the results use. Logged parity / mid
+  losses in finetune are averaged over all steps (they occur on some).
+- Self-play: both arms 10 rounds in parallel (~45 min per round), no
+  generation accepted (b1 18-48%, b2 21-46%); dot2c after gen 16 did the
+  same. The final nets = the fine-tuned ones; b1 / b2 dropped from the
+  evaluation as duplicates.
+- probe in parity_probe.gen_curves now evaluates the children in chunks
+  of 4096 (b1 ran out of GPU memory on 10x7).
+- Results: docs/parity_hand.md / docs/parity_arch.md. Raw 10x7 probe b1
+  78%, b2 82.6% (base 67.4%), but V got pessimistic (V after a winning
+  move 20-23%, base 77%), MCTS on the probe 76 / 87% (base 92%), routs at
+  MCTS 50 42 / 46 of 200 (base 11), bridge 15-5 for both. Verdict: no.
+- Unclear: why self-play never recovers V from the fine-tuned start.
+  The trainer keeps its weights across rejections, so ten rounds are
+  ~11k SGD steps from the start; still no candidate beats it.
+- Ideas for later: fine-tune with V frozen (or KL to the base V) — the
+  value damage is what loses games; a middle-game teacher that is right
+  there (exact search on 5x5 / 7x7 middle games, or a check of MCTS-2000
+  vs MCTS-20000 stability); b2's hint planes from scratch on 5x5 where
+  the judge covers the middle game.

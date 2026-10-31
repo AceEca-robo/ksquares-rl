@@ -33,18 +33,19 @@ finetune:                        # as experiment (a2), plus the middle-game teac
   lr: 0.0005                     # Adam: policy head and stem
   body_lr_scale: 0.1             # the rest of the body and the value / score heads
   log_every: 250
+  bn_batches: 200                # afterwards: BatchNorm statistics recomputed over this many replay batches
   arms:
     b1: {config: configs/parity_b1.yaml}
     b2: {config: configs/parity_b2.yaml}
 
 generations: 10                  # self-play rounds per arm (scripts/az_train.py --generations)
 
+# the self-play runs accepted no generation (runs/parity_b*/best.pt has gen_0000's weights,
+# the _ft nets): the final nets are the _ft ones
 nets:                            # evaluated by scripts/parity_hand.py --config configs/parity_arch.yaml
   base: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}
   b1_ft: {config: configs/parity_b1.yaml, checkpoint: runs/parity_arch/b1_ft.pt}
-  b1: {config: configs/parity_b1.yaml, checkpoint: runs/parity_b1/best.pt}
   b2_ft: {config: configs/parity_b2.yaml, checkpoint: runs/parity_arch/b2_ft.pt}
-  b2: {config: configs/parity_b2.yaml, checkpoint: runs/parity_b2/best.pt}
 
 # what scripts/parity_hand.py reads (probe sets, evaluation), as in configs/parity_hand.yaml
 data:

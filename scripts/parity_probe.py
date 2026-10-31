@@ -195,7 +195,8 @@ def gen_curves(ev, rc, boards, positions, sims, seed):
     for ks in kids:
         for ln, c in ks:
             c.step(ln)
-    _, cval = ev([c for ks in kids for _, c in ks])
+    flat = [c for ks in kids for _, c in ks]
+    cval = np.concatenate([ev(flat[i:i + 4096])[1] for i in range(0, len(flat), 4096)])  # GPU memory
     it = iter(cval)
     win_ok, lose_ok, greedy = [], [], []
     for b, ks, cor in zip(boards, kids, correct):

@@ -4,6 +4,7 @@
     python scripts/parity_arch.py teacher    # MCTS-2000 of Dot-2 on them: visits, move, root value
     python scripts/parity_arch.py check      # the same teacher on late judge positions: its accuracy
     python scripts/parity_arch.py finetune   # b1 / b2 from dot2c gen 16 -> runs/parity_arch/{arm}_ft.pt
+    python scripts/parity_arch.py bnfix      # recalibrate BatchNorm statistics of existing _ft nets
     python scripts/parity_arch.py midprobe   # raw policy vs the teacher on the validation positions
     python scripts/parity_arch.py report     # the part (b) section of docs/parity_hand.md
 
@@ -266,7 +267,11 @@ def cmd_finetune(cfg, arms):
         mid_tr = (xm[tr], mt["pi"][tr], mt["q"][tr])
         mid_va = (xm[~tr], mt["move"][~tr])
 
-        net.to(dev).eval()  # BatchNorm statistics stay as they are
+        net.to(dev)
+        # new channels (b1) carry their real statistics before training;
+        # training then runs in train mode, as self-play training does
+        recalibrate_bn(net, bufs, codecs, bw, rng, dev, fc)
+        net.train()
         fast = [p for n, p in net.named_parameters() if n.split(".")[0] in parity_hand.HEAD + ("stem",)]
         slow = [p for n, p in net.named_parameters() if n.split(".")[0] not in parity_hand.HEAD + ("stem",)]
         opt = torch.optim.Adam([{"params": fast, "lr": fc["lr"]}, {"params": slow, "lr": fc["lr"] * fc["body_lr_scale"]}])
@@ -279,42 +284,59 @@ def cmd_finetune(cfg, arms):
 
         def validate():
             r = {}
+            net.eval()
             with torch.no_grad():
                 for bname, (_, (codec, x, mask)) in par.items():
                     am = fwd(x, codec)[0].argmax(1).cpu().numpy()
                     r[bname] = 100 * float(np.mean(mask[np.arange(len(am)), am]))
                 am = fwd(mid_va[0], c10)[0].argmax(1).cpu().numpy()
                 r["mid"] = 100 * float(np.mean(am == mid_va[1]))
+            net.train()
             return r
 
         log = [{"step": 0, "val": validate()}]
-        print(f"{arm}: step 0 validation {log[-1]['val']}", flush=True)
+        print(f"{arm}: step 0 (BatchNorm statistics recalibrated) validation {log[-1]['val']}", flush=True)
         acc = dict.fromkeys(("parity", "mid_policy", "mid_value", "policy", "value"), 0.0)
-        sizes = list(par)
         sw = rc["train"].get("score_weight", 0.0)
         t0 = time.time()
+        cycle = ["10x7", "5x5", "10x7", "7x7"]
         for step in range(1, fc["steps"] + 1):
-            bname = sizes[step % len(sizes)]
-            codec, X, M = par[bname][0]
-            i = rng.integers(0, len(X), fc["parity_batch"])
-            x, m = parity_hand.augment(rng, codec, X[i], M[i])
-            lp = fwd(x, codec)[0]
-            lpar = -torch.logsumexp(lp.masked_fill(~torch.from_numpy(m).to(dev), -1e9), 1).mean()
-            i = rng.integers(0, len(mid_tr[0]), fc["mid_batch"])
-            x, pi = parity_hand.augment(rng, c10, mid_tr[0][i], mid_tr[1][i])
-            lp, v, _ = fwd(x, c10)
-            lmp = -(torch.from_numpy(pi).to(dev) * lp).sum(1).mean()
-            lmv = F.mse_loss(v, torch.from_numpy(mid_tr[2][i]).to(dev))
-            j = list(bufs)[int(rng.choice(len(bufs), p=bw))]
-            s = bufs[j].sample(rng, fc["selfplay_batch"])
-            c = codecs[j]
+            # one forward pass per step, one board size: judge, teacher and
+            # self-play positions share the BatchNorm batch statistics (apart,
+            # a batch of only late positions is itself a hint the net learns)
+            bname = cycle[step % len(cycle)]
+            c = codecs[bname]
+            s = bufs[bname].sample(rng, fc["selfplay_batch"])
             xs = c.encode(s["lines"], s["sides"], s["owner"], s["diff"].astype(np.float32), s["first"])
-            xs, pi = parity_hand.augment(rng, c, xs.reshape(len(xs), planes, -1), s["pi"].astype(np.float32))
-            lp, v, sc = fwd(xs, c)
-            lpol = -(torch.from_numpy(pi).to(dev) * lp).sum(1).mean()
-            lv = F.mse_loss(v, torch.from_numpy(s["z"].astype(np.float32)).to(dev))
+            xs, pis = parity_hand.augment(rng, c, xs.reshape(len(xs), planes, -1), s["pi"].astype(np.float32))
+            xp = np.zeros((0, planes, c.n_cells), np.float32)
+            m = np.zeros((0, c.n_lines), bool)
+            if bname in par:
+                _, X, M = par[bname][0]
+                i = rng.integers(0, len(X), fc["parity_batch"])
+                xp, m = parity_hand.augment(rng, c, X[i], M[i])
+            xm = np.zeros((0, planes, c.n_cells), np.float32)
+            pim = np.zeros((0, c.n_lines), np.float32)
+            qm = np.zeros(0, np.float32)
+            if bname == "10x7":
+                i = rng.integers(0, len(mid_tr[0]), fc["mid_batch"])
+                xm, pim = parity_hand.augment(rng, c, mid_tr[0][i], mid_tr[1][i])
+                qm = mid_tr[2][i]
+            ns, npar = len(xs), len(xp)
+            lp, v, sc = fwd(np.concatenate([xs, xp, xm]), c)
+            zero = torch.zeros((), device=dev)
+            lpol = -(torch.from_numpy(pis).to(dev) * lp[:ns]).sum(1).mean()
+            lv = F.mse_loss(v[:ns], torch.from_numpy(s["z"].astype(np.float32)).to(dev))
             mg = torch.from_numpy(s["margin"].astype(np.float32) / c.n_boxes).to(dev)
-            loss = lpar + lmp + lmv + lpol + lv + sw * F.mse_loss(sc, mg)
+            lsc = F.mse_loss(sc[:ns], mg)
+            lpar = (-torch.logsumexp(lp[ns:ns + npar].masked_fill(~torch.from_numpy(m).to(dev), -1e9), 1).mean()
+                    if npar else zero)
+            if len(xm):
+                lmp = -(torch.from_numpy(pim).to(dev) * lp[ns + npar:]).sum(1).mean()
+                lmv = F.mse_loss(v[ns + npar:], torch.from_numpy(qm).to(dev))
+            else:
+                lmp = lmv = zero
+            loss = lpar + lmp + lmv + lpol + lv + sw * lsc
             opt.zero_grad(set_to_none=True)
             loss.backward()
             opt.step()
@@ -327,9 +349,74 @@ def cmd_finetune(cfg, arms):
                 acc = dict.fromkeys(acc, 0.0)
                 print(f"{arm}: step {step} " + " ".join(f"{k} {rec[k]:.3f}" for k in acc)
                       + f" validation {rec['val']} ({rec['seconds']:.0f} s)", flush=True)
+        recalibrate_bn(net, bufs, codecs, bw, rng, dev, fc)  # statistics of self-play positions only
+        log.append({"step": "bn", "val": validate()})
+        print(f"{arm}: BatchNorm statistics recalibrated, validation {log[-1]['val']}", flush=True)
         net.cpu()
         torch.save(net.state_dict(), out / f"{arm}_ft.pt")
         (out / f"{arm}_ft_train.json").write_text(json.dumps(log, indent=1))
+
+
+def recalibrate_bn(net, bufs, codecs, bw, rng, dev, fc):
+    """BatchNorm running statistics = the batch statistics of the fine-tuned
+    weights (averaged over dot2c's replay buffers, sizes by weight).
+    Fine-tuning runs in eval mode, so the stored statistics are still
+    dot2c's; self-play training (train mode) would then see another net
+    than the one that plays (first try of 2026-10-31: the candidate in eval
+    mode lost 19-81 to its own start). Done before fine-tuning too: b1's new
+    channels start with default statistics (0 / 1), and weights out of them
+    learned on that scale do not survive train mode."""
+    import torch
+
+    bns = [m for m in net.modules() if isinstance(m, torch.nn.BatchNorm2d)]
+    for m in bns:
+        m.reset_running_stats()
+        m.momentum = None  # cumulative average
+    net.train()
+    with torch.no_grad():
+        for _ in range(fc["bn_batches"]):
+            j = list(bufs)[int(rng.choice(len(bufs), p=bw))]
+            s = bufs[j].sample(rng, fc["selfplay_batch"])
+            c = codecs[j]
+            x = c.encode(s["lines"], s["sides"], s["owner"], s["diff"].astype(np.float32), s["first"])
+            net(torch.from_numpy(x).to(dev))
+    for m in bns:
+        m.momentum = 0.1
+    net.eval()
+
+
+def cmd_bnfix(cfg, arms):
+    """Recalibrate the BatchNorm statistics of existing {arm}_ft.pt (kept as
+    {arm}_ft_raw.pt)."""
+    import shutil
+
+    import torch
+
+    from agents.az_net import Codec
+    from az_train import Buffer
+
+    fc = cfg["finetune"]
+    ptc = load_config(ROOT / fc["parity_config"])["train"]
+    out = ROOT / cfg["out"]
+    bufs = {}
+    for bname, path in ptc["selfplay_buffers"].items():
+        c = Codec(*transfer.wh_of(bname))
+        bufs[bname] = Buffer(1, c.n_lines, c.n_boxes)
+        d = np.load(ROOT / path)
+        bufs[bname].a = {k: d[k] for k in bufs[bname].a}
+        bufs[bname].n = int(d["n"])
+    bw = np.array([ptc["selfplay_weights"][b] for b in bufs], dtype=float)
+    bw /= bw.sum()
+    for arm in arms:
+        raw = out / f"{arm}_ft_raw.pt"
+        if not raw.exists():
+            shutil.copy2(out / f"{arm}_ft.pt", raw)
+        net, _ = load_net(fc["arms"][arm]["config"], raw, cfg["device"])
+        net.to(cfg["device"])
+        codecs = {b: Codec(*transfer.wh_of(b), net.planes) for b in bufs}
+        recalibrate_bn(net, bufs, codecs, bw, np.random.default_rng([cfg["seed"], 9]), cfg["device"], fc)
+        torch.save(net.cpu().state_dict(), out / f"{arm}_ft.pt")
+        print(f"{arm}: BatchNorm statistics recalibrated", flush=True)
 
 
 def _replay(w, h, moves):
@@ -472,13 +559,13 @@ def cmd_report(cfg):
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=["mid", "teacher", "check", "finetune", "midprobe", "report"])
+    ap.add_argument("cmd", choices=["mid", "teacher", "check", "finetune", "bnfix", "midprobe", "report"])
     ap.add_argument("--config", default=str(ROOT / "configs/parity_arch.yaml"))
     ap.add_argument("--nets", nargs="+")
     a = ap.parse_args()
     cfg = load_config(a.config)
-    if a.cmd == "finetune":
-        cmd_finetune(cfg, a.nets or list(cfg["finetune"]["arms"]))
+    if a.cmd in ("finetune", "bnfix"):
+        {"finetune": cmd_finetune, "bnfix": cmd_bnfix}[a.cmd](cfg, a.nets or list(cfg["finetune"]["arms"]))
     elif a.cmd == "midprobe":
         cmd_midprobe(cfg, a.nets or list(cfg["nets"]))
     else:
