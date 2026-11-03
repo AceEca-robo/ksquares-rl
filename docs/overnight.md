@@ -1081,3 +1081,16 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   decisive positions plus the middle-game judge's % solved per s.
 - Unclear: at 19-20 lines too few solved decisive positions (4 / 7) for the
   players' points; a longer limit or more games would be needed there.
+
+## 2026-11-03 (night) — the routs vs Hard checked with the middle-game judge
+
+- scripts/blowouts.py, configs/blowouts.yaml: replay dot2c gen 16 vs the
+  real Hard as the app plays (net first, seed = srand = MCTS rng, 50 sims,
+  CPU), seeds 11-200: again 17 losses (seed 121 1:69 as on 2026-10-29).
+  Moves now saved (runs/blowouts/games.jsonl).
+- Judge 30 s per Dot-2 position from the end backwards (4 processes, log
+  runs/logs/blowouts.log with `free -g`): mistake found in 6 / 17 (won
+  position -> lost with one move, lines 71-83, 7-18 safe lines), wall in
+  11 / 17 (lines 70-79, 8-23 safe lines). Table docs/blowouts.md.
+- Unclear: why some walls are at only 8-11 safe lines (seeds 141, 131);
+  a longer limit there would likely find the move.

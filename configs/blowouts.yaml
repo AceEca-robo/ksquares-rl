@@ -1,0 +1,10 @@
+# scripts/blowouts.py: Dot-2's routs vs Hard, the middle-game judge from the end backwards.
+net:
+  config: configs/dot2c.yaml
+  checkpoint: runs/dot2c/gen_0016.pt   # the app's 10x7 network (best_sizes 10x7)
+sims: 50                  # the app's setting in the 2026-10-29 run
+threads: 3                # torch threads per play process (4 processes)
+processes: 4              # session rule: at most 4
+out: runs/blowouts
+time_limit: 30            # judge seconds per position
+tt_bits: 24
