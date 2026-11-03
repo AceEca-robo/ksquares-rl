@@ -13,3 +13,4 @@ _src/
 # voice, builds; the finished videos go to ~/YouTube/ksquares-rl/
 video/
 agents/_mcts_tree*
+agents/_mid_judge*.so

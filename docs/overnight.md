@@ -1054,3 +1054,16 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Ideas for later: real-board search over sacrifices while s > 0 (the
   formula only at s = 0, where it is exact); the formula as a cheap
   late-game teacher for 10x7 positions the exact judge cannot reach.
+
+## 2026-11-03 (evening) — part 3 (c): a judge for the middle game of 10x7
+
+- sim/mid_judge.py + agents/csrc/mid_judge.c (cffi): exact real-board
+  search, bounds TT keyed by the canonical position (4 / 8 symmetries),
+  Berlekamp leaf at s = 0, sacrifices before safe lines, null-window
+  result-sign searches; PyJudge = the Python reference. tests/test_mid_judge.py.
+- scripts/mid_judge_eval.py, configs/mid_judge.yaml; results and
+  conclusions in docs/mid_judge.md, chart docs/mid_judge.png.
+- Positions: 300 + 300 + 500 Dot-2 self-play games (MCTS-200). One position
+  per exact s per game gave only 423 at 10-15 safe lines (s often drops
+  by several per move); all positions in the range: ~2 per game.
+- Stopped by the user during item 3 labelling (1400/2000); nets not run.

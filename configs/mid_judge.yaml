@@ -1,0 +1,51 @@
+# Part 3 (c): the middle-game judge (sim/mid_judge.py, agents/csrc/mid_judge.c)
+# on 10x7: scripts/mid_judge_eval.py -> docs/mid_judge.md, docs/mid_judge.png.
+seed: 3300
+device: cuda
+processes: 4              # judge workers (session rule: at most 4)
+out: runs/mid_judge
+
+net:                      # Dot-2 as in the app (the hand / intuition / MCTS rows)
+  config: configs/dot2c.yaml
+  checkpoint: runs/dot2c/gen_0016.pt
+
+games:                    # self-play positions: Dot-2 vs itself
+  n: 300
+  concurrent: 150
+  sims: 200
+  temp_moves: 10          # temperature 1 for the first 10 lines, then 0
+
+check:                    # sign agreement where the exact judge knows the answer
+  set: runs/parity_hand/data_10x7.jsonl
+  n: 5000
+
+reach:                    # solved within the limit, by safe lines left
+  safe: [5, 10, 15, 20, 30]
+  tiers:                  # seconds: positions per s, TT size (2^bits x 16 B per worker)
+    "10": {n: 40, tt_bits: 22}
+    "60": {n: 20, tt_bits: 24}
+    "600": {n: 8, tt_bits: 26}
+
+label:                    # judge labels (sets chosen after reach: it solves most positions up to 15 safe lines)
+  mid:                    # part 3 (c) item 3: the reached range; every position in it
+    games: [games, games2, games3]   # (one per exact s gave 423, all of games + games2 1160: ~2 per game)
+    all_in_range: true
+    safe: [10, 15]
+    n: 2000
+    time_limit: 60
+    tt_bits: 24
+  chart:                  # item 4: per safe-line count, 100 positions each
+    games: games
+    safe: [0, 18]
+    per_s: 100
+    time_limit: 30
+    tt_bits: 24
+
+nets:
+  sims: [200, 2000]
+  trees: 64               # boards per MCTS batch
+
+others:                   # the other judges on the labelled positions
+  formula_budget: 200000
+  exact_limit: 5.0        # agents/strong.py, as in docs/chain_solver.md
+  mid_limit: 10.0         # this judge as a player
