@@ -269,6 +269,12 @@ def cmd_nets(cfg, name):
     from agents.az_play import make_mcts
 
     rs = labelled(cfg, name)
+    path = out_dir(cfg) / f"nets_{name}.json"
+    old = json.loads(path.read_text()) if path.exists() else None  # resume: only positions not yet played
+    if old:
+        have = {tuple(k) for k in old["keys"]}
+        rs = [r for r in rs if tuple(r["key"]) not in have]
+    print(f"nets {name}: {len(rs)} positions", flush=True)
     ev, rc = parity_hand.evaluator({"device": cfg["device"]}, (cfg["net"]["config"], ROOT / cfg["net"]["checkpoint"]))
     boards = [board_of(r["moves"]) for r in rs]
     out = {"hand": [], "intuition": []}
@@ -298,7 +304,10 @@ def cmd_nets(cfg, name):
             print(f"[{time.strftime('%H:%M:%S')}] MCTS-{sims}: {len(mv)}/{len(boards)}", flush=True)
         out[f"mcts{sims}"] = mv
     keys = [list(r["key"]) for r in rs]
-    transfer.save(out_dir(cfg) / f"nets_{name}.json", {"keys": keys, "moves": out})
+    if old:
+        keys = old["keys"] + keys
+        out = {m: old["moves"][m] + out[m] for m in out}
+    transfer.save(path, {"keys": keys, "moves": out})
 
 
 def _others_one(task):
@@ -331,7 +340,11 @@ def _others_one(task):
 def cmd_others(cfg, name):
     ec = cfg["others"]
     rs = labelled(cfg, name)
-    tasks = [(r["key"], r["moves"], ec) for r in rs]
+    path = out_dir(cfg) / f"others_{name}.json"
+    old = json.loads(path.read_text()) if path.exists() else []  # resume: only positions not yet played
+    have = {tuple(r["key"]) for r in old}
+    tasks = [(r["key"], r["moves"], ec) for r in rs if tuple(r["key"]) not in have]
+    print(f"others {name}: {len(tasks)} positions", flush=True)
     with get_context("spawn").Pool(cfg["processes"], initializer=_init, initargs=(22,)) as pool:
         res = []
         t0 = time.time()
@@ -339,7 +352,7 @@ def cmd_others(cfg, name):
             res.append(r)
             if (i + 1) % 200 == 0:
                 print(f"[{time.strftime('%H:%M:%S')}] others: {i + 1}/{len(tasks)}, {time.time() - t0:.0f} s", flush=True)
-    transfer.save(out_dir(cfg) / f"others_{name}.json", res)
+    transfer.save(path, old + res)
 
 
 # --- report --------------------------------------------------------------------------
@@ -437,8 +450,10 @@ def cmd_report(cfg):
                     cells.append(f"{100 * c / len(kk):.1f}" if kk else "—")
                 L.append(f"| {lab} | {len(ks)} | " + " | ".join(cells) + " |")
             L.append("")
-            chart(cfg, name, by, rows, methods)
-            L += [f"![who knows what](mid_judge.png)", "",
+            if name == "chart":
+                chart(cfg, rs, by, rows)
+                L += ["![who knows what](who_knows.png)", ""]
+            L += [
                   "Decisive positions by safe lines left (% correct moves):", "",
                   "| safe lines | n | " + " | ".join(methods) + " |", "|---:|---:|" + "---:|" * len(methods)]
             for s in sorted({k[0] for k in by}, reverse=True):
@@ -456,37 +471,47 @@ def cmd_report(cfg):
     print("\n".join(L))
 
 
-def chart(cfg, name, by, rows, methods):
+def chart(cfg, rs, by, rows):
+    """docs/who_knows.png: % correct moves on decisive positions per safe-line count,
+    plus the share of all positions the strengthened (middle-game) judge solved."""
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    names = {"hand": "hand (policy argmax)", "intuition": "intuition (best child V)", "mcts200": "MCTS-200",
-             "mcts2000": "MCTS-2000", "formula": "formula judge (+1 ply)",
-             "mid": f"middle-game judge ({cfg['others']['mid_limit']} s)",
-             "exact": f"exact judge, Python ({cfg['others']['exact_limit']} s)"}
-    colors = {"hand": "#4C78A8", "intuition": "#9ECAE9", "mcts200": "#F58518", "mcts2000": "#E45756",
-              "formula": "#54A24B", "mid": "#000000", "exact": "#B279A2"}
-    s_all = sorted({k[0] for k in by})
-    fig, ax = plt.subplots(figsize=(9, 5.2))
-    for m in methods:
+    series = [("hand", "hand (policy argmax)", "#2a78d6"), ("intuition", "intuition (sign of child V)", "#1baf7a"),
+              ("mcts200", "MCTS-200", "#eda100"), ("mcts2000", "MCTS-2000", "#eb6834"),
+              ("formula", "formula judge (+1 ply)", "#6250d6")]
+    s_all = list(range(0, 21))
+    fig, ax = plt.subplots(figsize=(9.5, 5.4))
+    for m, lab, col in series:
         xs, ys = [], []
         for s in s_all:
-            ks = [k for k in by if k[0] == s and decisive(by[k]) and k in rows[m]]
+            ks = [k for k in by if k[0] == s and decisive(by[k]) and k in rows.get(m, {})]
             if len(ks) >= 10:
                 xs.append(s)
                 ys.append(100 * sum(correct(by[k], rows[m][k]) for k in ks) / len(ks))
-        ax.plot(xs, ys, marker="o", ms=3, lw=2 if m == "mid" else 1.5, label=names.get(m, m), color=colors.get(m))
-    ax.set_xlim(max(s_all) + 0.5, -0.5)
+        ax.plot(xs, ys, marker="o", ms=4, lw=2, label=lab, color=col)
+    xs, ys = [], []
+    for s in s_all:
+        a = [r for r in rs if r["key"][0] == s]
+        if a:
+            xs.append(s)
+            ys.append(100 * sum(r["labels"] is not None for r in a) / len(a))
+    ax.plot(xs, ys, ls="--", marker="s", ms=4, lw=2, color="#444444",
+            label=f"middle-game judge: % positions solved ({cfg['label']['chart']['time_limit']} s)")
+    ax.set_xlim(-0.5, 20.5)
+    ax.set_xticks(s_all)
     ax.set_ylim(0, 102)
-    ax.set_xlabel("safe lines left (game goes left to right)")
-    ax.set_ylabel("% correct moves (decisive positions)")
+    ax.set_xlabel("safe lines left")
+    ax.set_ylabel("% correct moves (decisive positions) / % solved")
     ax.set_title("10x7, Dot-2 self-play positions: who knows the right move")
-    ax.grid(alpha=0.3)
-    ax.legend(loc="lower left", fontsize=8)
+    ax.grid(alpha=0.25)
+    for sp in ("top", "right"):
+        ax.spines[sp].set_visible(False)
+    ax.legend(loc="lower left", fontsize=8, frameon=False)
     fig.tight_layout()
-    fig.savefig(ROOT / "docs/mid_judge.png", dpi=130)
+    fig.savefig(ROOT / "docs/who_knows.png", dpi=130)
 
 
 def main() -> None:

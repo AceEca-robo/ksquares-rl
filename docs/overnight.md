@@ -1067,3 +1067,17 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   per exact s per game gave only 423 at 10-15 safe lines (s often drops
   by several per move); all positions in the range: ~2 per game.
 - Stopped by the user during item 3 labelling (1400/2000); nets not run.
+
+## 2026-11-03 (late evening) — part 3 (c) finished: set 'mid' and the who-knows chart
+
+- Stages one at a time in tmux (runs/mid_judge/stages3.sh, log
+  runs/logs/part3c2.log with `free -g` before each; 4 judge processes).
+- label mid: the remaining 527 positions (2000 total, 1925 solved); nets on
+  mid: hand / intuition / MCTS-200 / MCTS-2000. Decisive positions: 83.6 /
+  91.0 / 95.6 / 96.4%.
+- Set 'chart' extended to 19-20 safe lines (configs/mid_judge.yaml) so the
+  chart's X runs 0-20; `nets` and `others` now resume (only new positions).
+- docs/who_knows.png replaces docs/mid_judge.png: players' % correct on
+  decisive positions plus the middle-game judge's % solved per s.
+- Unclear: at 19-20 lines too few solved decisive positions (4 / 7) for the
+  players' points; a longer limit or more games would be needed there.

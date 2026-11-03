@@ -36,7 +36,7 @@ label:                    # judge labels (sets chosen after reach: it solves mos
     tt_bits: 24
   chart:                  # item 4: per safe-line count, 100 positions each
     games: games
-    safe: [0, 18]
+    safe: [0, 20]            # 19-20 added for the who-knows chart (X 0-20)
     per_s: 100
     time_limit: 30
     tt_bits: 24

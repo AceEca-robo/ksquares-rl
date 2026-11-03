@@ -14,6 +14,16 @@
    at 86-100%. Formula judge: right whenever it answers, but on self-play
    positions it answers only at 0-1 safe lines (+1 ply needs every child
    settled). Exact Python judge (5 s): reaches ~8 safe lines.
-4. **Not done:** item 3 (2000 positions at 10-15 safe lines, MCTS-2000 and
-   hand checked on them) was stopped at 1400/2000 labelled, before the nets
-   were run (runs/mid_judge/labels_mid.jsonl; `label --set mid` resumes).
+4. **Set 'mid'** (finished 2026-11-03: 2000 positions at 10-15 safe lines,
+   1925 solved, 721 decisive): on decisive positions hand 83.6%, intuition
+   91.0%, MCTS-200 95.6%, MCTS-2000 96.4%. The hand is weakest at 13-15
+   lines (74-78%); search fixes most of it, and MCTS-2000 gains little over
+   MCTS-200 (+0.8 points) - the net's remaining errors here are not cured
+   by ten times more simulations.
+5. **Who knows what** (docs/who_knows.png, set 'chart' extended to 0-20
+   safe lines): MCTS stays at 86-100% over the whole range, the hand
+   drifts from ~98% at 0-2 lines to 53-85% at 15-18; the formula judge
+   answers only at 0-1 lines; the strengthened judge solves ~100% up to 10
+   lines, 77% at 15, 49% at 18, 15% at 20 (30 s). At 19-20 lines fewer
+   than 10 decisive solved positions per point, so the players' curves end
+   at 18.
