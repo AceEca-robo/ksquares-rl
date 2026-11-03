@@ -108,17 +108,28 @@ def _judge(args):
     return r
 
 
-def cmd_judge(cfg, walls=False):
+def wall_passes(cfg):
+    """[(limit, file)] of the wall reruns, shortest limit first (configs walls.passes)."""
+    return [(int(t), ROOT / cfg["out"] / ("judge_walls.jsonl" if int(t) == 600 else f"judge_walls_{t}.jsonl"))
+            for t in sorted(cfg["walls"]["passes"], key=int)]
+
+
+def cmd_judge(cfg, walls=False, limit=None):
     """walls: rerun the games that hit the wall with ``walls.time_limit``,
     from the wall position backwards (the later ones are already lost)."""
     games = [json.loads(x) for x in (ROOT / cfg["out"] / "games.jsonl").read_text().splitlines()]
     lost = sorted((g for g in games if g["net"] < g["hard"]), key=lambda g: g["seed"])
     if walls:
-        w = {r["seed"]: r["k"] for r in map(json.loads, (ROOT / cfg["out"] / "judge.jsonl").read_text().splitlines())
-             if r["status"] == "wall"}
-        wc = cfg["walls"]
-        tasks = [(g, cfg, w[g["seed"]], wc["time_limit"], wc["tt_bits"]) for g in lost if g["seed"] in w]
-        name = "judge_walls.jsonl"
+        passes = wall_passes(cfg)
+        limit = limit or passes[0][0]
+        src = ROOT / cfg["out"] / "judge.jsonl"
+        for t, f in passes:   # the walls left by the last pass shorter than this one
+            if t < limit and f.exists():
+                src = f
+        w = {r["seed"]: r["k"] for r in map(json.loads, src.read_text().splitlines()) if r["status"] == "wall"}
+        pc = cfg["walls"]["passes"][str(limit)]
+        tasks = [(g, cfg, w[g["seed"]], limit, pc["tt_bits"]) for g in lost if g["seed"] in w]
+        name = dict((t, f.name) for t, f in passes)[limit]
     else:
         tasks = [(g, cfg, 10**9, cfg["time_limit"], cfg["tt_bits"]) for g in lost]
         name = "judge.jsonl"
@@ -139,14 +150,16 @@ def cmd_report(cfg):
     games = [json.loads(x) for x in (ROOT / cfg["out"] / "games.jsonl").read_text().splitlines()]
     rs = sorted((json.loads(x) for x in (ROOT / cfg["out"] / "judge.jsonl").read_text().splitlines()),
                 key=lambda r: r["seed"])
-    wp = ROOT / cfg["out"] / "judge_walls.jsonl"
-    rerun = {r["seed"]: r for r in map(json.loads, wp.read_text().splitlines())} if wp.exists() else {}
-    for r in rs:   # a wall rerun with the longer limit replaces the first walk's end
+    for r in rs:
         r["limit"] = cfg["time_limit"]
-        if r["seed"] in rerun:
-            x = rerun[r["seed"]]
-            r.update({k: v for k, v in x.items() if k != "walk"}, limit=cfg["walls"]["time_limit"],
-                     walk=r["walk"][:-1] + x["walk"], wall30=(r["k"], r["s"]))
+    for t, wp in wall_passes(cfg):   # each wall rerun with a longer limit replaces the walk's end
+        rerun = {r["seed"]: r for r in map(json.loads, wp.read_text().splitlines())} if wp.exists() else {}
+        for r in rs:
+            if r["seed"] in rerun:
+                x = rerun[r["seed"]]
+                first = r.get("wall30", (r["k"], r["s"]))
+                r.update({k: v for k, v in x.items() if k != "walk"}, limit=t,
+                         walk=r["walk"][:-1] + x["walk"], wall30=first)
     lost = sum(g["net"] < g["hard"] for g in games)
     sign = {1: "win", 0: "draw", -1: "loss", None: "?"}
     L = ["# Dot-2's routs against Hard: where the judge finds the mistake", "",
@@ -158,8 +171,8 @@ def cmd_report(cfg):
          "the end backwards. *Found*: the first position (going back) that is not lost for Dot-2; the line "
          "played there is the mistake (its own label from `classify` in brackets). *Wall*: the judge ran out "
          "of time on a position that was still lost, so the mistake is earlier than it can see. Games that hit "
-         f"the wall at {cfg['time_limit']} s were rerun from the wall backwards with {cfg['walls']['time_limit']} s "
-         "per position (*limit* column; *30 s wall* = where the first pass stopped).", "",
+         f"the wall at {cfg['time_limit']} s were rerun from the wall backwards with longer limits "
+         f"({', '.join(str(t) for t, _ in wall_passes(cfg))} s per position, each pass on the walls the last one left) (*limit* column; *30 s wall* = where the first pass stopped).", "",
          "| seed | score (Dot-2 : Hard) | lines drawn | safe lines | judge | before the move | the move | "
          "positions judged | limit, s | 30 s wall (lines, safe) |",
          "|---:|---:|---:|---:|---|---|---|---:|---:|---|"]
@@ -184,13 +197,14 @@ def main() -> None:
     ap.add_argument("cmd", choices=["play", "judge", "report"])
     ap.add_argument("--config", default=str(CFG))
     ap.add_argument("--walls", action="store_true", help="judge: rerun the walls with walls.time_limit")
+    ap.add_argument("--limit", type=int, help="judge --walls: which pass (walls.passes), default the shortest")
     ap.add_argument("--seeds", type=int, nargs=2, default=[11, 200])
     a = ap.parse_args()
     cfg = load_config(a.config)
     if a.cmd == "play":
         cmd_play(cfg, *a.seeds)
     elif a.cmd == "judge":
-        cmd_judge(cfg, a.walls)
+        cmd_judge(cfg, a.walls, a.limit)
     else:
         cmd_report(cfg)
 

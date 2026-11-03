@@ -19,9 +19,15 @@
    loss is proven there, the mistake is at or before that point. Seeds 131
    and 141, the walls at 8-11 safe lines, now stop at 14 and 13: the
    safe-line count falls by 3-5 over a single move pair there.
-4. **Together:** in 9 of 17 routs the decisive mistake is one move from a
-   won position, at lines 70-83 with 7-20 safe lines; in the other 8 the
-   loss is proven back to 13-27 safe lines. The routs are lost in the
-   middle game, not the endgame; then Hard takes the chains. A teacher for
-   this range (the judge labels of docs/mid_judge.md at 10-15 lines,
-   longer limits for 16-20) is the next step.
+4. **3600 s pass** (2026-11-04, the 8 walls left at 600 s): one more
+   mistake found (seed 145: won -> lost at line 71 with 20 safe lines, the
+   600 s wall position, solved in 887 s). Of the other 7, three walls move
+   back one more Dot-2 move (seeds 41, 53, 98: the loss proven at 18-27
+   safe lines in 6-25 min, then a wall at 26-29), four stay where they were
+   (seeds 29, 131, 141, 144). Seeds 131 and 141 stay unsolved for an hour at
+   only 13-14 safe lines: safe-line count alone does not say how hard a
+   position is for the judge.
+5. **Together:** in 10 of 17 routs the decisive mistake is one move from a
+   won position, at lines 70-83 with 7-20 safe lines; in the other 7 the
+   loss is proven back to 13-29 safe lines (lines 67-72). The routs are
+   lost in the middle game, not the endgame; then Hard takes the chains.

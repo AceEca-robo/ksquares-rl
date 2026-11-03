@@ -1098,3 +1098,8 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   worker, from the 30 s wall backwards; 30 min): 3 more mistakes found
   (seeds 47, 102, 156, at the wall position itself), 8 walls move back one
   Dot-2 move to 13-27 safe lines. Total: mistake found in 9 / 17.
+- 3600 s pass on the 8 walls left (`judge --walls --limit 3600`, 2 GB
+  table per worker, 2026-11-03 22:52 - 11-04 01:09): seed 145 found (line
+  71, 20 safe lines, 887 s); three walls one Dot-2 move further back (26-29
+  safe lines), four unchanged, among them seeds 131 / 141 at 13-14 safe
+  lines. Total: mistake found in 10 / 17.

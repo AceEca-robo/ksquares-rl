@@ -8,6 +8,7 @@ processes: 4              # session rule: at most 4
 out: runs/blowouts
 time_limit: 30            # judge seconds per position
 tt_bits: 24
-walls:                    # judge --walls: the games that hit the 30 s wall, from the wall backwards
-  time_limit: 600
-  tt_bits: 26             # 1 GB table per worker
+walls:                    # judge --walls --limit T: the games still at the wall, from the wall backwards
+  passes:
+    "600": {tt_bits: 26}    # 1 GB table per worker
+    "3600": {tt_bits: 27}   # 2 GB
