@@ -173,26 +173,34 @@ def cmd_stats(cfg):
 
 # --- fine-tuning ------------------------------------------------------------------
 
-HEAD = ("p_conv", "g_conv", "p_g", "p_out")   # AZNet2's policy head
+HEAD = ("p_conv", "g_conv", "p_g", "p_out", "p_hint")   # AZNet2's policy head (p_hint: arm a3)
 
 
-def load_base(cfg):
+def load_base(cfg, arm_cfg=None):
+    """Dot-2 as it is; an arm with its own ``config`` (a3) gets that net with
+    Dot-2 widened into it (new inputs and the hint path start at zero)."""
     import torch
 
-    from agents.az_net import make_net
+    from agents.az_net import make_net, widen_from
 
+    sd = torch.load(ROOT / cfg["net"]["checkpoint"], map_location="cpu")
+    if arm_cfg and arm_cfg.get("config"):
+        rc = load_config(ROOT / arm_cfg["config"])
+        net = make_net(rc)
+        widen_from(net, sd)
+        return net, rc
     rc = load_config(ROOT / cfg["net"]["config"])
     net = make_net(rc)
-    net.load_state_dict(torch.load(ROOT / cfg["net"]["checkpoint"], map_location="cpu"))
+    net.load_state_dict(sd)
     return net, rc
 
 
-def parity_arrays(bname, positions):
+def parity_arrays(bname, positions, planes=None):
     """Encoded positions (N, planes, cells) and correct-move masks (N, n_lines)."""
     from agents.az_net import Codec, N_PLANES_2
     from sim.board import Board
 
-    codec = Codec(*transfer.wh_of(bname), planes=N_PLANES_2)
+    codec = Codec(*transfer.wh_of(bname), planes=planes or N_PLANES_2)
     boards = []
     for p in positions:
         b = Board(codec.w, codec.h)
@@ -240,15 +248,13 @@ def cmd_train(cfg, arms):
     dev = cfg["device"]
     out = ROOT / cfg["data"]["out"]
     sizes = list(cfg["data"]["boards"])
-    par = {}
-    for bname in sizes:
-        tr, va = split_data(cfg, bname)
-        par[bname] = (parity_arrays(bname, tr), parity_arrays(bname, va))
+    splits = {b: split_data(cfg, b) for b in sizes}
+    for bname, (tr, va) in splits.items():
         print(f"{bname}: {len(tr)} train, {len(va)} validation positions", flush=True)
-    bufs, codecs = {}, {}
+    bufs = {}
     for bname, path in tc["selfplay_buffers"].items():
-        codecs[bname] = Codec(*transfer.wh_of(bname), planes=N_PLANES_2)
-        bufs[bname] = Buffer(1, codecs[bname].n_lines, codecs[bname].n_boxes)
+        c = Codec(*transfer.wh_of(bname), planes=N_PLANES_2)
+        bufs[bname] = Buffer(1, c.n_lines, c.n_boxes)
         d = np.load(ROOT / path)
         bufs[bname].a = {k: d[k] for k in bufs[bname].a}
         bufs[bname].n = int(d["n"])
@@ -259,7 +265,11 @@ def cmd_train(cfg, arms):
         ac = tc["arms"][arm]
         torch.manual_seed(cfg["seed"])
         rng = np.random.default_rng([cfg["seed"], len(arm)])
-        net, _ = load_base(cfg)
+        net, _ = load_base(cfg, ac)
+        planes = getattr(net, "planes", N_PLANES_2)
+        par = {b: (parity_arrays(b, tr, planes), parity_arrays(b, va, planes)) for b, (tr, va) in splits.items()}
+        codecs = {b: Codec(*transfer.wh_of(b), planes=planes) for b in bufs}
+        frozen0 = {k: v.clone() for k, v in net.state_dict().items() if k.split(".")[0] not in HEAD}
         net.to(dev).eval()  # BatchNorm statistics stay as trained
         head = [p for n, p in net.named_parameters() if n.split(".")[0] in HEAD]
         rest = [p for n, p in net.named_parameters() if n.split(".")[0] not in HEAD]
@@ -327,8 +337,33 @@ def cmd_train(cfg, arms):
                 print(f"{arm}: step {step} parity loss {rec['parity']:.3f} self-play policy {rec['policy']:.3f} "
                       f"value {rec['value']:.3f} validation {rec['val']} ({rec['seconds']:.0f} s)", flush=True)
         net.cpu()
+        if ac["train"] == "head":
+            log.append({"step": "frozen", **frozen_check(cfg, net, frozen0, par)})
+            print(f"{arm}: frozen check {log[-1]}", flush=True)
         torch.save(net.state_dict(), out / f"{arm}.pt")
         (out / f"{arm}_train.json").write_text(json.dumps(log, indent=1))
+
+
+def frozen_check(cfg, net, frozen0, par):
+    """Head-only arms: every non-head tensor (weights and BatchNorm buffers)
+    as it was, and V / score on the validation positions bit for bit equal
+    to base Dot-2's (fp32, CPU)."""
+    import torch
+
+    sd = net.state_dict()
+    same = all(torch.equal(sd[k], v) for k, v in frozen0.items())
+    base, _ = load_base(cfg)
+    base.eval()
+    net.eval()
+    eq, n = True, 0
+    with torch.no_grad():
+        for bname, (_, (codec, x, _)) in par.items():
+            xt = torch.from_numpy(x.reshape(len(x), -1, codec.rows, codec.cols))
+            _, v, s = net(xt)
+            _, v0, s0 = base(xt[:, :base.planes])
+            eq &= torch.equal(v, v0) and (s is None or torch.equal(s, s0))
+            n += len(x)
+    return {"weights_unchanged": bool(same), "v_bitwise_equal": bool(eq), "positions": n}
 
 
 def rc_score_weight(cfg):
@@ -339,12 +374,14 @@ def rc_score_weight(cfg):
 
 def nets_of(cfg, names):
     """name -> (net config, checkpoint): 'base' is Dot-2 as it is, others the
-    arms; a config with ``nets`` (part 3 b) names them there."""
+    arms (with their own net config, if they have one); a config with
+    ``nets`` (part 3 b) names them there."""
     if "nets" in cfg:
         return {n: (cfg["nets"][n]["config"], ROOT / cfg["nets"][n]["checkpoint"]) for n in names}
     out = ROOT / cfg["data"]["out"]
-    return {n: (cfg["net"]["config"], ROOT / cfg["net"]["checkpoint"] if n == "base" else out / f"{n}.pt")
-            for n in names}
+    arms = cfg["train"]["arms"]
+    return {n: (arms.get(n, {}).get("config", cfg["net"]["config"]),
+                ROOT / cfg["net"]["checkpoint"] if n == "base" else out / f"{n}.pt") for n in names}
 
 
 def evaluator(cfg, net):
@@ -463,7 +500,8 @@ def cmd_report(cfg):
          f"**base** = Dot-2 ({cfg['net']['checkpoint']}, the app's 10x7 network). Arms, fine-tuned for "
          f"{tc['steps']} steps (Adam, lr {tc['lr']}; each step {tc['parity_batch']} parity positions of one size "
          f"+ {tc['selfplay_batch']} self-play positions from dot2c's replay buffers with their MCTS targets): "
-         + "; ".join(f"**{a}** " + ("policy head only" if c["train"] == "head" else
+         + "; ".join(f"**{a}** " + ("policy head only" + (" with the chain hint planes wired into it "
+                                    f"({c['config']})" if c.get("config") else "") if c["train"] == "head" else
                                     f"whole net, body and value heads at {c['body_lr_scale']}x lr, "
                                     "self-play value loss kept") for a, c in tc["arms"].items()) + ".", ""]
 
@@ -481,7 +519,7 @@ def cmd_report(cfg):
           "|---|---|---:|---|---|---|---|"]
     for n in names:
         tj = out / f"{n}_train.json"
-        val = json.loads(tj.read_text())[-1]["val"] if tj.exists() else {}
+        val = [r for r in json.loads(tj.read_text()) if "val" in r][-1]["val"] if tj.exists() else {}
         for b in cfg["data"]["boards"]:
             r = res.get(f"probe/{n}/{b}")
             if r:

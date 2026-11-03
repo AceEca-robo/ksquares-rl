@@ -3,7 +3,7 @@
 # (scripts/parity_hand.py -> docs/parity_hand.md).
 seed: 3031
 device: cuda
-processes: 16                    # CPU workers: the judge, the opponents' moves
+processes: 4                       # CPU workers: the judge, the opponents' moves
 
 net:                             # the network that is fine-tuned
   config: configs/dot2c.yaml
@@ -41,6 +41,7 @@ train:                           # fine-tuning arms
   arms:
     a1: {train: head}            # policy head only; body, value / score heads frozen
     a2: {train: all, body_lr_scale: 0.1, value_loss: true}   # body and V at 0.1x lr, self-play V loss kept
+    a3: {train: head, config: configs/parity_b2h.yaml}   # a1 + chain hint planes into the policy head (2026-11-01)
 
 eval:
   probe_sims: 200                # MCTS on the probe sets

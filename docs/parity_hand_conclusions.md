@@ -28,3 +28,17 @@ judge's answers, but that does not fix the routs, which start earlier.
    count directly; for training data of that phase the judge's limit
    would have to be raised by a lot or replaced by the net's own MCTS
    at many simulations as a softer teacher.
+
+### a3 (2026-11-03): (b) closed cleanly — head only, with the chain planes
+
+a3 = a1 with b2's chain hint planes fed straight into the policy head
+(`hint_head`, zero-initialised), body, value and score heads frozen.
+Frozen check after training: every non-head tensor unchanged and V / score
+bit-for-bit equal to base on 1000 validation positions (fp32, CPU). Raw
+probe 10x7 75.3% (a1 77.0%, base 67.4%), 5x5 65.5% (a1 65.0%); MCTS 94.7%;
+raw Elo 5x5 1713 / 10x7 1481 (base 1695 / 1450); routs 12 / 200 (base
+11); bridge 19-1. Verdict: the play is not damaged (V is untouched), but
+the expected ~80% is not reached: the hint planes add nothing over a1 —
+the late parity they encode is already in the body's features. The hint
+was only worth something for the middle game, which the judge sets do not
+contain.

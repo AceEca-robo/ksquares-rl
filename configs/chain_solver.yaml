@@ -1,0 +1,22 @@
+# The formula judge (sim/chain_solver.py) against the exact judge
+# (agents/strong.py exact_move_values): scripts/chain_solver_eval.py ->
+# docs/chain_solver.md.
+seed: 3200
+processes: 4
+budget: 200000            # formula recursion states per position; over it: no answer
+out: runs/chain_solver    # agree.json, timing_{size}.jsonl
+
+agree:                    # late positions where the exact judge knows the answer
+  sets:                   # part 3 (a) judge sets: no box to take, 1..max_safe safe lines,
+                          # the move decides the result (strategy_probe.classify "parity")
+    5x5: runs/parity_hand/data_5x5.jsonl
+    10x7: runs/parity_hand/data_10x7.jsonl
+  n: 5000                 # per size
+  mid: runs/parity_arch/mid_states.npz   # 10x7, 20-40 safe lines, dot2c self-play: coverage only
+
+timing:                   # whole games: from how many safe lines on does each judge answer
+  pairs: [[hard, hard], [medium, hard], [greedy, hard], [easy, medium], [medium, medium]]
+  boards:
+    10x7: {games: 200, exact_max_safe: 8, time_limit: 5.0}
+    5x5: {games: 300, exact_max_safe: 14, time_limit: 2.0}
+  buckets: [[0, 0], [1, 2], [3, 5], [6, 10], [11, 19], [20, 29], [30, 40], [41, 999]]

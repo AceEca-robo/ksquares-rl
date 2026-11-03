@@ -1028,3 +1028,29 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   there (exact search on 5x5 / 7x7 middle games, or a check of MCTS-2000
   vs MCTS-20000 stability); b2's hint planes from scratch on 5x5 where
   the judge covers the middle game.
+
+## 2026-11-03 — part 3: (b) closed with a frozen-body arm; the formula judge
+
+- Constraints this session: stages one at a time, at most 4 judge
+  processes, `free -g` before each stage (runs/logs/part3_next.log).
+- (1) a3 = a1 + chain hint planes into the policy head only
+  (`hint_head`, configs/parity_b2h.yaml, trained 2026-11-01; bridge and
+  report today). Frozen check: non-head tensors unchanged, V / score
+  bitwise equal on 1000 positions. Probe 10x7 75.3% (a1 77.0%), Elo and
+  routs at base level, bridge 19-1. The hints add nothing late; no damage.
+  parity_hand.py report: read `val` from the last logged step that has it
+  (the frozen check is now the last entry).
+- (2) sim/chain_solver.py: Berlekamp's recursion over arms / junctions /
+  loops of the final board F with the safe lines as tempo moves, plus
+  `capture_decision` (take all vs double-deal) and `ply_values` (every real
+  move, then the formula). Exact with no safe lines left (tests: 333/333
+  positions on 3x3-4x4 vs exact search). Bug found and fixed: after a chain
+  opened in the middle the decline was tried on the wrong (short) side.
+- With safe lines left the formula is an approximation: a sacrifice made
+  now cuts the board differently from F. On the judge sets (results in
+  docs/chain_solver.md) the plain formula keeps the result with its move
+  in 70% (10x7) / 57% (5x5); one real ply first: 84% / 74%. In the middle
+  game (20-40 safe lines) it never answers: the safe phase is not fixed.
+- Ideas for later: real-board search over sacrifices while s > 0 (the
+  formula only at s = 0, where it is exact); the formula as a cheap
+  late-game teacher for 10x7 positions the exact judge cannot reach.
