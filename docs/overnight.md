@@ -1094,3 +1094,7 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   11 / 17 (lines 70-79, 8-23 safe lines). Table docs/blowouts.md.
 - Unclear: why some walls are at only 8-11 safe lines (seeds 141, 131);
   a longer limit there would likely find the move.
+- Walls rerun (`judge --walls`, 600 s per position, 1 GB table per
+  worker, from the 30 s wall backwards; 30 min): 3 more mistakes found
+  (seeds 47, 102, 156, at the wall position itself), 8 walls move back one
+  Dot-2 move to 13-27 safe lines. Total: mistake found in 9 / 17.
