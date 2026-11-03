@@ -14,8 +14,8 @@
 3. **Wall in 11 of 17.** The judge (30 s) proves the loss back to lines
    73-85 and then runs out of time at lines 70-79 with 8-23 safe lines;
    the mistake is there or earlier. The walls at 8 and 11 safe lines
-   (seeds 141, 131) are positions with many short chains still open,
-   harder than the self-play positions of the same s.
+   (seeds 141, 131) are unusual: in self-play the judge solves ~100% at
+   that s; why these are harder is not checked yet.
 4. So the routs are not lost in the endgame: the net loses a won game
    with one middle-game move, then Hard takes the chains. A teacher for
    this range (the judge labels of docs/mid_judge.md at 10-15 lines,
