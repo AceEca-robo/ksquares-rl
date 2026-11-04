@@ -1103,3 +1103,28 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   71, 20 safe lines, 887 s); three walls one Dot-2 move further back (26-29
   safe lines), four unchanged, among them seeds 131 / 141 at 13-14 safe
   lines. Total: mistake found in 10 / 17.
+
+## 2026-11-04 (night) — part 3 (d): learning from its own mistakes, checked by the judge
+
+- scripts/self_correct.py, configs/self_correct.yaml -> docs/self_correction.md.
+  Stages one at a time after the 3600 s wall pass (log
+  runs/logs/self_correct.log with `free -g`; 4 judge processes).
+- Collect: dot2c gen 16 vs the simulator's Hard and vs itself, MCTS 50 / 200,
+  50 losses each (800 / 1800 / 200 / 200 games). Judge 60 s per position:
+  81 mistakes found, 118 walls; vs Hard the mistakes sit at 0-1 safe lines
+  (endgame), self-play losses are walls at 15-25+.
+- Fine-tune as a1 (policy head only, V bitwise frozen), 2000 steps, 384 per
+  batch with 10 / 30 / 50% mistakes (m10 / m30 / m50): train mistakes
+  memorised, held-out 1 -> 3 of 8.
+- Routs per 200 vs Hard (MCTS 50) are noisy: base 5 on the evaluation seed
+  (11 in part 3 a); `self_correct.py noise` adds five seeds: base 7.8, m10
+  7.7, m30 10.8, m50 11.7 per 200 over 1200 games. Elo raw: 1450 / 1457 /
+  1354 / 1328. Bridge 19-0-1 / 20-0 / 18-1-1 / 16-4.
+- Item 4 (self-play loop with judge fine-tuning) not run: no variant
+  beats base. base's probe / Elo / bridge numbers copied from part 3 (a)
+  (runs/parity_hand/eval.json, same settings), its routs rerun.
+- Unclear: the found mistakes vs Hard are endgame ones while the routs are
+  lost in the middle game; the 60 s limit decides which mistakes we see.
+- Ideas for later: mine the middle-game mistakes with long limits (10-60 min
+  per position, as in docs/blowouts.md) and judge a held-out set before any
+  games; compare nets with >= 1200 games against Hard.

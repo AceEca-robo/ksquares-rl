@@ -1,0 +1,58 @@
+# Part 3 (d): the hand learns from its own mistakes, checked by the judge
+# (scripts/self_correct.py -> docs/self_correction.md).
+seed: 3031                # = configs/parity_hand.yaml: the evaluation games are the same as base's there
+device: cuda
+processes: 4              # CPU workers (judge / Hard's moves); session rule: at most 4
+out: runs/self_correct
+
+net:
+  config: configs/dot2c.yaml
+  checkpoint: runs/dot2c/gen_0016.pt
+
+collect:
+  seed: 3400              # differs from the evaluation's
+  arms:                   # [opponent, MCTS sims, losses wanted]: 200 in all
+    - [hard, 50, 50]
+    - [hard, 200, 50]
+    - [self, 50, 50]
+    - [self, 200, 50]
+  batch: 200              # games played at once
+  max_games: 4000         # per arm
+  temp_moves: 10          # self-play: temperature 1 for the first lines (variety), then 0
+
+judge:
+  time_limit: 60          # seconds per position
+  tt_bits: 24
+
+train:
+  val_share: 0.1          # of the found mistakes, held out for the accuracy curve
+  steps: 2000
+  batch: 384              # = parity_hand's 128 + 256
+  lr: 0.0005              # Adam, policy head (as parity_hand)
+  symmetries: true
+  log_every: 250
+  selfplay_buffers: {5x5: runs/dot2c/buffer_5x5.npz, 7x7: runs/dot2c/buffer_7x7.npz, 10x7: runs/dot2c/buffer_10x7.npz}
+  selfplay_weights: {5x5: 0.1, 7x7: 0.3, 10x7: 0.6}
+  variants: {m10: 0.1, m30: 0.3, m50: 0.5}   # mistake share of the batch (and of the loss)
+
+# scripts/parity_hand.py probe / elo / routs / bridge --config configs/self_correct.yaml --nets ...
+nets:
+  base: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}
+  m10: {config: configs/dot2c.yaml, checkpoint: runs/self_correct/m10.pt}
+  m30: {config: configs/dot2c.yaml, checkpoint: runs/self_correct/m30.pt}
+  m50: {config: configs/dot2c.yaml, checkpoint: runs/self_correct/m50.pt}
+data:
+  out: runs/self_correct
+  boards:
+    10x7: {heldout: docs/transfer_parity_10x7.json}
+eval:
+  probe_sims: 200
+  elo:
+    games: 200
+    opponents: [greedy, medium, hard, strong]
+    boards:
+      10x7: {ladder: [docs/ladder_10x7.json, docs/ladder_10x7_s4.json], params: {strong: {node_budget: 14400}}}
+  routs: {games: 200, sims: 50, margin: 20}
+  bridge: {games: 20}
+noise:                    # self_correct.py noise: routs of base and the variants on more game sets
+  seeds: [3501, 3502, 3503, 3504, 3505]
