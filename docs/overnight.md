@@ -1128,3 +1128,17 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Ideas for later: mine the middle-game mistakes with long limits (10-60 min
   per position, as in docs/blowouts.md) and judge a held-out set before any
   games; compare nets with >= 1200 games against Hard.
+
+## 2026-11-04 (day) — middle-game mistakes from routs only: generalisation check
+
+- Request: mistakes only from routs (lost by 20+) vs the simulator's Hard (MCTS 50), judge 600 s from the
+  end backwards, a mistake counts at 7-25 safe lines; hold out 30%, fine-tune the head on the rest; if the
+  held-out accuracy does not rise, stop ("the hand does not generalise the middle game"), else routs on
+  1200 games and the bridge. Target 150 mistakes, cut to 80 by the user during the run.
+- Interrupted first: the 600 s rerun of part 3 (d)'s 118 walls (40 done, 3 found); its code changes were
+  reverted.
+- New scripts/rout_mistakes.py + configs/rout_mistakes.yaml. Judge passes 30 s then 600 s on the walls from
+  the wall backwards (same walk as one 600 s pass, cheaper); the walk stops above 25 safe lines.
+- Yield: 80 mistakes from 248 routs in 5500 games (~8.5 h); 107 routs hit the 600 s wall.
+- Check: held out 2/24 -> 5/24 (r10), 6/24 (r30); sign test p 0.23 / 0.14 -> not significant, rule says
+  stop. No evaluation games. docs/rout_mistakes.md.

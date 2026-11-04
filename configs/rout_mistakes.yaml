@@ -1,0 +1,55 @@
+# Middle-game mistakes from routs only (scripts/rout_mistakes.py -> docs/rout_mistakes.md).
+# Train / eval blocks are read by self_correct.py's trainer and parity_hand.py.
+seed: 3031                # = configs/parity_hand.yaml: the evaluation games are the same as base's there
+device: cuda
+processes: 4              # CPU workers (judge / Hard's moves); session rule: at most 4
+out: runs/rout_mistakes
+
+net:
+  config: configs/dot2c.yaml
+  checkpoint: runs/dot2c/gen_0016.pt
+
+collect:
+  seed: 3600              # differs from the evaluation's and from self_correct's
+  opp: hard               # the simulator's Hard, net first alternating, temperature 0
+  sims: 50
+  batch: 500              # games per round; after each round the new routs are judged
+  max_games: 30000      # ~4 mistakes in range per 500 games (first round): 150 need ~19000
+  margin: 20              # rout = a loss by this many boxes or more
+judge:
+  passes:                 # from the end backwards; a later pass reruns the walls of the last one from the wall
+    - {time_limit: 30, tt_bits: 24}
+    - {time_limit: 600, tt_bits: 26}
+  safe: [7, 25]           # a mistake counts only at this many safe lines; the walk stops above the range
+  want: 80                # mistakes in the range (was 150; cut to 80 by the user, 2026-11-04)
+train:
+  val_share: 0.3          # held out: does the hand generalise to unseen middle-game mistakes?
+  steps: 2000
+  batch: 384              # = parity_hand's 128 + 256
+  lr: 0.0005              # Adam, policy head (as parity_hand)
+  symmetries: true
+  log_every: 250
+  selfplay_buffers: {5x5: runs/dot2c/buffer_5x5.npz, 7x7: runs/dot2c/buffer_7x7.npz, 10x7: runs/dot2c/buffer_10x7.npz}
+  selfplay_weights: {5x5: 0.1, 7x7: 0.3, 10x7: 0.6}
+  variants: {r10: 0.1, r30: 0.3}   # mistake share of the batch (and of the loss)
+
+# scripts/parity_hand.py probe / elo / routs / bridge --config configs/rout_mistakes.yaml --nets ...
+nets:
+  base: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}
+  r10: {config: configs/dot2c.yaml, checkpoint: runs/rout_mistakes/r10.pt}
+  r30: {config: configs/dot2c.yaml, checkpoint: runs/rout_mistakes/r30.pt}
+data:
+  out: runs/rout_mistakes
+  boards:
+    10x7: {heldout: docs/transfer_parity_10x7.json}
+eval:
+  probe_sims: 200
+  elo:
+    games: 200
+    opponents: [greedy, medium, hard, strong]
+    boards:
+      10x7: {ladder: [docs/ladder_10x7.json, docs/ladder_10x7_s4.json], params: {strong: {node_budget: 14400}}}
+  routs: {games: 200, sims: 50, margin: 20}
+  bridge: {games: 20}
+noise:                    # rout_mistakes.py routs: routs of base and the variants on more game sets
+  seeds: [3501, 3502, 3503, 3504, 3505]
