@@ -14,5 +14,8 @@ _src/
 video/**/*.mp4
 video/**/*.mp3
 video/**/*.png
+video/.tts/
+video/build*/
+video/**/*.log
 agents/_mcts_tree*
 agents/_mid_judge*.so
