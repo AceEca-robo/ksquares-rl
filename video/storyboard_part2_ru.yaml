@@ -1,0 +1,102 @@
+# Russian cut of the part 2 video (docs/video_script_part2_ru.md).
+#
+#   .venv/bin/python video/video_build.py --storyboard video/storyboard_part2_ru.yaml \
+#       --script docs/video_script_part2_ru.md --out video/p2/ksquares_rl_part2_ru.mp4 \
+#       --srt video/p2/ksquares_rl_part2_ru.srt --build video/build_p2_ru
+#
+# Format as storyboard_ru.yaml (part 1). Cuts sit on the sentence starts of
+# the scene's voice (video_anim.sentence_starts on video/p2/voice_ru_<N>.mp3).
+# Materials: p2/card_*.png (video/p2_cards.py); p2/hard_10x7_ru.mp4 (dot2c
+# gen 16 vs the real Hard, 10x7, seed 13, 45:25); p2/dot2a_medium_10x7_ru.mp4
+# (dot2a gen 1 without search vs the real Medium, 10x7, seed 5, 38:32);
+# p2/menu_10x7_ru.png, p2/train_ru.png, ../docs/app_10x7.png (the app).
+
+size: [1920, 1080]
+fps: 25
+crf: 18
+voice_at: 0.5
+fade: 0.4
+title:
+  seconds: 3
+  image: p2/card_title.png
+end:
+  seconds: 6
+  lines: ["github.com/AceEca-robo/ksquares-rl", "",
+          "KSquares 21.12.3 © Matt Williams et al., GPL-2+"]
+
+scenes:
+  - n: 1
+    title: Доска побольше
+    voice: p2/voice_ru_1.mp3
+    fragments:
+      - {file: rec/hard_gen54_ru.mp4, from: 38.6, seconds: 8.9,
+         caption: "часть 1: Dot обыгрывает встроенного противника на 5×5"}
+      - {file: p2/card_boards.png, seconds: 20.1}       # "Но настоящая доска в игре больше"
+
+  - n: 2
+    title: Новая Dot
+    voice: p2/voice_ru_2.mp3
+    fragments:
+      - {file: p2/card_net.png, seconds: 28.1}
+      # "...посадили её за доску десять на семь"
+      - {file: p2/dot2a_medium_10x7_ru.mp4, from: 0, seconds: 8.0}
+
+  - n: 3
+    title: Переезд без подготовки
+    voice: p2/voice_ru_3.mp3
+    fragments:
+      - {file: p2/dot2a_medium_10x7_ru.mp4, from: 8.0, seconds: 14.2,
+         caption: "красные: Dot-2 без перебора, ни одной партии на 10×7 · синие: KSquares Medium"}
+      - {file: p2/card_transfer.png, seconds: 25.0}     # "Dot-2 играет на большой доске..."
+
+  - n: 4
+    title: Интуиция врёт
+    voice: p2/voice_ru_4.mp3
+    fragments:
+      # "Помните интуицию? ... кто выигрывает": the app's thought panel
+      - {file: p2/dot2a_medium_10x7_ru.mp4, from: 40, seconds: 8.6, crop: "820:880:1070:30",
+         caption: "полоса «кто выигрывает» — это интуиция Dot"}
+      - {file: p2/card_intuition.png, seconds: 31.1}    # "На маленькой доске интуиция ошибалась редко"
+
+  - n: 5
+    title: Размышления вредят
+    voice: p2/voice_ru_5.mp3
+    fragments:
+      - {file: p2/card_search.png, seconds: 44.6}
+
+  - n: 6
+    title: Один раунд лечит
+    voice: p2/voice_ru_6.mp3
+    fragments:
+      - {file: p2/card_round.png, seconds: 44.0}
+
+  - n: 7
+    title: 19 из 20
+    voice: p2/voice_ru_7.mp3
+    fragments:
+      # the end of the game with the score (the whole game is 112 s)
+      - {file: p2/hard_10x7_ru.mp4, from: 88.0, seconds: 10.8,
+         caption: "красные: Dot-2 (обучение с переездом) · синие: KSquares, сложный уровень"}
+      - {file: p2/hard_10x7_ru.mp4, from: 98.8, seconds: 13.2,
+         caption: "20 партий через мост: 19 побед, 1 ничья, 0 поражений"}
+      - {file: p2/card_wins.png, seconds: 3.0}
+
+  - n: 8
+    title: С нуля против опыта
+    voice: p2/voice_ru_8.mp3
+    fragments:
+      - {file: p2/card_scratch.png, seconds: 44.6}
+
+  - n: 9
+    title: Сыграйте на большой доске
+    voice: p2/voice_ru_9.mp3
+    fragments:
+      - {file: p2/menu_10x7_ru.png, seconds: 3.4}
+      - {file: ../docs/app_10x7.png, seconds: 8.5}      # "сыграйте ... посмотрите, как она думает"
+      - {file: p2/train_ru.png, seconds: 9.5}           # "обучить свою Dot прямо на большой доске"
+
+  - n: 10
+    title: Что дальше
+    voice: p2/voice_ru_10.mp3
+    fragments:
+      - {file: p2/card_question.png, seconds: 16.0}

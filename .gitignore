@@ -17,5 +17,10 @@ video/**/*.png
 video/.tts/
 video/build*/
 video/**/*.log
+video/**/*.json
+video/**/*.srt
+video/check/
+video/p2/
+video/p3/
 agents/_mcts_tree*
 agents/_mid_judge*.so

@@ -1,0 +1,100 @@
+# English cut of the part 2 video (docs/video_script_part2_en.md).
+#
+#   .venv/bin/python video/video_build.py --lang en --storyboard video/storyboard_part2_en.yaml \
+#       --script docs/video_script_part2_en.md --out video/p2/ksquares_rl_part2_en.mp4 \
+#       --srt video/p2/ksquares_rl_part2_en.srt --build video/build_p2_en
+#
+# Format as storyboard_ru.yaml (part 1). Cuts sit on the sentence starts of
+# the scene's voice (video_anim.sentence_starts on video/p2/voice_en_<N>.mp3).
+# Materials: p2/card_*.png (video/p2_cards.py); p2/hard_10x7_en.mp4 (dot2c
+# gen 16 vs the real Hard, 10x7, seed 13, 45:25); p2/dot2a_medium_10x7_en.mp4
+# (dot2a gen 1 without search vs the real Medium, 10x7, seed 5, 38:32);
+# p2/menu_10x7_en.png, p2/train_en.png, p2/app_10x7_en.png (the app).
+
+size: [1920, 1080]
+fps: 25
+crf: 18
+voice_at: 0.5
+fade: 0.4
+title:
+  seconds: 3
+  image: p2/card_title_en.png
+end:
+  seconds: 6
+  lines: ["github.com/AceEca-robo/ksquares-rl", "",
+          "KSquares 21.12.3 © Matt Williams et al., GPL-2+"]
+
+scenes:
+  - n: 1
+    title: A bigger board
+    voice: p2/voice_en_1.mp3
+    fragments:
+      - {file: rec/hard_gen54_en.mp4, from: 38.6, seconds: 7.6,
+         caption: "part 1: Dot beats the built-in opponent on 5×5"}
+      - {file: p2/card_boards_en.png, seconds: 19.0}
+
+  - n: 2
+    title: Dot-2
+    voice: p2/voice_en_2.mp3
+    fragments:
+      - {file: p2/card_net_en.png, seconds: 24.2}
+      - {file: p2/dot2a_medium_10x7_en.mp4, from: 0, seconds: 7.4}
+
+  - n: 3
+    title: Moving without preparation
+    voice: p2/voice_en_3.mp3
+    fragments:
+      - {file: p2/dot2a_medium_10x7_en.mp4, from: 7.4, seconds: 13.5,
+         caption: "red: Dot-2 without thinking, not one game on 10×7 · blue: KSquares Medium"}
+      - {file: p2/card_transfer_en.png, seconds: 22.3}
+
+  - n: 4
+    title: Intuition lies
+    voice: p2/voice_en_4.mp3
+    fragments:
+      - {file: p2/dot2a_medium_10x7_en.mp4, from: 40, seconds: 7.3, crop: "820:880:1070:30",
+         caption: "the “who is winning” bar is Dot's intuition"}
+      - {file: p2/card_intuition_en.png, seconds: 30.4}
+
+  - n: 5
+    title: Thinking hurts
+    voice: p2/voice_en_5.mp3
+    fragments:
+      - {file: p2/card_search_en.png, seconds: 39.1}
+
+  - n: 6
+    title: One round cures it
+    voice: p2/voice_en_6.mp3
+    fragments:
+      - {file: p2/card_round_en.png, seconds: 37.6}
+
+  - n: 7
+    title: 19 out of 20
+    voice: p2/voice_en_7.mp3
+    fragments:
+      # the end of the game; the KSquares window goes black at 110.5 s, after the last move
+      - {file: p2/hard_10x7_en.mp4, from: 89.5, seconds: 9.5,
+         caption: "red: Dot-2 (moved from 5×5) · blue: KSquares, Hard"}
+      - {file: p2/hard_10x7_en.mp4, from: 99.0, seconds: 11.3,
+         caption: "20 games through the bridge: 19 wins, 1 draw, 0 losses"}
+      - {file: p2/card_wins_en.png, seconds: 3.0}
+
+  - n: 8
+    title: From scratch vs experience
+    voice: p2/voice_en_8.mp3
+    fragments:
+      - {file: p2/card_scratch_en.png, seconds: 39.1}
+
+  - n: 9
+    title: Play on the big board
+    voice: p2/voice_en_9.mp3
+    fragments:
+      - {file: p2/menu_10x7_en.png, seconds: 2.9}
+      - {file: p2/app_10x7_en.png, seconds: 6.2}
+      - {file: p2/train_en.png, seconds: 8.0}
+
+  - n: 10
+    title: What next
+    voice: p2/voice_en_10.mp3
+    fragments:
+      - {file: p2/card_question_en.png, seconds: 15.2}

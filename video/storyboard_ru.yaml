@@ -1,0 +1,133 @@
+# Russian cut of the KSquares video (docs/video_script_ru.md).
+#
+#   .venv/bin/python video/video_build.py --storyboard video/storyboard_ru.yaml \
+#       --out video/ksquares_rl_ru.mp4 --srt video/ksquares_rl_ru.srt --build video/build_ru
+#
+# Format as in pacman-rl/video/storyboard.yaml: per scene a voice (none = a
+# pause) and fragments (png stills or mp4 clips, seconds, from, speed, crop,
+# caption). Paths are relative to video/. Cuts inside a scene sit on the
+# sentence starts of its voice (video_anim.sentence_starts: text-length
+# estimate snapped to the voice's pauses), voice at 0.5 s.
+#
+# Fragment seconds re-cut 2026-10-27 for the new voice (the hero is Dot): each
+# cut on the start of the same sentence as in the old cut's meaning.
+#
+# Materials: rec/*.mp4 (scripts/launcher.py --record, az5b gen 54 vs Hard,
+# seed 11, 18-7; az5 gen 1 vs az5b gen 54), anim_2*.mp4 (video_anim.py),
+# card_*.png / shot_*.png (video_cards.py), thumb/ (video_thumbnail.py).
+
+size: [1920, 1080]
+fps: 25
+crf: 18
+voice_at: 0.5
+fade: 0.4
+title:
+  seconds: 3
+  image: thumb/thumb_c_ru_1080.png
+end:
+  seconds: 6
+  lines: ["github.com/AceEca-robo/ksquares-rl", "",
+          "KSquares 21.12.3 © Matt Williams et al., GPL-2+"]
+
+scenes:
+  - n: 1
+    title: Знакомьтесь, Dot
+    voice: voice_ru_1.mp3
+    fragments:
+      - {file: rec/hard_gen54_ru.mp4, from: 0, seconds: 10, speed: 1.05,
+         caption: "красные: Dot · синие: встроенный противник KSquares"}
+      - {file: rec/hard_gen54_ru.mp4, from: 10.5, seconds: 33.2, speed: 1.05}
+
+  - n: 2
+    title: Игра
+    voice: voice_ru_2.mp3
+    fragments:
+      - {file: anim_2.mp4, seconds: 40.8}
+
+  - n: 2п
+    title: Пауза — двойной крест
+    fragments:
+      - {file: anim_2p.mp4, seconds: 4.0}
+
+  - n: 2а
+    title: Секрет игры
+    voice: voice_ru_2а.mp3
+    fragments:
+      - {file: anim_2a.mp4, seconds: 38.8}
+
+  - n: 3
+    title: Тренировочный зал
+    voice: voice_ru_3.mp3
+    fragments:
+      - {file: shot_bridge.png, seconds: 9.4}     # "...маленький мост"
+      - {file: shot_bench.png, seconds: 6.2}      # "тренировочный зал ... тысячи партий"
+      - {file: shot_verify.png, seconds: 7.9}     # "теми же ходами, что в настоящей игре"
+      - {file: shot_strong.png, seconds: 16.0}    # "и ещё одного — судью"
+      - {file: shot_log.png, seconds: 8.8}        # "журнал его решений"
+
+  - n: 4
+    title: Как Dot учится
+    voice: voice_ru_4.mp3
+    fragments:
+      - {file: card_az.png, seconds: 6.7}
+      # "куда бы я пошла ... кто здесь выигрывает": the app's thought panel
+      - {file: rec/hard_gen54_ru.mp4, from: 6, seconds: 6.8, crop: "820:880:1070:30",
+         caption: "панель приложения: куда пошла бы Dot и её перебор вариантов"}
+      - {file: card_az.png, seconds: 32.6}        # "Dot играет сама с собой ... раунд"
+
+  - n: 5
+    title: Лестница
+    voice: voice_ru_5.mp3
+    fragments:
+      - {file: card_elo.png, seconds: 21.5}
+      - {file: rec/hard_gen54_ru.mp4, from: 29.7, seconds: 9.7}   # "Откуда берётся эта разница?"
+
+  - n: 6
+    title: Dot и её интуиция
+    voice: voice_ru_6.mp3
+    fragments:
+      - {file: ../docs/probes/az5b/gen_54.png, seconds: 18.3,
+         caption: "позиции: верные ходы обведены — их знает судья"}
+      - {file: card_curves_0.png, seconds: 3.8}   # "Правильный ответ ... знает судья"
+      - {file: card_curves_1.png, seconds: 8.1}   # "Dot при выборе хода ошибается"
+      - {file: card_curves_2.png, seconds: 17.7}  # "А интуиция?"
+      # its own text "Dot знает, кто выиграет." lands on the voice's same words (47.9 s)
+      - {file: thumb/thumb_c_ru_1080.png, seconds: 22.5}
+      - {file: card_curves_3.png, seconds: 7.1}   # "перебрать ходы и про каждый спросить интуицию"
+      - {file: card_curves_4.png, seconds: 6.6}   # "И Dot решает девять задач из десяти"
+      - {file: ../docs/probes/az5b/gen_54.png, seconds: 5.0,
+         caption: "голубые линии — Dot выбирает ход; звезда — Dot подумав; кольца — верные ходы"}
+      - {file: card_tail.png, seconds: 5.4}
+
+  - n: 7
+    title: Потолок
+    voice: voice_ru_7.mp3
+    fragments:
+      - {file: card_night.png, seconds: 8.9}
+      - {file: card_ladder.png, seconds: 7.7}     # "результат не менялся"
+      - {file: card_night.png, seconds: 4.9}      # "обыгрывать свои прежние версии"
+      - {file: card_ladder.png, seconds: 4.4}     # "остановили тренировку"
+      # "попала не последняя Dot, а самая сильная": the menu's "Сеть: az5b gen 54"
+      - {file: rec/menu_ru.png, seconds: 6.8}
+
+  - n: 8
+    title: Сыграйте с Dot
+    voice: voice_ru_8.mp3
+    fragments:
+      - {file: rec/menu_ru.png, seconds: 13.5}
+      - {file: rec/hard_gen54_ru.mp4, from: 14, seconds: 4.4}     # "Справа видно, что она думает"
+      - {file: rec/hard_gen54_ru.mp4, from: 30, seconds: 4.3,
+         caption: "судья проверяет ход Dot: «сеть видит: её ход сохраняет победу»"}
+      - {file: rec/self_g1_g54_ru.mp4, from: 3, seconds: 9.6, speed: 3,
+         caption: "Dot из 1-го раунда (красные) против Dot из 54-го (синие), ускорено ×3"}
+      # after the voice: the app's fourth mode (scripts/launcher.py --mode train --screenshot)
+      - {file: rec/train_ru.png, seconds: 5.0,
+         caption: "новый режим: «Обучить свою Dot» — обучение с нуля на вашей видеокарте"}
+
+  - n: 9
+    title: Что дальше
+    voice: voice_ru_9.mp3
+    fragments:
+      - {file: rec/ten_by_seven_ru.png, seconds: 4.6}
+      - {file: card_heads.png, seconds: 10.9}     # "Следующий шаг — научить её любому полю"
+      - {file: shot_log.png, seconds: 20.9}       # "Всё открыто ... на гитхабе. Клонируйте ..."
