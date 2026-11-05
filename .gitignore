@@ -9,8 +9,10 @@ __pycache__/
 .pytest_cache/
 _src/
 
-# materials for the video (docs/video_script_ru.md): generators, recordings,
-# voice, builds; the finished videos go to ~/YouTube/ksquares-rl/
-video/
+# materials for the video (docs/video_script_ru.md): recordings, voice, stills;
+# the finished videos go to ~/YouTube/ksquares-rl/
+video/**/*.mp4
+video/**/*.mp3
+video/**/*.png
 agents/_mcts_tree*
 agents/_mid_judge*.so
