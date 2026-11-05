@@ -1142,3 +1142,16 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Yield: 80 mistakes from 248 routs in 5500 games (~8.5 h); 107 routs hit the 600 s wall.
 - Check: held out 2/24 -> 5/24 (r10), 6/24 (r30); sign test p 0.23 / 0.14 -> not significant, rule says
   stop. No evaluation games. docs/rout_mistakes.md.
+
+## 2026-11-05 — the hand on set mid (for the part 3 video)
+
+- Request: head-only fine-tune on set mid, 70 / 30, sign test; games only if it generalises. Split by game
+  (positions of a game are close), 4000 steps as parity_hand, variants r10 / r30 as rout_mistakes.
+- Held out 95.2 -> 95.7 / 96.5%, decisive 86.9 -> 88.4 / 90.5%, up / down 6 / 3 and 11 / 4, p 0.25 / 0.059:
+  rule not met, no evaluation games. docs/mid_hand.md.
+- Video script part 3: docs/video_script_part3_ru.md. sims_default was already 200 (README line added).
+- Unclear: train rose only 2.3 points, so "memorises" does not describe this set.
+- Part 3 voice redone from the current script (edge-tts ru-RU-DmitryNeural; NoAudioReceived again, several reruns): 489.8 s. Storyboard
+  cuts moved to the new sentences, two_boards and conv_window added. RU draft video/p3/ksquares_rl_part3_ru.mp4 (not in git). Then: scene 1 card_chains (schematic board), question card from the voice's question; scene 8 step-by-step funnel (p3_clips.funnel); storyboard min_tail 0.7 s. 8:31, copied to ~/YouTube/ksquares-rl/.
+- Part 3 scene 10 rewritten as asked (the next part is a graph network; was "the next game is not on a board"), re-voiced alone, 91.1 s; new
+  clips funnel10, window_graph (schematic graph, made-up lengths), end card text changed. RU rebuilt and copied to ~/YouTube/ksquares-rl/.

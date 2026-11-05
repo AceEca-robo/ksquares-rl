@@ -86,6 +86,31 @@ not counted.
 
 The app plays 10x7 in every mode with dot2c gen 16; dot2s gen 39 is in the
 generation lists, and "Train your own Dot" can train on 10x7 too.
+It searches 200 simulations per move by default; the routs of docs/blowouts.md came at 50, its lowest setting.
+
+## Part 3: can the raw policy see it without search?
+
+Dot-2 sees who must open the first chain only by searching: on hard late
+10x7 positions MCTS 200 is right 92.4% of the time, the raw policy 67.4%.
+At 50 simulations 17 of 190 games vs the real Hard ended in a rout, and in
+10 of the 17 the judge found one mid-game move that threw away a win
+(`docs/blowouts.md`). Five attempts to fix this in the policy itself:
+
+| # | attempt | where it helped | what stopped it | details |
+|---:|---|---|---|---|
+| 1 | fine-tune on the exact judge's answers | raw late accuracy 67.4 -> 87.5% | routs at MCTS 50: 11 -> 14 of 200; the judge answers only near the end | `docs/parity_hand.md` |
+| 2 | new nets: pooling in every block, chain hint planes | raw late accuracy up to 82.6% | shared body: value turns pessimistic, routs 46 of 200, bridge 15-5; head-only with the hint: 75.3%, routs 12 of 200 | `docs/parity_arch.md`, `docs/parity_hand.md` |
+| 3 | formula judge (Berlekamp's chain counting) | answers 95% at 1-2 safe lines on 10x7 | 0% answers at 20-40 safe lines | `docs/chain_solver.md` |
+| 4 | mid-game judge: search, formula at the leaves | reaches the middle game | wall: 75% solved in a minute at 15 safe lines, 20% at 20, 0 at 30 | `docs/mid_judge.md` |
+| 5 | fine-tune on Dot-2's own mistakes and the judge's mid-game labels | held-out mistakes 2/24 -> 6/24; held-out decisive positions 86.9 -> 90.5% | neither passed the sign test fixed in advance (p 0.14, p 0.059), so no evaluation games | `docs/rout_mistakes.md`, `docs/mid_hand.md` |
+
+![who knows what: % correct moves by safe lines left](docs/who_knows.png)
+
+Where the judge can check, MCTS 200 is right 96% of the time on decisive
+positions and the raw policy 89%; past about 20 safe lines the judge solves
+almost nothing, so nobody can be checked there. The answer so far: possible
+where a teacher exists, but mid-game teacher labels cost minutes each, and
+search is cheaper. The app stays at 200 simulations.
 
 ## The app
 
