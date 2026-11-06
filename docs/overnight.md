@@ -1162,3 +1162,10 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Scene 9 numbers: 80 mistakes in ~8.5 h gives ~4.4 days per 1000 and ~22 days per 5000 at the same rate. Move time at 200 sims on 10x7 through launcher/brain.py Brain.think, dot2c gen 16: median 0.052 s on the RTX 4060 Laptop, 0.226 s on CPU (20 threads). Search time only, not the UI's.
 - Subtitles: no global offset or drift (first line of every scene on the voice's start); single lines snapped to the wrong pause, up to ~2 s early. video_build.py now anchors every sentence on its long pause (sentence_cuts). Part 3 after the fix: 0 of 140 sentence-opening subtitles more than 0.3 s from an audio onset. The built srt of parts 1-2 still have the old timing: lines more than 0.3 s early 4 (part 1 RU), 4 (part 2 RU), 11 (part 1 EN), 1 (part 2 EN).
 - edge-tts refused long texts for hours; a failed retry deletes the scene's mp3, so retry one scene at a time.
+
+## 2026-11-06 (later): part 3 video, English cut and thumbnails
+
+- docs/video_script_part3_en.md (Dot-2 is "she", as in part 2; the judge "it"), en-US-GuyNeural. Screen texts through video/p3_i18n.py (P3_LANG=en); cuts from the voice in video/p3_en_cuts.py, which writes storyboard_part3_en.yaml.
+- video/p3/menu_10x7_200_en.png is the EN menu shot with the search row pasted from the RU shot (MCTS 200 selected), not a new capture.
+- Thumbnails rebuilt on the "who knows what" map (video/p3_thumbnail.py). EN cut: 10:27, 0 of 142 sentence-opening subtitles more than 0.3 s from an audio onset.
+- The repo and the video folder have no link to part 2: descriptions keep a placeholder.

@@ -112,6 +112,14 @@ almost nothing, so nobody can be checked there. The answer so far: possible
 where a teacher exists, but mid-game teacher labels cost minutes each, and
 search is cheaper. The app stays at 200 simulations.
 
+What "cost" means here: 80 mid-game mistakes took about 8.5 hours, so at
+that rate 1000 would take about 4.4 days and 5000 about 22 days, for one
+network. A move at 200 simulations on 10x7 takes 0.05 s on an RTX 4060
+Laptop and 0.23 s on a 20-thread CPU (search only, median).
+
+The part 3 video tells this story: `docs/video_script_part3_ru.md`,
+`docs/video_script_part3_en.md`.
+
 ## The app
 
 One pygame window with a menu (English, Russian, Ukrainian):

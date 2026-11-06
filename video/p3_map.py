@@ -14,10 +14,12 @@ HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 from PIL import Image
 from video_anim import sentence_starts
+from p3_i18n import T, suffix
 from video_cards import C_POLICY, C_VALUE, DIM, FAINT, FG, GRID, LATO, PLUS, font, page
 from video_thumbnail import YELLOW
 OUT = os.path.join(HERE, "p3"); FPS = 25; TAIL = 1.0; FADE = 0.4; WIPE = 1.6
-SCRIPT = os.path.join(ROOT, "docs/video_script_part3_ru.md")
+LANG = "en" if suffix() else "ru"
+SCRIPT = os.path.join(ROOT, f"docs/video_script_part3_{LANG}.md")
 
 X0, B0, B1, X1, Y0, Y1 = 150, 450, 880, 1820, 250, 860     # plot left, box, plot right; plot top, bottom
 BOX = (10, 11, 15)
@@ -65,30 +67,30 @@ def zone(d, x0, x1, text, col=FG):
 def x_axis(d):
     d.line((X0, Y1, X1, Y1), fill=DIM, width=3)
     d.polygon(((X1 + 30, Y1), (X1 + 6, Y1 - 10), (X1 + 6, Y1 + 10)), fill=DIM)
-    d.text((X0, Y1 + 56), "первая линия", font=font(30, LATO), fill=DIM, anchor="lt")
-    d.text((X1, Y1 + 56), "последняя линия", font=font(30, LATO), fill=DIM, anchor="rt")
+    d.text((X0, Y1 + 56), T("первая линия"), font=font(30, LATO), fill=DIM, anchor="lt")
+    d.text((X1, Y1 + 56), T("последняя линия"), font=font(30, LATO), fill=DIM, anchor="rt")
     for s, x in ((40, B0), (20, fx(20)), (15, fx(15)), (10, fx(10)), (5, fx(5)), (0, fx(0))):
         d.text((x, Y1 + 14), str(s), font=font(28, LATO), fill=DIM, anchor="mt")
-    d.text((fx(10), Y1 + 56), "безопасных линий осталось", font=font(28, LATO), fill=DIM, anchor="mt")
-    d.text((fx(10), Y1 + 100), "игроки: до 18 линий, дальше мало позиций для проверки", font=font(24, LATO), fill=FAINT, anchor="mt")
+    d.text((fx(10), Y1 + 56), T("безопасных линий осталось"), font=font(28, LATO), fill=DIM, anchor="mt")
+    d.text((fx(10), Y1 + 100), T("игроки: до 18 линий, дальше мало позиций для проверки"), font=font(24, LATO), fill=FAINT, anchor="mt")
 
 
 def y_axis(d):
     for v in (0, 25, 50, 75, 100):
         if v: d.line((X0, fy(v), X1, fy(v)), fill=GRID, width=2)
         d.text((X0 - 16, fy(v)), str(v), font=font(28, LATO), fill=DIM, anchor="rm")
-    d.text((X0 - 80, 148), "% верных ходов", font=font(28, LATO), fill=DIM)
+    d.text((X0 - 80, 148), T("% верных ходов"), font=font(28, LATO), fill=DIM)
 
 
 def zone_start(d):
-    zone(d, X0, B0, "начало партии")
-    d.text(((X0 + B0) / 2, 530), "судья", font=font(30, LATO), fill=DIM, anchor="mm")
-    d.text(((X0 + B0) / 2, 572), "не достаёт", font=font(30, LATO), fill=DIM, anchor="mm")
+    zone(d, X0, B0, T("начало партии"))
+    d.text(((X0 + B0) / 2, 530), T("судья"), font=font(30, LATO), fill=DIM, anchor="mm")
+    d.text(((X0 + B0) / 2, 572), T("не достаёт"), font=font(30, LATO), fill=DIM, anchor="mm")
 
 
 def zone_box(d):
     d.rectangle((B0, Y0, B1, Y1), fill=BOX, outline=FAINT, width=2)
-    zone(d, B0, B1, "середина\n20–40 безопасных линий")
+    zone(d, B0, B1, T("середина\n20–40 безопасных линий"))
 
 
 def question(d):
@@ -96,7 +98,7 @@ def question(d):
 
 
 def zone_end(d):
-    zone(d, B1, X1, "концовка\nот 20 линий до конца")
+    zone(d, B1, X1, T("концовка\nот 20 линий до конца"))
 
 
 def player(k):
@@ -104,27 +106,27 @@ def player(k):
         curve(d, [(fx(s), fy(v[k])) for s, v in sorted(DATA.items(), reverse=True)],
               (C_POLICY, C_VALUE, PLUS)[k])
         legend(d, k, (C_POLICY, C_VALUE, PLUS)[k],
-               ("Dot-2 без размышлений", "интуиция", "Dot-2 с размышлениями")[k])
+               (T("Dot-2 без размышлений"), T("интуиция"), T("Dot-2 с размышлениями"))[k])
     return f
 
 
 def judge(d):
     curve(d, [(fx(s), fy(v)) for s, v in sorted(SOLVED.items(), reverse=True)], WHITE, square=True)
-    legend(d, 3, WHITE, "судья: доля решённых")
+    legend(d, 3, WHITE, T("судья: доля решённых"))
 
 
 # (first words of the sentence, what appears, fade or wipe: 1 left to right, -1 right to left)
 EVENTS = [
-    ("По горизонтали", x_axis, 0), ("По вертикали", y_axis, 0),
-    ("Начало партии", zone_start, 0), ("Середина партии", zone_box, 0), ("Поэтому в коробке", question, 0),
-    ("Концовка", zone_end, 0),
-    ("Синяя", player(0), 1), ("Оранжевая", player(1), 1), ("Зелёная —", player(2), 1), ("И белая", judge, -1),
+    (T("По горизонтали"), x_axis, 0), (T("По вертикали"), y_axis, 0),
+    (T("Начало партии"), zone_start, 0), (T("Середина партии"), zone_box, 0), (T("Поэтому в коробке"), question, 0),
+    (T("Концовка"), zone_end, 0),
+    (T("Синяя"), player(0), 1), (T("Оранжевая"), player(1), 1), (T("Зелёная —"), player(2), 1), (T("И белая"), judge, -1),
 ]
 
 
 def layers():
     """images[k]: the map with the first k events drawn"""
-    img, d = page("Кто что знает")
+    img, d = page(T("Кто что знает"))
     out = [img.copy()]
     for _, f, _ in EVENTS:
         f(d)
@@ -134,7 +136,7 @@ def layers():
 
 def sentences():
     from video_voice import scenes
-    text = next(t for k, _, _, t in scenes(SCRIPT, "ru") if str(k) == "7")
+    text = next(t for k, _, _, t in scenes(SCRIPT, LANG) if str(k) == "7")
     return [s for s in re.split(r"(?<=[.!?…])\s+", text.strip()) if s]
 
 
@@ -164,16 +166,16 @@ def frames(imgs, starts, end):
 
 def main():
     imgs = layers()
-    imgs[-1].save(f"{OUT}/card_map_5.png")
-    img, d = page("Кто что знает")
+    imgs[-1].save(f"{OUT}/card_map_5{suffix()}.png")
+    img, d = page(T("Кто что знает"))
     x_axis(d); y_axis(d); zone_start(d); zone_box(d); question(d); zone_end(d); player(2)(d)
-    d.text((960, 1040), "200 вариантов: 96 % верных ходов там, где судья может проверить", font=font(34), fill=YELLOW, anchor="mm")
-    img.save(f"{OUT}/card_map_6.png")
-    s, end = sentence_starts("ru", "7", SCRIPT, f"{OUT}/voice_ru_7.mp3")
+    d.text((960, 1040), T("200 вариантов: 96 % верных ходов там, где судья может проверить"), font=font(34), fill=YELLOW, anchor="mm")
+    img.save(f"{OUT}/card_map_6{suffix()}.png")
+    s, end = sentence_starts(LANG, "7", SCRIPT, f"{OUT}/voice_{LANG}_7.mp3")
     assert len(s) == len(sentences()), (len(s), len(sentences()))
     p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "1920x1080",
                           "-r", str(FPS), "-i", "-", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "18",
-                          f"{OUT}/map_ru.mp4"], stdin=subprocess.PIPE)
+                          f"{OUT}/map_{LANG}.mp4"], stdin=subprocess.PIPE)
     for f in frames(imgs, s, end):
         p.stdin.write(f)
     p.stdin.close(); p.wait()

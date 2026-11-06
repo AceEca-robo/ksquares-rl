@@ -13,6 +13,7 @@ long chain; then the frame covers the whole board and the hint appears.
 import os, subprocess, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path[:0] = [HERE, ROOT, os.path.join(ROOT, "scripts")]
+from p3_i18n import T, suffix
 from video_cards import DIM, FAINT, FG, LATO, arrow, font, page
 from video_thumbnail import BLUE, PANEL, RED, YELLOW
 from video_cards import C_POLICY
@@ -66,16 +67,16 @@ def two_boards(top, seconds=24):
     for f in range(int(seconds * FPS)):
         t = f / FPS
         img, d = page()
-        d.text((110, 150), "без размышлений", font=font(46), fill=C_POLICY)
-        d.text((1010, 150), "с размышлениями", font=font(46), fill=YELLOW)
+        d.text((110, 150), T("без размышлений"), font=font(46), fill=C_POLICY)
+        d.text((1010, 150), T("с размышлениями"), font=font(46), fill=YELLOW)
         s = 78
         board(d, 110, 280, s, best if t > 0.6 else None)
-        d.text((110, 900), "взглянула и сразу ходит" if t > 0.6 else "", font=font(36, LATO), fill=DIM)
+        d.text((110, 900), T("взглянула и сразу ходит") if t > 0.6 else "", font=font(36, LATO), fill=DIM)
         done = t > 1 + SEARCH
         n = 200 if done else int(max(0, t - 1) / SEARCH * 200)
         hi = top[0] if done else (cand[int(t * 7) % len(cand)] if t > 1 else None)
         board(d, 1010, 280, s, hi, YELLOW if done else FAINT)
-        d.text((1010, 900), f"вариантов: {n}", font=font(36, LATO), fill=DIM)
+        d.text((1010, 900), T("вариантов:") + f" {n}", font=font(36, LATO), fill=DIM)
         yield img
 
 
@@ -85,7 +86,7 @@ def conv_window(seconds=26):
     SLIDE = 15.0
     for f in range(int(seconds * FPS)):
         t = f / FPS
-        img, d = page("Что видит сеть")
+        img, d = page(T("Что видит сеть"))
         for x, y in chain:
             d.rectangle((x0 + x * s + 8, y0 + y * s + 8, x0 + (x + 1) * s - 8, y0 + (y + 1) * s - 8), fill=PANEL)
         for a, e in zip(chain, chain[1:]):
@@ -101,15 +102,15 @@ def conv_window(seconds=26):
             a, e = path[k], path[min(k + 1, 3)]
             wx, wy = a[0] + (e[0] - a[0]) * r, a[1] + (e[1] - a[1]) * r
             d.rounded_rectangle((x0 + wx * s, y0 + wy * s, x0 + (wx + 3) * s, y0 + (wy + 3) * s), 12, outline=YELLOW, width=7)
-            d.multiline_text((tx, 330), "свёрточное окошко:\nмаленькие узоры", font=font(44), fill=YELLOW, spacing=12)
+            d.multiline_text((tx, 330), T("свёрточное окошко:\nмаленькие узоры"), font=font(44), fill=YELLOW, spacing=12)
             if t > 8:
-                d.multiline_text((tx, 520), "цепочка длиннее окошка", font=font(38, LATO), fill=FG, spacing=10)
+                d.multiline_text((tx, 520), T("цепочка длиннее окошка"), font=font(38, LATO), fill=FG, spacing=10)
         else:
             d.rounded_rectangle((x0 - 24, y0 - 24, x0 + 10 * s + 24, y0 + 7 * s + 24), 16, outline=YELLOW, width=7)
-            d.multiline_text((tx, 330), "взгляд на всё поле", font=font(44), fill=YELLOW)
+            d.multiline_text((tx, 330), T("взгляд на всё поле"), font=font(44), fill=YELLOW)
             if t > SLIDE + 1.5:
                 d.text((tx, 450), "+", font=font(70), fill=FG)
-                d.multiline_text((tx, 560), "подсказка:\nкакие цепочки,\nкому открывать первую", font=font(40, LATO), fill=FG, spacing=10)
+                d.multiline_text((tx, 560), T("подсказка:\nкакие цепочки,\nкому открывать первую"), font=font(40, LATO), fill=FG, spacing=10)
         yield img
 
 
@@ -118,10 +119,10 @@ def funnel(seconds=31, at=(11.6, 13.6, 14.9), fade=0.4):
     from PIL import Image
     steps = []
     for k in range(4):
-        img, d = page("Попытка 5: на своих ошибках")
+        img, d = page(T("Попытка 5: на своих ошибках"))
         if k == 0:
-            d.text((960, 460), "настоящие ошибки самой Dot-2", font=font(60), fill=FG, anchor="mm")
-        for i, (n, l) in enumerate((("5500", "партий"), ("248", "разгромов"), ("80", "ошибок в середине"))[:k]):
+            d.text((960, 460), T("настоящие ошибки самой Dot-2"), font=font(60), fill=FG, anchor="mm")
+        for i, (n, l) in enumerate((("5500", T("партий")), ("248", T("разгромов")), ("80", T("ошибок в середине")))[:k]):
             x = 340 + i * 620
             d.text((x, 420), n, font=font(120), fill=YELLOW if i == 2 else FG, anchor="mm")
             d.text((x, 520), l, font=font(40, LATO), fill=DIM, anchor="mm")
@@ -140,13 +141,13 @@ def window_vs_graph(seconds=32, at=4.4, fade=0.4):
     from PIL import Image
     steps = []
     for k in range(2):
-        img, d = page("Окошко или граф")
+        img, d = page(T("Окошко или граф"))
         x0, y0, c = 110, 330, 70
         for i in range(11):
             for j in range(8):
                 d.ellipse((x0 + i * c - 5, y0 + j * c - 5, x0 + i * c + 5, y0 + j * c + 5), fill=FAINT)
         d.rectangle((x0 + 2 * c - 8, y0 + 2 * c - 8, x0 + 4 * c + 8, y0 + 4 * c + 8), outline=YELLOW, width=7)
-        d.text((x0 + 5 * c, y0 + 7 * c + 70), "свёрточная сеть: окошко", font=font(44, LATO), fill=FG, anchor="mm")
+        d.text((x0 + 5 * c, y0 + 7 * c + 70), T("свёрточная сеть: окошко"), font=font(44, LATO), fill=FG, anchor="mm")
         if k:
             nodes = [(1140, 420), (1480, 340), (1780, 470), (1240, 700), (1560, 640), (1800, 780)]
             edges = [(0, 1, "8", RED), (1, 2, "5", C_POLICY), (0, 3, "3", YELLOW), (1, 4, "10", RED),
@@ -161,7 +162,7 @@ def window_vs_graph(seconds=32, at=4.4, fade=0.4):
                 x, y = (p + r) / 2, (q + s) / 2
                 d.ellipse((x - 34, y - 34, x + 34, y + 34), fill=PANEL)
                 d.text((x, y), n, font=font(40), fill=FG, anchor="mm")
-            d.text((1460, y0 + 7 * c + 70), "графовая сеть: цепочки готовыми", font=font(44, LATO), fill=FG, anchor="mm")
+            d.text((1460, y0 + 7 * c + 70), T("графовая сеть: цепочки готовыми"), font=font(44, LATO), fill=FG, anchor="mm")
         steps.append(img.convert("RGB"))
     for f in range(round(seconds * FPS)):
         a = (f / FPS - at) / fade
@@ -171,7 +172,7 @@ def window_vs_graph(seconds=32, at=4.4, fade=0.4):
 def write(name, frames):
     p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "1920x1080",
                           "-r", str(FPS), "-i", "-", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "18",
-                          os.path.join(OUT, name)], stdin=subprocess.PIPE)
+                          os.path.join(OUT, name.replace(".mp4", suffix() + ".mp4"))], stdin=subprocess.PIPE)
     for im in frames:
         p.stdin.write(im.convert("RGB").tobytes())
     p.stdin.close(); p.wait(); print(name)
@@ -180,6 +181,13 @@ def write(name, frames):
 if __name__ == "__main__":
     write("two_boards.mp4", two_boards(policy()))
     write("conv_window.mp4", conv_window())
-    write("funnel.mp4", funnel())
-    write("funnel10.mp4", funnel(seconds=25, at=(3.1, 4.8, 6.2)))
-    write("window_graph.mp4", window_vs_graph())
+    if T("партий") == "партий":
+        write("funnel.mp4", funnel())
+        write("funnel10.mp4", funnel(seconds=25, at=(3.1, 4.8, 6.2)))
+        write("window_graph.mp4", window_vs_graph())
+    else:                               # English: times from the voice (sentence 3 of scene 8, etc.)
+        import json
+        a = json.load(open(os.path.join(OUT, "times_en.json")))
+        write("funnel.mp4", funnel(at=tuple(a["funnel"])))
+        write("funnel10.mp4", funnel(seconds=25, at=tuple(a["funnel10"])))
+        write("window_graph.mp4", window_vs_graph(at=a["graph"]))

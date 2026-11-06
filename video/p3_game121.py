@@ -8,6 +8,7 @@ import json, os, subprocess, sys, tempfile
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path[:0] = [HERE, ROOT, os.path.join(ROOT, "scripts")]
 from PIL import ImageDraw
+from p3_i18n import T, suffix
 from video_cards import DIM, FAINT, FG, font, page, LATO
 from video_thumbnail import BLUE, PANEL, RED, YELLOW
 from sim.board import Board
@@ -70,11 +71,11 @@ def frame(k, judge, V):
     bx = 1290
     d.text((bx, 70), "Dot-2", font=font(44), fill=RED)
     d.text((bx + 420, 70), f"{sc[0]} : {sc[1]}", font=font(56), fill=FG)
-    d.text((bx, 200), f"линия {k}", font=font(36, LATO), fill=DIM)
-    d.text((bx, 270), "судья", font=font(36, LATO), fill=DIM)
+    d.text((bx, 200), T("линия") + f" {k}", font=font(36, LATO), fill=DIM)
+    d.text((bx, 270), T("судья"), font=font(36, LATO), fill=DIM)
     if judge:
-        d.text((bx, 320), judge, font=font(64), fill=(120, 205, 120) if judge == "выигрыш" else RED)
-    d.text((bx, 460), "интуиция: кто выигрывает", font=font(36, LATO), fill=DIM)
+        d.text((bx, 320), judge, font=font(64), fill=(120, 205, 120) if judge == T("выигрыш") else RED)
+    d.text((bx, 460), T("интуиция: кто выигрывает"), font=font(36, LATO), fill=DIM)
     W = 520; y = 530; mid = bx + W / 2
     d.rounded_rectangle((bx, y, bx + W, y + 50), 8, fill=PANEL)
     v = V.get(k, V[max(V)])
@@ -82,7 +83,7 @@ def frame(k, judge, V):
     d.line((mid, y - 8, mid, y + 58), fill=FG, width=3)
     d.text((bx, y + 66), "Hard", font=font(30, LATO), fill=DIM)
     d.text((bx + W, y + 66), "Dot-2", font=font(30, LATO), fill=DIM, anchor="ra")
-    d.text((bx + W / 2, y + 120), f"{v:+.2f}".replace(".", ",").replace("-", "−"), font=font(56), fill=FG, anchor="ma")
+    d.text((bx + W / 2, y + 120), f"{v:+.2f}".replace(".", T(",")).replace("-", "−"), font=font(56), fill=FG, anchor="ma")
     return img
 
 
@@ -107,8 +108,8 @@ if __name__ == "__main__":
     else:
         V = values(); json.dump(V, open(pv, "w"))
     print({k: V[k] for k in (77, 79, 80, 83, 88, 98) if k in V})
-    seq = [(MISTAKE, "выигрыш", 7.0), (MISTAKE + 1, "проигрыш", 4.0)]
-    seq += [(k, "проигрыш", 1.0) for k in range(MISTAKE + 2, 100)]
-    seq += [(k, "проигрыш", 0.12) for k in range(100, len(M) + 1)]
-    clip("game121_ru.mp4", seq)
-    clip("game121_end.mp4", [(k, None, 0.12) for k in range(70, len(M) + 1)] + [(len(M), None, 6.0)])
+    seq = [(MISTAKE, T("выигрыш"), 7.0), (MISTAKE + 1, T("проигрыш"), 4.0)]
+    seq += [(k, T("проигрыш"), 1.0) for k in range(MISTAKE + 2, 100)]
+    seq += [(k, T("проигрыш"), 0.12) for k in range(100, len(M) + 1)]
+    clip(f"game121_{'en' if suffix() else 'ru'}.mp4", seq)
+    clip(f"game121_end{suffix()}.mp4", [(k, None, 0.12) for k in range(70, len(M) + 1)] + [(len(M), None, 6.0)])

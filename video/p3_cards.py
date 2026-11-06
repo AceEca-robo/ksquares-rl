@@ -6,13 +6,14 @@ mid_judge.md, rout_mistakes.md, mid_hand.md. The map: video/p3_map.py.
 import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+from p3_i18n import T, suffix
 from video_cards import C_POLICY, C_VALUE, DIM, FAINT, FG, GRID, LATO, PLUS, arrow, box, font, page
 from video_thumbnail import BLUE, PANEL, RED, YELLOW
 OUT = os.path.join(HERE, "p3")
 
 
 def save(img, name):
-    os.makedirs(OUT, exist_ok=True); img.save(f"{OUT}/{name}.png"); print(name)
+    os.makedirs(OUT, exist_ok=True); img.save(f"{OUT}/{name}{suffix()}.png"); print(name)
 
 
 def dots(d, x, y, w, h, c, r=6, col=FAINT):
@@ -27,87 +28,87 @@ def pair(d, x, label, a, b, col, y1=860, top=300, sa=None, sb=None):
     for i, (v, c, s) in enumerate(((a, FAINT, sa), (b, col, sb))):
         xx = x + i * (bw + 50); t = y1 - v / 100 * H
         d.rounded_rectangle((xx, t, xx + bw, y1), 10, fill=c)
-        d.text((xx + bw / 2, t - 14), s or f"{v} %", font=font(46), fill=FG, anchor="mb")
+        d.text((xx + bw / 2, t - 14), T(s or f"{v} %"), font=font(46), fill=FG, anchor="mb")
     d.text((x + bw + 25, y1 + 24), label, font=font(36, LATO), fill=DIM, anchor="mt")
 
 
 def title():
     img, d = page()
     dots(d, 1180, 560, 10, 7, 62, r=7)
-    d.text((96, 120), "Нейросеть Dot, часть 3", font=font(44, LATO), fill=DIM)
-    d.text((96, 190), "Понять, а не пересчитать", font=font(96), fill=YELLOW)
-    d.text((96, 360), "пять попыток научить Dot-2 видеть правильный ход сразу", font=font(44, LATO), fill=FG)
+    d.text((96, 120), T("Нейросеть Dot, часть 3"), font=font(44, LATO), fill=DIM)
+    d.text((96, 190), T("Понять, а не пересчитать"), font=font(96), fill=YELLOW)
+    d.text((96, 360), T("пять попыток научить Dot-2 видеть правильный ход сразу"), font=font(44, LATO), fill=FG)
     save(img, "card_title")
 
 
 def question():
-    img, d = page("Наш вопрос")
+    img, d = page(T("Наш вопрос"))
     dots(d, 1210, 300, 10, 7, 60)
     d.text((1510, 510), "?", font=font(300), fill=YELLOW, anchor="mm")
-    d.multiline_text((96, 330), "Думая, Dot-2 считает,\nкому открывать первую цепочку.\nБез размышлений она этого не видит.", font=font(46, LATO), fill=FG, spacing=20)
-    d.text((96, 760), "понимать игру, а не пересчитывать её каждый раз?", font=font(46), fill=YELLOW)
+    d.multiline_text((96, 330), T("Думая, Dot-2 считает,\nкому открывать первую цепочку.\nБез размышлений она этого не видит."), font=font(46, LATO), fill=FG, spacing=20)
+    d.text((96, 760), T("понимать игру, а не пересчитывать её каждый раз?"), font=font(46), fill=YELLOW)
     save(img, "card_question")
 
 
 def blowouts():
-    img, d = page("17 разгромов: где судья нашёл ошибку")
+    img, d = page(T("17 разгромов: где судья нашёл ошибку"))
     found = [20, 47, 48, 59, 81, 102, 121, 145, 156, 196]
     wall = [29, 41, 53, 98, 131, 141, 144]
     for i, s in enumerate(sorted(found + wall)):
         x, y = 150 + (i % 6) * 280, 260 + (i // 6) * 170
         f = s in found
         d.rounded_rectangle((x, y, x + 240, y + 130), 14, fill=PANEL, outline=YELLOW if f else None, width=4)
-        d.text((x + 120, y + 42), f"партия {s}", font=font(32, LATO), fill=FG if f else DIM, anchor="mm")
-        d.text((x + 120, y + 92), "ошибка найдена" if f else "судья не дотянулся", font=font(23, LATO), fill=YELLOW if f else DIM, anchor="mm")
-    d.text((960, 830), "10 из 17: один ход от выигрыша к проигрышу, 7–20 безопасных линий", font=font(42), fill=YELLOW, anchor="mm")
-    d.text((960, 900), "в остальных 7 партия проиграна ещё раньше: 13–29 безопасных линий", font=font(34, LATO), fill=DIM, anchor="mm")
+        d.text((x + 120, y + 42), T("партия") + f" {s}", font=font(32, LATO), fill=FG if f else DIM, anchor="mm")
+        d.text((x + 120, y + 92), T("ошибка найдена") if f else T("судья не дотянулся"), font=font(23, LATO), fill=YELLOW if f else DIM, anchor="mm")
+    d.text((960, 830), T("10 из 17: один ход от выигрыша к проигрышу, 7–20 безопасных линий"), font=font(42), fill=YELLOW, anchor="mm")
+    d.text((960, 900), T("в остальных 7 партия проиграна ещё раньше: 13–29 безопасных линий"), font=font(34, LATO), fill=DIM, anchor="mm")
     save(img, "card_blowouts")
 
 
 def teacher():
-    img, d = page("Попытка 1: Dot-2 учится у судьи")
-    pair(d, 240, "верные ходы без размышлений", 67, 87, C_POLICY, y1=800)
-    pair(d, 1130, "разгромов из 200", 11, 14, RED, y1=800, top=560, sa="11", sb="14")
-    d.text((1370, 330), "разгромы те же", font=font(50), fill=YELLOW, anchor="mm")
+    img, d = page(T("Попытка 1: Dot-2 учится у судьи"))
+    pair(d, 240, T("верные ходы без размышлений"), 67, 87, C_POLICY, y1=800)
+    pair(d, 1130, T("разгромов из 200"), 11, 14, RED, y1=800, top=560, sa="11", sb="14")
+    d.text((1370, 330), T("разгромы те же"), font=font(50), fill=YELLOW, anchor="mm")
     save(img, "card_teacher")
 
 
 def timeline():
-    img, d = page("Судья видит только конец партии")
+    img, d = page(T("Судья видит только конец партии"))
     x0, x1, y = 160, 1760, 520
     d.rounded_rectangle((x0, y, x1, y + 90), 14, fill=PANEL)
     d.rounded_rectangle((1560, y, x1, y + 90), 14, fill=C_POLICY)
-    d.text((1660, y + 140), "судья отвечает", font=font(38), fill=C_POLICY, anchor="mm")
+    d.text((1660, y + 140), T("судья отвечает"), font=font(38), fill=C_POLICY, anchor="mm")
     d.rounded_rectangle((980, y - 18, 1250, y + 108), 14, outline=RED, width=6)
-    d.text((1115, y - 70), "здесь ошибка", font=font(44), fill=RED, anchor="mm")
-    d.text((x0, y + 120), "начало партии", font=font(34, LATO), fill=DIM)
-    d.text((1115, y + 150), "судья молчит", font=font(38, LATO), fill=DIM, anchor="mm")
+    d.text((1115, y - 70), T("здесь ошибка"), font=font(44), fill=RED, anchor="mm")
+    d.text((x0, y + 120), T("начало партии"), font=font(34, LATO), fill=DIM)
+    d.text((1115, y + 150), T("судья молчит"), font=font(38, LATO), fill=DIM, anchor="mm")
     save(img, "card_timeline")
 
 
 def body(d, lock=False, bad=True):
-    box(d, (120, 420, 520, 620), "подсказка: цепочки,\nкому открывать первую", outline=YELLOW, size=36, colour=YELLOW)
+    box(d, (120, 420, 520, 620), T("подсказка: цепочки,\nкому открывать первую"), outline=YELLOW, size=36, colour=YELLOW)
     arrow(d, (530, 520), (660, 520))
-    box(d, (670, 400, 1030, 640), "общее тело", size=46)
+    box(d, (670, 400, 1030, 640), T("общее тело"), size=46)
     arrow(d, (1040, 470), (1210, 360)); arrow(d, (1040, 570), (1210, 680))
-    box(d, (1220, 260, 1720, 440), "выбор хода", outline=C_POLICY, size=46, colour=C_POLICY)
-    box(d, (1220, 600, 1720, 780), "интуиция" + (" (заморожена)" if lock else ""), outline=RED if bad else C_VALUE, size=40, colour=RED if bad else C_VALUE)
+    box(d, (1220, 260, 1720, 440), T("выбор хода"), outline=C_POLICY, size=46, colour=C_POLICY)
+    box(d, (1220, 600, 1720, 780), T("интуиция") + (T(" (заморожена)") if lock else ""), outline=RED if bad else C_VALUE, size=40, colour=RED if bad else C_VALUE)
 
 
 def shared():
-    img, d = page("Попытка 2: взгляд на всё поле и подсказка")
+    img, d = page(T("Попытка 2: взгляд на всё поле и подсказка"))
     body(d)
-    d.text((1470, 225), "без размышлений: 67 → 83 %", font=font(36), fill=FG, anchor="mm")
-    d.text((1470, 830), "видит проигрыш там, где его нет", font=font(34, LATO), fill=DIM, anchor="mm")
-    d.text((960, 930), "разгромов 11 → 46 из 200  ·  настоящий противник 19–0–1 → 15–5", font=font(42), fill=YELLOW, anchor="mm")
+    d.text((1470, 225), T("без размышлений: 67 → 83 %"), font=font(36), fill=FG, anchor="mm")
+    d.text((1470, 830), T("видит проигрыш там, где его нет"), font=font(34, LATO), fill=DIM, anchor="mm")
+    d.text((960, 930), T("разгромов 11 → 46 из 200  ·  настоящий противник 19–0–1 → 15–5"), font=font(42), fill=YELLOW, anchor="mm")
     save(img, "card_shared_body")
 
 
 def frozen():
-    img, d = page("Заморозили интуицию")
+    img, d = page(T("Заморозили интуицию"))
     body(d, lock=True, bad=False)
-    d.text((1470, 225), "без размышлений: 67 → 75 %", font=font(36), fill=FG, anchor="mm")
-    d.text((960, 930), "разгромов 12 из 200  ·  настоящий противник 19–1: игра цела, разгромы те же", font=font(38), fill=YELLOW, anchor="mm")
+    d.text((1470, 225), T("без размышлений: 67 → 75 %"), font=font(36), fill=FG, anchor="mm")
+    d.text((960, 930), T("разгромов 12 из 200  ·  настоящий противник 19–1: игра цела, разгромы те же"), font=font(38), fill=YELLOW, anchor="mm")
     save(img, "card_frozen")
 
 
@@ -120,30 +121,30 @@ def chains(d, x, y, c, full):
 
 
 def chains_card():
-    img, d = page("Конец партии: доска разрезана на цепочки")
+    img, d = page(T("Конец партии: доска разрезана на цепочки"))
     dots(d, 180, 260, 9, 6, 80); chains(d, 180, 260, 80, True)
-    d.multiline_text((1060, 400), "всё решает,\nкому придётся\nоткрыть первую", font=font(56), fill=YELLOW, spacing=20)
+    d.multiline_text((1060, 400), T("всё решает,\nкому придётся\nоткрыть первую"), font=font(56), fill=YELLOW, spacing=20)
     save(img, "card_chains")
 
 
 def formula():
-    img, d = page("Попытка 3: судья по формуле")
+    img, d = page(T("Попытка 3: судья по формуле"))
     dots(d, 180, 260, 9, 6, 80); chains(d, 180, 260, 80, True)
-    d.multiline_text((1060, 340), "безопасных линий\nне осталось,\nдоска разрезана\nна цепочки:", font=font(46, LATO), fill=FG, spacing=16)
-    d.text((1060, 680), "100 % верно", font=font(76), fill=YELLOW)
+    d.multiline_text((1060, 340), T("безопасных линий\nне осталось,\nдоска разрезана\nна цепочки:"), font=font(46, LATO), fill=FG, spacing=16)
+    d.text((1060, 680), T("100 % верно"), font=font(76), fill=YELLOW)
     save(img, "card_formula")
 
 
 def formula_back():
-    img, d = page("Попытка 3: судья по формуле")
+    img, d = page(T("Попытка 3: судья по формуле"))
     dots(d, 180, 260, 9, 6, 80); chains(d, 180, 260, 80, False)
-    d.multiline_text((1060, 340), "в середине партии\nдоска ещё не разрезана:\nсчитать нечего", font=font(46, LATO), fill=FG, spacing=16)
-    d.text((1060, 640), "ответов нет", font=font(76), fill=RED)
+    d.multiline_text((1060, 340), T("в середине партии\nдоска ещё не разрезана:\nсчитать нечего"), font=font(46, LATO), fill=FG, spacing=16)
+    d.text((1060, 640), T("ответов нет"), font=font(76), fill=RED)
     save(img, "card_formula_back")
 
 
 def tree():
-    img, d = page("Попытка 4: сильный судья")
+    img, d = page(T("Попытка 4: сильный судья"))
     root = (960, 250)
     for i in range(3):
         a = (480 + i * 480, 480)
@@ -155,25 +156,25 @@ def tree():
             d.text((b[0], 735), "f", font=font(38), fill=PANEL, anchor="mm")
         d.ellipse((a[0] - 24, a[1] - 24, a[0] + 24, a[1] + 24), fill=C_POLICY)
     d.ellipse((root[0] - 30, root[1] - 30, root[0] + 30, root[1] + 30), fill=FG)
-    d.text((960, 880), "перебор на настоящей доске, на листьях формула", font=font(44), fill=FG, anchor="mm")
+    d.text((960, 880), T("перебор на настоящей доске, на листьях формула"), font=font(44), fill=FG, anchor="mm")
     save(img, "card_tree")
 
 
 def wall():
-    img, d = page("Стена: сколько позиций судья решает")
-    rows = [("безопасных линий", "за минуту", "за 10 минут"), ("10", "100 %", "100 %"), ("15", "75 %", "88 %"), ("20", "20 %", "50 %"), ("30", "0", "0")]
+    img, d = page(T("Стена: сколько позиций судья решает"))
+    rows = [(T("безопасных линий"), T("за минуту"), T("за 10 минут")), ("10", "100 %", "100 %"), ("15", "75 %", "88 %"), ("20", "20 %", "50 %"), ("30", "0", "0")]
     for i, r in enumerate(rows):
         y = 260 + i * 125
         if i: d.line((260, y - 28, 1660, y - 28), fill=GRID, width=2)
         for x, v in zip((460, 1000, 1460), r):
-            d.text((x, y + 30), v, font=font(62) if i else font(36, LATO), fill=DIM if i == 0 else (RED if r[0] == "30" else FG), anchor="mm")
-    d.text((960, 930), "позиции из партий Dot-2: 20 на лимит в минуту, 8 на лимит в 10 минут", font=font(30, LATO), fill=DIM, anchor="mm")
+            d.text((x, y + 30), T(v) if i else v, font=font(62) if i else font(36, LATO), fill=DIM if i == 0 else (RED if r[0] == "30" else FG), anchor="mm")
+    d.text((960, 930), T("позиции из партий Dot-2: 20 на лимит в минуту, 8 на лимит в 10 минут"), font=font(30, LATO), fill=DIM, anchor="mm")
     save(img, "card_wall")
 
 
 def mistakes():
-    img, d = page("Попытка 5: на своих ошибках")
-    for i, (n, l) in enumerate((("5500", "партий"), ("248", "разгромов"), ("80", "ошибок в середине"))):
+    img, d = page(T("Попытка 5: на своих ошибках"))
+    for i, (n, l) in enumerate((("5500", T("партий")), ("248", T("разгромов")), ("80", T("ошибок в середине")))):
         x = 340 + i * 620
         d.text((x, 420), n, font=font(120), fill=YELLOW if i == 2 else FG, anchor="mm")
         d.text((x, 520), l, font=font(40, LATO), fill=DIM, anchor="mm")
@@ -182,27 +183,27 @@ def mistakes():
 
 
 def mistakes_held():
-    img, d = page("Знакомые ошибки Dot-2 запоминает, а новые?")
-    pair(d, 240, "знакомые ошибки", 12.5, 100, C_POLICY, y1=800, sa="12 %", sb="100 %")
-    pair(d, 1130, "новые ошибки", 8.3, 25, C_POLICY, y1=800, sa="2 из 24", sb="6 из 24")
-    d.text((960, 950), "так мало, что от шума не отличить", font=font(44), fill=YELLOW, anchor="mm")
+    img, d = page(T("Знакомые ошибки Dot-2 запоминает, а новые?"))
+    pair(d, 240, T("знакомые ошибки"), 12.5, 100, C_POLICY, y1=800, sa="12 %", sb="100 %")
+    pair(d, 1130, T("новые ошибки"), 8.3, 25, C_POLICY, y1=800, sa="2 из 24", sb="6 из 24")
+    d.text((960, 950), T("так мало, что от шума не отличить"), font=font(44), fill=YELLOW, anchor="mm")
     save(img, "card_mistakes_held")
 
 
 def mid_held():
-    img, d = page("Большой набор судьи: 1925 позиций")
-    pair(d, 240, "решающие позиции из новых партий", 86.9, 90.5, C_POLICY, y1=780, top=260, sa="87 %", sb="90,5 %")
-    d.text((1320, 340), "стало верно: 11", font=font(58), fill=PLUS, anchor="mm")
-    d.text((1320, 430), "стало неверно: 4", font=font(58), fill=RED, anchor="mm")
-    d.multiline_text((1320, 590), "порог, заданный заранее,\nне пройден\n(партии не игрались)", font=font(40, LATO), fill=DIM, anchor="mm", align="center", spacing=12)
-    d.text((960, 950), "прибавка есть, доказать её не смогли", font=font(44), fill=YELLOW, anchor="mm")
+    img, d = page(T("Большой набор судьи: 1925 позиций"))
+    pair(d, 240, T("решающие позиции из новых партий"), 86.9, 90.5, C_POLICY, y1=780, top=260, sa="87 %", sb="90,5 %")
+    d.text((1320, 340), T("стало верно: 11"), font=font(58), fill=PLUS, anchor="mm")
+    d.text((1320, 430), T("стало неверно: 4"), font=font(58), fill=RED, anchor="mm")
+    d.multiline_text((1320, 590), T("порог, заданный заранее,\nне пройден\n(партии не игрались)"), font=font(40, LATO), fill=DIM, anchor="mm", align="center", spacing=12)
+    d.text((960, 950), T("прибавка есть, доказать её не смогли"), font=font(44), fill=YELLOW, anchor="mm")
     save(img, "card_mid_held")
 
 
 def end():
     img, d = page()
     d.ellipse((930, 430, 990, 490), fill=YELLOW)
-    d.text((960, 640), "часть 4: графовая сеть вместо свёрточной", font=font(64), fill=FG, anchor="mm")
+    d.text((960, 640), T("часть 4: графовая сеть вместо свёрточной"), font=font(64), fill=FG, anchor="mm")
     save(img, "card_end")
 
 

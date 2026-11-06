@@ -1,57 +1,43 @@
 #!/usr/bin/env python3
-"""YouTube thumbnail of the part 3 video (docs/video_script_part3_ru.md).
+"""YouTube thumbnail of the part 3 video: the "who knows what" map (video/p3_map.py)
+under the title. The curves are the real data: green Dot-2 with thinking, blue
+without, white the judge's share solved, and the dark box with the question mark.
 
-Text: "Понять, а не пересчитать", as the part 2 thumbnail (video/p2_thumbnail.py,
-whose helpers this reuses). The board is real: game seed 121 of runs/blowouts
-(the 1:69 rout of the video) at the last position with no safe line left and
-no box taken yet by the player to move, chains of 3+ coloured with their length.
-
-    .venv/bin/python video/p3_thumbnail.py   # video/p3/thumbnail_ru.png, thumbnail_ru_320.png
+    .venv/bin/python video/p3_thumbnail.py             # video/p3/thumbnail_ru.png, thumbnail_ru_320.png
+    P3_LANG=en .venv/bin/python video/p3_thumbnail.py  # the same with _en
 """
 import os, sys
-from PIL import Image
-HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
-sys.path[:0] = [HERE, ROOT, os.path.join(ROOT, "scripts")]
-from p2_thumbnail import colour_chains, safe
-from p3_game121 import M
-from sim.board import Board
-from video_thumbnail import BG, H, W, WHITE, YELLOW, BoardPainter, chain_boxes, fit_font, panel, text
+from PIL import Image, ImageDraw
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from p3_i18n import LANG, T
+from p3_map import DATA, SOLVED
+from video_cards import C_POLICY, PLUS, font
+from video_thumbnail import BG, H, W, WHITE, YELLOW
+
+X0, B0, B1, X1, Y0, Y1 = 60, 60, 760, W - 70, 430, H - 60
+fx = lambda s: B1 + (20 - s) / 20 * (X1 - B1)
+fy = lambda v: Y1 - v / 100 * (Y1 - Y0)
 
 
-def position():
-    """The board at the first moment no safe line is left."""
-    b = Board(10, 7)
-    for ln in M:
-        if not any(safe(b, x) for x in b.legal_moves()):
-            return b
-        b.step(ln)
-    raise SystemExit("no such position")
-
-
-def render(b):
-    groups = [g for g in chain_boxes(b) if len(g) >= 3]
-    print("chains", sorted((len(g) for g in groups), reverse=True))
-    colours = colour_chains(b, groups)
-    c = Image.new("RGBA", (W, H), BG + (255,))
-    cell = 88
-    x0, y0 = W - 10 * cell - 110, (H - 7 * cell) // 2 + 30
-    pad = cell * 0.45
-    panel(c, (x0 - pad, y0 - pad, x0 + 10 * cell + pad, y0 + 7 * cell + pad))
-    p = BoardPainter(c, b, x0, y0, cell)
-    p.boxes(colours); p.lines()
-    for g in groups:
-        p.label(sorted(g)[len(g) // 2], str(len(g)), round(cell * 0.5))
-    lines = [("Понять,", WHITE), ("а не", WHITE), ("пересчитать", YELLOW)]
-    left = x0 - pad - 90
-    size = min(fit_font(s, left, 190).size for s, _ in lines)
-    y = H / 2 - size * 1.1
-    for s, col in lines:
-        text(c, s, 60, y, left, size, col, anchor="lm")
-        y += size * 1.1
-    return c.convert("RGB")
+def render():
+    img = Image.new("RGB", (W, H), BG); d = ImageDraw.Draw(img)
+    size = 118
+    while max(d.textlength(T(s), font=font(size)) for s in ("Что знает нейросеть —", "и где кончается знание")) > W - 120:
+        size -= 2
+    d.text((60, 70), T("Что знает нейросеть —"), font=font(size), fill=WHITE)
+    d.text((60, 70 + size * 1.25), T("и где кончается знание"), font=font(size), fill=YELLOW)
+    d.rectangle((B0, Y0, B1, Y1), fill=(5, 6, 9), outline=(70, 75, 90), width=4)
+    d.text(((B0 + B1) / 2, (Y0 + Y1) / 2), "?", font=font(400), fill=YELLOW, anchor="mm")
+    for k, col in ((0, C_POLICY), (2, PLUS)):
+        pts = [(fx(s), fy(v[k])) for s, v in sorted(DATA.items(), reverse=True)]
+        d.line(pts, fill=col, width=16, joint="curve")
+    pts = [(fx(s), fy(v)) for s, v in sorted(SOLVED.items(), reverse=True)]
+    d.line(pts, fill=WHITE, width=16, joint="curve")
+    return img
 
 
 if __name__ == "__main__":
-    img = render(position())
-    img.resize((1280, 720), Image.LANCZOS).save(os.path.join(HERE, "p3", "thumbnail_ru.png"))
-    img.resize((320, 180), Image.LANCZOS).save(os.path.join(HERE, "p3", "thumbnail_ru_320.png"))
+    img = render()
+    img.resize((1280, 720), Image.LANCZOS).save(os.path.join(HERE, "p3", f"thumbnail_{LANG}.png"))
+    img.resize((320, 180), Image.LANCZOS).save(os.path.join(HERE, "p3", f"thumbnail_{LANG}_320.png"))

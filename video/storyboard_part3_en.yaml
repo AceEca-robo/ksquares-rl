@@ -1,0 +1,95 @@
+# English cut of the part 3 video (docs/video_script_part3_en.md), written by video/p3_en_cuts.py.
+#
+#   .venv/bin/python video/video_build.py --lang en --storyboard video/storyboard_part3_en.yaml \
+#       --script docs/video_script_part3_en.md --out video/p3/ksquares_rl_part3_en.mp4 \
+#       --srt video/p3/ksquares_rl_part3_en.srt --build video/build_p3_en
+
+size: [1920, 1080]
+fps: 25
+crf: 18
+voice_at: 0.5
+min_tail: 0.7
+fade: 0.4
+title:
+  seconds: 3
+  image: p3/card_title_en.png
+end:
+  seconds: 6
+  lines: ["github.com/AceEca-robo/ksquares-rl", "",
+          "KSquares 21.12.3 © Matt Williams et al., GPL-2+"]
+
+scenes:
+  - n: 1
+    title: "The question"
+    voice: p3/voice_en_1.mp3
+    fragments:
+      - {file: p3/two_boards_en.mp4, seconds: 22.2, speed: 1.08}
+      - {file: p3/card_chains_en.png, seconds: 13.6}
+      - {file: p3/card_question_en.png, seconds: 12.4}
+      - {file: p3/game121_end_en.mp4, seconds: 12.9, caption: "1:69 · 50 options per move · 17 routs of 190"}
+
+  - n: 2
+    title: "Where the mistake is"
+    voice: p3/voice_en_2.mp3
+    fragments:
+      - {file: p3/game121_en.mp4, seconds: 24.4}
+      - {file: p3/card_blowouts_en.png, seconds: 21.6}
+
+  - n: 3
+    title: "Attempt 1: the judge as teacher"
+    voice: p3/voice_en_3.mp3
+    fragments:
+      - {file: p3/card_teacher_en.png, seconds: 18.8, caption: "positions with 1–2 safe lines"}
+      - {file: p3/card_timeline_en.png, seconds: 20.4}
+
+  - n: 4
+    title: "Attempt 2: a new network"
+    voice: p3/voice_en_4.mp3
+    fragments:
+      - {file: p3/conv_window_en.mp4, seconds: 32.3, speed: 0.61}
+      - {file: p3/card_shared_body_en.png, seconds: 13.5}
+      - {file: p3/card_frozen_en.png, seconds: 17.7}
+
+  - n: 5
+    title: "Attempt 3: a judge by formula"
+    voice: p3/voice_en_5.mp3
+    fragments:
+      - {file: p3/card_formula_en.png, seconds: 34.8}
+      - {file: p3/card_formula_back_en.png, seconds: 18.7, caption: "middle of the game, 5500 positions: no answers"}
+
+  - n: 6
+    title: "Attempt 4: a strong judge"
+    voice: p3/voice_en_6.mp3
+    fragments:
+      - {file: p3/card_tree_en.png, seconds: 17.7}
+      - {file: p3/card_wall_en.png, seconds: 16.7}
+
+  - n: 7
+    title: "Who knows what"
+    voice: p3/voice_en_7.mp3
+    fragments:
+      - {file: p3/map_en.mp4, seconds: 140.4}
+
+  - n: 8
+    title: "Attempt 5: learning from her own mistakes"
+    voice: p3/voice_en_8.mp3
+    fragments:
+      - {file: p3/funnel_en.mp4, seconds: 24.4}
+      - {file: p3/card_mistakes_held_en.png, seconds: 5.9}
+      - {file: p3/card_mid_held_en.png, seconds: 11.2}
+
+  - n: 9
+    title: "The answer"
+    voice: p3/voice_en_9.mp3
+    fragments:
+      - {file: p3/card_map_6_en.png, seconds: 43.2}
+      - {file: p3/menu_10x7_200_en.png, seconds: 11.2}
+
+  - n: 10
+    title: "What next"
+    voice: p3/voice_en_10.mp3
+    fragments:
+      - {file: p3/card_map_5_en.png, seconds: 22.5}
+      - {file: p3/funnel10_en.mp4, seconds: 21.8}
+      - {file: p3/window_graph_en.mp4, seconds: 27.5}
+      - {file: p3/card_end_en.png, seconds: 12.2}
