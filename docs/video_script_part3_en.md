@@ -102,8 +102,7 @@ holds a question mark: we know the mistake lives here, but we can't point a
 finger at it. The endgame, from twenty safe lines to the end of the game. Here
 the judge answers, and here we have numbers. Four lines. Blue is Dot-2 without
 thinking, a move at a single glance. Coming out of the box, Dot-2 without
-thinking gets every fourth or fifth move wrong, and in some positions every
-second one. By the end of the game, almost never. Orange is Dot-2's intuition,
+thinking gets every fourth or fifth move wrong, and in some positions one in two. By the end of the game, almost never. Orange is Dot-2's intuition,
 her estimate of who is winning. The intuition is a little more accurate than the
 move without thinking. Green is Dot-2 with thinking, two hundred options per
 move. The green line stays above the others: on average ninety-six percent right

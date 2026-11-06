@@ -68,7 +68,7 @@ scenes:
     title: "Who knows what"
     voice: p3/voice_en_7.mp3
     fragments:
-      - {file: p3/map_en.mp4, seconds: 140.4}
+      - {file: p3/map_en.mp4, seconds: 140.3}
 
   - n: 8
     title: "Attempt 5: learning from her own mistakes"

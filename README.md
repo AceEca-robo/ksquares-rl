@@ -289,6 +289,8 @@ estimate.
 
 - English: [Dot learns Dots and Boxes with AlphaZero](https://youtu.be/xuTt9ruvtEE)
 - Russian: [Нейросеть Dot учится играть в KSquares](https://youtu.be/i5LGKsFo3A8)
+- Part 2, English: [Dot moves to the big board](https://youtu.be/xo6GhKYS5mo)
+- Part 2, Russian: [Dot переезжает на большую доску](https://youtu.be/GLHuz8HAN0k)
 
 ## License
 
