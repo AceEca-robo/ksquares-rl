@@ -291,6 +291,8 @@ estimate.
 - Russian: [Нейросеть Dot учится играть в KSquares](https://youtu.be/i5LGKsFo3A8)
 - Part 2, English: [Dot moves to the big board](https://youtu.be/xo6GhKYS5mo)
 - Part 2, Russian: [Dot переезжает на большую доску](https://youtu.be/GLHuz8HAN0k)
+- Part 3, English: [Can a neural net understand the game, instead of computing it?](https://youtu.be/A6YWscRXpHw)
+- Part 3, Russian: [Можно ли научить нейросеть Dot-2 понимать игру, а не пересчитывать её?](https://youtu.be/xmrkV39-09w)
 
 ## License
 
