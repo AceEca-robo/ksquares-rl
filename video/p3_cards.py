@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Stills for the part 3 video (docs/video_script_part3_ru.md), video/p3/card_*.png.
 Numbers: docs/blowouts.md, parity_hand.md, parity_arch.md, chain_solver.md,
-mid_judge.md, rout_mistakes.md, mid_hand.md; the map from docs/mid_judge.md's
-'chart' table and runs/mid_judge/labels_chart.jsonl.
+mid_judge.md, rout_mistakes.md, mid_hand.md. The map: video/p3_map.py.
 """
-import json, os, re, sys
+import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
-from video_cards import C_MCTS, C_POLICY, C_VALUE, DIM, FAINT, FG, GRID, LATO, MINUS, PLUS, arrow, box, font, page
+from video_cards import C_POLICY, C_VALUE, DIM, FAINT, FG, GRID, LATO, PLUS, arrow, box, font, page
 from video_thumbnail import BLUE, PANEL, RED, YELLOW
 OUT = os.path.join(HERE, "p3")
 
@@ -172,55 +171,6 @@ def wall():
     save(img, "card_wall")
 
 
-def map_cards():
-    t = open(f"{ROOT}/docs/mid_judge.md").read()
-    t = t[t.index("Labelled set 'chart'"):]
-    t = t[t.index("Decisive positions by safe lines"):]
-    data = {}
-    for m in re.finditer(r"^\| (\d+) \| (\d+) \| (\d+) \| (\d+) \| (\d+) \|", t, re.M):
-        s, n, h, i, c = map(int, m.groups())
-        if n >= 10: data[s] = (h, i, c)
-    rs = [json.loads(x) for x in open(f"{ROOT}/runs/mid_judge/labels_chart.jsonl")]
-    solved = {}
-    for s in range(21):
-        a = [r for r in rs if r["key"][0] == s]
-        if a: solved[s] = 100 * sum(r["labels"] is not None for r in a) / len(a)
-    X0, X1, Y0, Y1 = 170, 1560, 240, 880
-    fx = lambda s: X0 + s / 24 * (X1 - X0); fy = lambda v: Y1 - v / 100 * (Y1 - Y0)
-    S = [("Dot-2 без\nразмышлений", C_POLICY, 0), ("интуиция", C_VALUE, 1), ("Dot-2 с\nразмышлениями", PLUS, 2)]
-
-    def draw(stage):
-        img, d = page("Кто что знает")
-        for v in (0, 25, 50, 75, 100):
-            d.line((X0, fy(v), X1, fy(v)), fill=GRID, width=2)
-            d.text((X0 - 16, fy(v)), f"{v}", font=font(28, LATO), fill=DIM, anchor="rm")
-        for s in (0, 5, 10, 15, 20):
-            d.text((fx(s), Y1 + 16), str(s), font=font(30, LATO), fill=DIM, anchor="mt")
-        d.text((fx(10), Y1 + 62), "безопасных линий осталось  →  к середине партии", font=font(32, LATO), fill=DIM, anchor="mt")
-        d.text((X0, 180), "% верных ходов на решающих позициях", font=font(28, LATO), fill=DIM)
-        if stage >= 5 and stage != 6:
-            d.rectangle((fx(20), Y0, X1, Y1), fill=(10, 11, 15))
-            d.text(((fx(20) + X1) / 2, 500), "?", font=font(170), fill=YELLOW, anchor="mm")
-        for name, col, k in S:
-            if stage < k + 1 or (stage == 6 and k != 2): continue
-            pts = [(fx(s), fy(v[k])) for s, v in sorted(data.items())]
-            d.line(pts, fill=col, width=5, joint="curve")
-            for p in pts: d.ellipse((p[0] - 7, p[1] - 7, p[0] + 7, p[1] + 7), fill=col)
-            d.ellipse((1600, 270 + k * 90, 1630, 300 + k * 90), fill=col)
-            d.multiline_text((1645, 262 + k * 90), name, font=font(30, LATO), fill=FG, spacing=4)
-        if stage in (4, 5):
-            pts = [(fx(s), fy(v)) for s, v in sorted(solved.items())]
-            d.line(pts, fill=FG, width=4)
-            for p in pts: d.rectangle((p[0] - 7, p[1] - 7, p[0] + 7, p[1] + 7), fill=FG)
-            d.rectangle((1600, 545, 1630, 575), fill=FG)
-            d.text((1645, 560), "судья", font=font(34, LATO), fill=FG, anchor="lm")
-            d.multiline_text((1600, 590), "доля решённых\nпозиций,\nне точность", font=font(26, LATO), fill=DIM, spacing=6)
-        if stage == 6:
-            d.text((960, 1020), "200 вариантов: 96 % верных ходов там, где судья может проверить", font=font(36), fill=YELLOW, anchor="mm")
-        save(img, f"card_map_{stage}")
-    for st in range(7): draw(st)
-
-
 def mistakes():
     img, d = page("Попытка 5: на своих ошибках")
     for i, (n, l) in enumerate((("5500", "партий"), ("248", "разгромов"), ("80", "ошибок в середине"))):
@@ -256,5 +206,5 @@ def end():
     save(img, "card_end")
 
 
-for f in (title, question, chains_card, blowouts, teacher, timeline, shared, frozen, formula, formula_back, tree, wall, map_cards, mistakes, mistakes_held, mid_held, end):
+for f in (title, question, chains_card, blowouts, teacher, timeline, shared, frozen, formula, formula_back, tree, wall, mistakes, mistakes_held, mid_held, end):
     f()

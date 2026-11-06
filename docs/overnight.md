@@ -1155,3 +1155,10 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   cuts moved to the new sentences, two_boards and conv_window added. RU draft video/p3/ksquares_rl_part3_ru.mp4 (not in git). Then: scene 1 card_chains (schematic board), question card from the voice's question; scene 8 step-by-step funnel (p3_clips.funnel); storyboard min_tail 0.7 s. 8:31, copied to ~/YouTube/ksquares-rl/.
 - Part 3 scene 10 rewritten as asked (the next part is a graph network; was "the next game is not on a board"), re-voiced alone, 91.1 s; new
   clips funnel10, window_graph (schematic graph, made-up lengths), end card text changed. RU rebuilt and copied to ~/YouTube/ksquares-rl/.
+
+## 2026-11-06: part 3 video, scenes 3-9 rewritten
+
+- Scenes 3-9 revoiced from the new text; scene 7 is now an animation (video/p3_map.py): X is the game, zones start / middle / endgame, zones and lines appear with the voice. Cards map_5/6 (scenes 9, 10) come from the same code. Only the endgame part of X is to scale.
+- Scene 9 numbers: 80 mistakes in ~8.5 h gives ~4.4 days per 1000 and ~22 days per 5000 at the same rate. Move time at 200 sims on 10x7 through launcher/brain.py Brain.think, dot2c gen 16: median 0.052 s on the RTX 4060 Laptop, 0.226 s on CPU (20 threads). Search time only, not the UI's.
+- Subtitles: no global offset or drift (first line of every scene on the voice's start); single lines snapped to the wrong pause, up to ~2 s early. video_build.py now anchors every sentence on its long pause (sentence_cuts). Part 3 after the fix: 0 of 140 sentence-opening subtitles more than 0.3 s from an audio onset. The built srt of parts 1-2 still have the old timing: lines more than 0.3 s early 4 (part 1 RU), 4 (part 2 RU), 11 (part 1 EN), 1 (part 2 EN).
+- edge-tts refused long texts for hours; a failed retry deletes the scene's mp3, so retry one scene at a time.

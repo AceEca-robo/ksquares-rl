@@ -6,7 +6,7 @@
 #
 # Format as storyboard_ru.yaml (part 1). Cuts sit on the sentence starts of
 # the scene's voice (video_anim.sentence_starts on video/p3/voice_ru_<N>.mp3).
-# Materials: every p3/card_*.png, p3/game121_ru.mp4, p3/two_boards.mp4, p3/conv_window.mp4, p3/menu_10x7_200_ru.png
+# Materials: every p3/card_*.png, p3/game121_ru.mp4, p3/two_boards.mp4, p3/conv_window.mp4, p3/map_ru.mp4, p3/menu_10x7_200_ru.png
 # (docs/video_script_part3_ru.md, "Что нужно снять"). Voice: video/p3/voice_ru_<N>.mp3.
 
 size: [1920, 1080]
@@ -45,55 +45,50 @@ scenes:
     voice: p3/voice_ru_3.mp3
     fragments:
       - {file: p3/card_teacher.png, seconds: 20.0, caption: "позиции с 1–2 безопасными линиями"}   # План простой
-      - {file: p3/card_timeline.png, seconds: 21.6}   # Прекрасно.
+      - {file: p3/card_timeline.png, seconds: 22.3}   # Прекрасно.
 
   - n: 4
     title: "Попытка 2: новая сеть"
     voice: p3/voice_ru_4.mp3
     fragments:
-      - {file: p3/conv_window.mp4, seconds: 35.4, speed: 0.73}   # Вторая попытка: изменить саму сеть.
-      - {file: p3/card_shared_body.png, seconds: 16.0}   # Без размышлений Dot-2 и правда
-      - {file: p3/card_frozen.png, seconds: 18.2}   # Разгромов становится вчетверо
+      - {file: p3/conv_window.mp4, seconds: 35.9, speed: 0.72}   # Вторая попытка: изменить саму сеть.
+      - {file: p3/card_shared_body.png, seconds: 16.1}   # Без размышлений Dot-2 и правда
+      - {file: p3/card_frozen.png, seconds: 19.4}   # Разгромов становится вчетверо
 
   - n: 5
     title: "Попытка 3: судья по формуле"
     voice: p3/voice_ru_5.mp3
     fragments:
-      - {file: p3/card_formula.png, seconds: 16.4}   # Может, судья слишком примитивный?
-      - {file: p3/card_formula_back.png, seconds: 21.0, caption: "середина партии, 5500 позиций: ответов нет"}   # И когда безопасные линии
+      - {file: p3/card_formula.png, seconds: 39.5}   # Может, судья слишком примитивный?
+      - {file: p3/card_formula_back.png, seconds: 18.4, caption: "середина партии, 5500 позиций: ответов нет"}   # Но в середине партии
 
   - n: 6
     title: "Попытка 4: сильный судья"
     voice: p3/voice_ru_6.mp3
     fragments:
-      - {file: p3/card_tree.png, seconds: 17.6}   # Четвёртая попытка
-      - {file: p3/card_wall.png, seconds: 25.8}   # Мы проверили его
+      - {file: p3/card_tree.png, seconds: 20.2}   # Четвёртая попытка
+      - {file: p3/card_wall.png, seconds: 18.6}   # Но у него есть стена.
 
   - n: 7
     title: "Кто что знает"
     voice: p3/voice_ru_7.mp3
     fragments:
-      - {file: p3/card_map_0.png, seconds: 8.4}   # Зато теперь
-      - {file: p3/card_map_1.png, seconds: 7.1}   # Вот Dot-2 без размышлений.
-      - {file: p3/card_map_2.png, seconds: 3.5}   # Вот интуиция
-      - {file: p3/card_map_3.png, seconds: 11.7}   # Вот Dot-2 с размышлениями
-      - {file: p3/card_map_4.png, seconds: 17.8}   # И вот судья.
-      - {file: p3/card_map_5.png, seconds: 6.5}   # За этой стеной
+      - {file: p3/map_ru.mp4, seconds: 157.8}   # video/p3_map.py: zones and lines appear with the voice
 
   - n: 8
     title: "Попытка 5: на своих ошибках"
     voice: p3/voice_ru_8.mp3
     fragments:
-      - {file: p3/funnel.mp4, seconds: 30.1}   # Последняя попытка.
-      - {file: p3/card_mistakes_held.png, seconds: 7.8}   # Теперь главная проверка
-      - {file: p3/card_mid_held.png, seconds: 13.4}   # Прибавка есть
+      - {file: p3/funnel.mp4, seconds: 27.8}   # Последняя попытка.
+      - {file: p3/card_mistakes_held.png, seconds: 7.0}   # Теперь главная проверка
+      - {file: p3/card_mid_held.png, seconds: 13.2}   # Прибавка есть
 
   - n: 9
     title: "Ответ"
     voice: p3/voice_ru_9.mp3
     fragments:
-      - {file: p3/card_map_6.png, seconds: 25.6}   # Итак, ответ.
-      - {file: p3/menu_10x7_200_ru.png, seconds: 9.1}   # Поэтому в приложении
+      - {file: p3/card_map_6.png, seconds: 45.1}   # Итак, ответ.
+      - {file: p3/menu_10x7_200_ru.png, seconds: 12.6}   # Поэтому в приложении
 
   - n: 10
     title: "Что дальше"

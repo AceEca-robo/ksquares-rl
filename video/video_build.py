@@ -28,6 +28,7 @@ import yaml
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+from video_anim import pick  # noqa: E402
 from video_voice import LANGS, duration, scenes as script_scenes  # noqa: E402
 
 FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -164,14 +165,28 @@ def chunks(text):
     return out
 
 
-def time_subs(text, mp3):
-    """[(start, end, line)] within the mp3: boundaries placed by length, then
-    moved to the nearest pause of the voice (within 1.2 s)."""
-    lines = chunks(text)
-    total = duration(mp3)
-    pauses = silences(mp3)
-    t0 = pauses[0][1] if pauses and pauses[0][0] < 0.05 else 0.0
-    t1 = pauses[-1][0] if pauses and pauses[-1][1] > total - 0.05 else total
+def sentence_cuts(sents, t0, t1, pauses):
+    """[(end of a sentence, start of the next)]: edge-tts leaves ~1 s between
+    sentences and seldom that long inside one, so the boundaries are the long
+    pauses, picked in order closest to the estimates by text length; with too
+    few long pauses, the nearest pause within 1.5 s, else the estimate."""
+    weights = [len(s) + 8 for s in sents]
+    ests = [t0 + (t1 - t0) * sum(weights[:i + 1]) / sum(weights) for i in range(len(sents) - 1)]
+    long = [p for p in pauses if p[1] - p[0] > 0.9]
+    if len(long) >= len(ests):
+        ends = pick([p[1] for p in long], ests)
+        return [next(p for p in long if p[1] == e) for e in ends]
+    cuts = []
+    for est in ests:
+        last = cuts[-1][1] if cuts else t0
+        near = [p for p in pauses if abs((p[0] + p[1]) / 2 - est) < 1.5 and p[1] > last + 0.5]
+        cuts.append(min(near, key=lambda p: abs((p[0] + p[1]) / 2 - est)) if near else (est, est))
+    return cuts
+
+
+def time_lines(lines, t0, t1, pauses):
+    """[(start, end, line)] of one sentence's lines in [t0, t1]: boundaries
+    placed by length, then moved to the nearest pause (within 1.2 s)."""
     inner = [(a, b) for a, b in pauses if a > t0 + 0.1 and b < t1 - 0.1]
     weights = [len(s) + 8 for s in lines]          # a pause costs about as much as a word
     cum, cuts = 0, []                               # (end of a line, start of the next)
@@ -192,6 +207,24 @@ def time_subs(text, mp3):
     for line, (end, nxt) in zip(lines, cuts):
         out.append((start, min(end + 0.15, nxt), line))
         start = nxt
+    return out
+
+
+def time_subs(text, mp3):
+    """[(start, end, line)] within the mp3: every sentence opens on its own
+    start in the voice, its long lines share the sentence's time."""
+    sents = [s for s in re.split(r"(?<=[.!?…])\s+", text.strip()) if s]
+    total = duration(mp3)
+    pauses = silences(mp3)
+    t0 = pauses[0][1] if pauses and pauses[0][0] < 0.05 else 0.0
+    t1 = pauses[-1][0] if pauses and pauses[-1][1] > total - 0.05 else total
+    inner = [(a, b) for a, b in pauses if a > t0 + 0.1 and b < t1 - 0.1]
+    cuts = sentence_cuts(sents, t0, t1, inner)
+    starts = [t0] + [c[1] for c in cuts]
+    ends = [c[0] for c in cuts] + [t1]
+    out = []
+    for sent, a, b in zip(sents, starts, ends):
+        out += time_lines(chunks(sent), a, b, inner)
     return out
 
 

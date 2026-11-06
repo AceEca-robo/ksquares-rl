@@ -113,7 +113,7 @@ def conv_window(seconds=26):
         yield img
 
 
-def funnel(seconds=31, at=(12.5, 14.9, 16.2), fade=0.4):
+def funnel(seconds=31, at=(11.6, 13.6, 14.9), fade=0.4):
     """Scene 8: 5500 -> 248 -> 80, each number appears at its time on the voice."""
     from PIL import Image
     steps = []

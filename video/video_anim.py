@@ -104,14 +104,14 @@ def pick(cands, ests):
     return out[::-1]
 
 
-def sentence_starts(lang, n):
+def sentence_starts(lang, n, script=None, mp3=None):
     """Start of every sentence of scene n's voice, in seconds of the clip
     (the voice starts at VOICE_AT): boundaries by text length, snapped to the
     nearest pause of the voice."""
-    script = os.path.join(ROOT, "docs", {"ru": "video_script_ru.md", "en": "video_script_en.md"}[lang])
+    script = script or os.path.join(ROOT, "docs", {"ru": "video_script_ru.md", "en": "video_script_en.md"}[lang])
     text = next(t for k, _, _, t in scenes(script, lang) if str(k) == n)
     sents = [s for s in re.split(r"(?<=[.!?…])\s+", text.strip()) if s]
-    mp3 = os.path.join(HERE, f"voice_{lang}_{n}.mp3")
+    mp3 = mp3 or os.path.join(HERE, f"voice_{lang}_{n}.mp3")
     total = duration(mp3)
     r = subprocess.run(["ffmpeg", "-i", mp3, "-af", "silencedetect=noise=-35dB:d=0.18", "-f", "null", "-"],
                        capture_output=True, text=True)
