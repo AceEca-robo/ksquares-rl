@@ -120,6 +120,10 @@ Laptop and 0.23 s on a 20-thread CPU (search only, median).
 The part 3 video tells this story: `docs/video_script_part3_ru.md`,
 `docs/video_script_part3_en.md`.
 
+The data of this part (the rout games, the judge's mid-game labels, the
+games and judge passes behind the 80 mistakes) is in the
+[v0.3 release](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.3).
+
 ## The app
 
 One pygame window with a menu (English, Russian, Ukrainian):

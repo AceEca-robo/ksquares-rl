@@ -1169,3 +1169,7 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - video/p3/menu_10x7_200_en.png is the EN menu shot with the search row pasted from the RU shot (MCTS 200 selected), not a new capture.
 - Thumbnails rebuilt on the "who knows what" map (video/p3_thumbnail.py). EN cut: 10:27, 0 of 142 sentence-opening subtitles more than 0.3 s from an audio onset.
 - The repo and the video folder have no link to part 2: descriptions keep a placeholder.
+
+## 2026-11-06 (evening): release v0.3
+
+- Part 2 and part 3 videos published; links in README "Videos" and in the part 3 descriptions. Release v0.3: data of part 3, no new networks (the app stays on v0.1 and v0.2 assets).
