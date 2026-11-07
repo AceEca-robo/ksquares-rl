@@ -1198,3 +1198,11 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - (a) alternating: stuck from step 5000 at 76.1 / 52.9 (5x5 / 10x7). (b) curriculum: 10x7 at 99% from step 6000 to the end, 5x5 drops to 21% (below chance) once it is no longer trained.
 - Rule failed (both sizes needed) -> stop, (i) not rerun, as the user decided. The result is not "counts on 5x5 but not on 10x7": Gc does count on 10x7 (held 97-99%), but not on both sizes at once with this training. Tables: docs/graph_hand.md.
 - Unclear: why (b) is below chance on 5x5 (a size-dependent sign: both boards have an even number of dots); why (a) got stuck.
+
+## 2026-11-07 (evening): stage 0 not reproduced, (i) with the curriculum
+
+- Plan amended: stage 0 on 10x7 alone (user).
+- Stage 0 (b) repeated: 10x7 74%, not 99%. The click is not reproducible with the same config.
+- (i) with the 5x5 -> 10x7 curriculum, all four nets with clipping / cosine / best point: no click for any net; mean 10x7 probe C 68.9, C+h 71.8, Ga 70.4, Gc 72.6%. Gc beats C (p 0.041), not C+h (p 0.90). The convolutions did not click either, so "the school, not the graph" is not shown: nobody clicked.
+- Plan table: Gc <= C+h -> stop. docs/graph_hand.md.
+- Unclear: report.py picks seeds by the sum of both validations, this round's rule is 10x7; both are in graph_hand.md.

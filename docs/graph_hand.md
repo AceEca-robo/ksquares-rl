@@ -82,3 +82,51 @@ first such point to the end >= 90% on both. runs/graph_hand2/stage0_{alt,curr}.j
   no longer trained, falls to 13-41%, below chance: the net gives the wrong sign
   on 5x5, so what it learned on 10x7 does not carry back to 5x5.
 - Stage 0 failed by the rule; (i) was not rerun. Part 4 stops at stage 0.
+
+<!-- report runs/graph_hand3 -->
+## (i) From scratch, raw policy (runs/graph_hand3, 30000 steps)
+
+Training: {'clip': 1.0, 'cosine': True, 'keep_best': True}. Validation and probe, % correct, at the best-validation step; probes 1000 (5x5) and 304 (10x7).
+
+| arm | seed | params | val 5x5 | val 10x7 | probe 5x5 | probe 10x7 [95%] |
+|---|---:|---:|---:|---:|---:|---:|
+| C | 1 | 510211 | 46.2 | 60.6 | 51.1 | 70.4 [65-75] |
+| C | 2 | 510211 | 45.6 | 62.2 | 47.3 | 65.8 [60-71] |
+| C | 3 | 510211 | 46.8 | 60.0 | 47.2 | 70.4 [65-75] |
+| Ch | 1 | 513091 | 43.6 | 60.4 | 45.6 | 71.1 [66-76] |
+| Ch | 2 | 513091 | 43.4 | 59.4 | 43.3 | 74.7 [69-79] |
+| Ch | 3 | 513091 | 49.6 | 59.8 | 51.3 | 69.7 [64-75] |
+| Ga | 1 | 499830 | 43.4 | 62.6 | 46.2 | 72.0 [67-77] |
+| Ga | 2 | 499830 | 48.0 | 60.8 | 47.6 | 67.8 [62-73] |
+| Ga | 3 | 499830 | 43.4 | 62.0 | 47.9 | 71.4 [66-76] |
+| Gc | 1 | 497067 | 46.0 | 63.6 | 46.2 | 72.4 [67-77] |
+| Gc | 2 | 497067 | 45.8 | 63.4 | 48.0 | 73.7 [68-78] |
+| Gc | 3 | 497067 | 42.6 | 64.8 | 47.1 | 71.7 [66-76] |
+
+Best-validation seed of each arm, McNemar on the 10x7 probe (positions only the first / only the second has right):
+
+| pair | first only | second only | p |
+|---|---:|---:|---:|
+| Gc_s1 vs C_s2 | 47 | 27 | 0.0265 |
+| Gc_s1 vs Ch_s3 | 42 | 34 | 0.422 |
+| Ga_s2 vs C_s2 | 37 | 31 | 0.545 |
+| Gc_s1 vs Ga_s2 | 39 | 25 | 0.103 |
+<!-- end report runs/graph_hand3 -->
+
+## Stage 0 (b) repeated, mixed fine-tune, (i) with the curriculum (2026-11-07)
+
+- (b) repeated (curr_r, same config and seed): 5x5 reached 95% at 7500 (was 5500),
+  switch there; 10x7 then sat at 74% to step 20000 (first run: 99%). The 10x7 click
+  of stage 0 (b) did not reproduce; likely GPU nondeterminism (scatter_add), not checked.
+- Mixed fine-tune (mixft, 5000 steps, both sizes, lr x0.1) from the curr_r final net:
+  5x5 63 -> 75%, 10x7 74 -> 74%. It started from a 74% net, so it does not answer
+  whether one net holds both sizes.
+- (i) with the curriculum (table above, runs/graph_hand3): no arm shows a click on
+  10x7 validation (all 56-65% throughout); all overfit (train loss down to 0.002).
+- The report picks each arm's seed by the sum of both validations. Picked by 10x7
+  validation instead (the rule of this round): C s2, C+h s1, Ga s1, Gc s3;
+  McNemar on the 10x7 probe: Gc vs C 44 / 26, p 0.041; Gc vs C+h 31 / 29, p 0.90;
+  Ga vs C 42 / 23, p 0.025; Gc vs Ga 33 / 34, p 1.0.
+- Mean 10x7 probe over 3 seeds: C 68.9, C+h 71.8, Ga 70.4, Gc 72.6%. No arm reaches 80%.
+- Reading by the plan: Gc > C (p < 0.05) but not over C+h, and the probe is below
+  80%: the row "Gc <= C+h in (i): graph gives nothing beyond chain planes -> stop".
