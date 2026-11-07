@@ -1173,3 +1173,15 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 ## 2026-11-06 (evening): release v0.3
 
 - Part 2 and part 3 videos published; links in README "Videos" and in the part 3 descriptions. Release v0.3: data of part 3, no new networks (the app stays on v0.1 and v0.2 assets).
+
+## 2026-11-07: part 4, stage 0 and experiment (i)
+
+- Plan agreed and committed (docs/plan_part4.md): G16 only, G18 in reserve; (ii) gets two body variants (frozen / lr 0.1x), Bonferroni p < 0.025.
+- agents/graph_net.py: GraphNet on Dot-2's planes (segments computed in forward, torch), equivariant (tested), 0.50M for Gc (width 50) and Ga (width 65). Inference 10x7 batch 64: about 3.4k positions/s for Gc vs 28k for AZNet2, i.e. 8x slower, over the plan's 4x limit; matters only for (iii).
+- Stage 0, run 1 (Gc, Ga, C; alternating 5x5 / 10x7, 6000 steps): Gc 5x5 at chance until step 4000, then 93.4% at 4500 and 97.8% at 6000; 10x7 57.4%. Ga and C stayed at chance. Logs runs/graph_hand_stage0_v1.log.
+- Run 2: sin / cos of the pooled sums added to the readout. All outputs saturated to one sign (loss about 2, constant accuracy). Removed on the user's decision: it is a parity hint C does not get.
+- Run 3: Gc only, 20000 steps on 10x7 only. No click: chance (48-52%) at every 500-step log. Stage 0 FAILED on 10x7.
+- (i) run anyway, as decided, with 18000 steps (3 x the 6000 that sufficed on 5x5). docs/graph_hand.md. 10x7 probe: C 69.4-73.0, C+h 70.1-71.4, Ga 72.0-73.0, Gc 72.0-75.7%; best-validation seeds, McNemar: Gc vs C p 0.83, Gc vs C+h p 0.74. No arm reaches 80%. 5x5 validation 48-59% for all arms.
+- All arms overfit: train loss 0.05-0.11 at the end, 10x7 validation flat from step 7500.
+- Reading by the plan's table: "Gc <= C in (i)" holds (no difference) -> stop. But stage 0 also failed, which the plan reads as a readout defect, not a finding; so (i) is not a clean negative for graphs.
+- Unclear: why 5x5 clicked in run 1 and 10x7 never did; whether 5x5 data in the mix helped (run 3 trained on 10x7 only).
