@@ -34,6 +34,7 @@ stage0:
   hold_acc: 90.0                 # both sizes, every log from the first pass to the end
 
 train:
+  arms: [C, Ch, Ga, Gc]
   seeds: [1, 2, 3]
   steps: 30000                   # 18000 (3 x the 6000 that sufficed on 5x5) if stage 0 fails, --steps
   batch: 128                     # sizes alternate

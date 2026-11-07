@@ -243,7 +243,7 @@ def cmd_train(cfg, lim):
     for b, (tr, va) in splits.items():
         print(f"{b}: {len(tr)} train, {len(va)} validation", flush=True)
     for seed in tc["seeds"]:
-        for arm in cfg["arms"]:
+        for arm in cfg["train"]["arms"]:
             name = run_name(arm, seed)
             if (out / f"{name}.pt").exists():
                 continue
@@ -307,7 +307,7 @@ def cmd_probe(cfg):
     out = ROOT / cfg["out"]
     res = {}
     for seed in cfg["train"]["seeds"]:
-        for arm in cfg["arms"]:
+        for arm in cfg["train"]["arms"]:
             name = run_name(arm, seed)
             net = make_arm(cfg, arm, 0)
             net.load_state_dict(torch.load(out / f"{name}.pt", map_location="cpu"))
@@ -330,7 +330,7 @@ def cmd_report(cfg):
               "| arm | seed | params | val 5x5 | val 10x7 | probe 5x5 | probe 10x7 [95%] |",
               "|---|---:|---:|---:|---:|---:|---:|"]
     best = {}
-    for arm in cfg["arms"]:
+    for arm in cfg["train"]["arms"]:
         scored = []
         for seed in seeds:
             name = run_name(arm, seed)
