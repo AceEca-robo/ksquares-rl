@@ -209,7 +209,7 @@ def cmd_train(cfg, lim):
             log, acc, t0 = [], 0.0, time.time()
             net.train()
             for step in range(1, tc["steps"] + 1):
-                    b = sizes[step % len(sizes)]
+                b = sizes[step % len(sizes)]
                 codec, X, M = par[b][0]
                 idx = rng.integers(0, len(X), tc["batch"])
                 x, m = parity_hand.augment(rng, codec, X[idx], M[idx], on=not graph)
