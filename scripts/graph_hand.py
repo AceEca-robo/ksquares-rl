@@ -62,6 +62,32 @@ def make_arm(cfg, arm, seed):
     return make_net(load_config(ROOT / ac["config"]) if "config" in ac else ac)
 
 
+class Optim:
+    """Adam with the configured gradient clipping and cosine lr decay."""
+
+    def __init__(self, net, lr, steps, oc):
+        import torch
+
+        self.net, self.clip = net, oc.get("clip")
+        self.opt = torch.optim.Adam(net.parameters(), lr=lr)
+        self.sched = torch.optim.lr_scheduler.CosineAnnealingLR(self.opt, steps) if oc.get("cosine") else None
+
+    def step(self, loss) -> None:
+        import torch
+
+        self.opt.zero_grad(set_to_none=True)
+        loss.backward()
+        if self.clip:
+            torch.nn.utils.clip_grad_norm_(self.net.parameters(), self.clip)
+        self.opt.step()
+        if self.sched is not None:
+            self.sched.step()
+
+
+def best_state(net):
+    return {k: v.detach().cpu().clone() for k, v in net.state_dict().items()}
+
+
 def is_graph(net) -> bool:
     return net.__class__.__name__ == "GraphNet"
 
@@ -114,7 +140,8 @@ def cmd_stage0(cfg, lim, tag):
     for arm in [rc["arm"]]:
         net = make_arm(cfg, arm, cfg["seed"]).to(dev)
         res["params"] = sum(p.numel() for p in net.parameters())
-        opt = torch.optim.Adam(net.parameters(), lr=sc["lr"])
+        opt = Optim(net, sc["lr"], sc["steps"], cfg.get("optim", {}))
+        best = (-1.0, None, None)
         np_rng = np.random.default_rng(cfg["seed"])
         sizes = [wh for wh in data if f"{wh[0]}x{wh[1]}" in rc["train_sizes"]]
         switched = None
@@ -142,19 +169,21 @@ def cmd_stage0(cfg, lim, tag):
                 xb, = parity_hand.augment(np_rng, c, xb)
             xt = torch.from_numpy(xb.reshape(-1, 12, c.rows, c.cols)).to(dev)
             loss = F.mse_loss(net(xt)[1], torch.from_numpy(Y[idx]).to(dev))
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            opt.step()
+            opt.step(loss)
             loss = loss.item()
             lim.tick()
             if step % sc["log_every"] == 0:
                 log.append({"step": step, "loss": loss, "val": validate()})
                 print(f"stage0 {tag}: {log[-1]}", flush=True)
+                m = min(log[-1]["val"].values())
+                if m > best[0]:
+                    best = (m, step, best_state(net))
                 if rc.get("curriculum") and switched is None and log[-1]["val"]["5x5"] >= sc["pass_acc"]:
                     switched = step                  # 5x5 has clicked: 10x7 only from here
                     sizes = [(10, 7)]
                     print(f"stage0 {tag}: curriculum switch to 10x7 at step {step}", flush=True)
-        res.update(run=rc, log=log, switched=switched)
+        res.update(run=rc, log=log, switched=switched, best_step=best[1])
+        torch.save(best[2], out / f"stage0_{tag}_best.pt")
         res_path.write_text(json.dumps(res, indent=1))
         del net, opt
         torch.cuda.empty_cache()
@@ -166,9 +195,14 @@ def first_at(log, size, acc):
 
 
 def stage0_verdict(sc, rc, res):
-    v = res["log"][-1]["val"]
-    ok = v["10x7"] >= sc["pass_acc"]
-    print("stage 0:", "PASS" if ok else "FAIL", v, "| 95% first reached at",
+    """Pass: the best point (min over sizes) >= pass_acc on both sizes, and
+    every later log >= hold_acc on both sizes to the end."""
+    log = res["log"]
+    v = log[-1]["val"]
+    i = next((k for k, r in enumerate(log) if min(r["val"].values()) >= sc["pass_acc"]), None)
+    ok = i is not None and all(min(r["val"].values()) >= sc["hold_acc"] for r in log[i:])
+    print("stage 0:", "PASS" if ok else "FAIL", "last", v, "| best step", res.get("best_step"),
+          "| both >= pass first at", None if i is None else log[i]["step"], "| 95% first reached at",
           {b: first_at(res["log"], b, sc["pass_acc"]) for b in v}, flush=True)
     if not ok:
         raise SystemExit(3)
@@ -219,7 +253,8 @@ def cmd_train(cfg, lim):
                    for b, (tr, va) in splits.items()}
             n_par = sum(p.numel() for p in net.parameters())
             print(f"{name}: {n_par} parameters", flush=True)
-            opt = torch.optim.Adam(net.parameters(), lr=tc["lr"])
+            opt = Optim(net, tc["lr"], tc["steps"], cfg.get("optim", {}))
+            best = (-1.0, None, None)
             rng = np.random.default_rng([cfg["seed"], seed, len(arm), ord(arm[-1])])
             graph = is_graph(net)
             log, acc, t0 = [], 0.0, time.time()
@@ -234,9 +269,7 @@ def cmd_train(cfg, lim):
                 legal = xt[:, 1].flatten(1)[:, net.line_cells(codec.rows, codec.cols)] > 0
                 lp = F.log_softmax(logits.masked_fill(~legal, -1e9), 1)
                 loss = -torch.logsumexp(lp.masked_fill(~torch.from_numpy(m).to(dev), -1e9), 1).mean()
-                opt.zero_grad(set_to_none=True)
-                loss.backward()
-                opt.step()
+                opt.step(loss)
                 acc += loss.item()
                 lim.tick()
                 if step % tc["log_every"] == 0:
@@ -247,9 +280,13 @@ def cmd_train(cfg, lim):
                                 "seconds": time.time() - t0})
                     acc = 0.0
                     print(f"{name}: {log[-1]}", flush=True)
+                    mv = float(np.mean(list(val.values())))
+                    if mv > best[0]:
+                        best = (mv, step, best_state(net))
             net.cpu()
-            (out / f"{name}_train.json").write_text(json.dumps({"params": n_par, "log": log}, indent=1))
-            torch.save(net.state_dict(), out / f"{name}.pt")
+            (out / f"{name}_train.json").write_text(json.dumps({"params": n_par, "log": log, "best_step": best[1]},
+                                                               indent=1))
+            torch.save(best[2] if cfg.get("optim", {}).get("keep_best") else net.state_dict(), out / f"{name}.pt")
             del net, opt, par
             torch.cuda.empty_cache()
 
@@ -285,16 +322,11 @@ def cmd_report(cfg):
     probe = json.loads((out / "probe.json").read_text())
     seeds = cfg["train"]["seeds"]
     sizes = ["5x5", "10x7"]
-    lines = ["# Part 4: stage 0 and experiment (i)", "",
-             "Generated by scripts/graph_hand.py report; plan in docs/plan_part4.md.", ""]
-    s0 = json.loads((out / "stage0.json").read_text())
-    lines += ["## Stage 0", "", f"Mover favoured: {s0['base_rate']}.", "",
-              "| arm | 5x5 val % | 10x7 val % |", "|---|---:|---:|"]
-    for a in cfg["stage0"]["arms"]:
-        v = s0[a][-1]["val"]
-        lines.append(f"| {a} | {v['5x5']:.1f} | {v['10x7']:.1f} |")
-    lines += ["", "## (i) From scratch, raw policy", "",
-              "Validation and probe, % correct; probes 1000 (5x5) and 304 (10x7).", "",
+    keep = cfg.get("optim", {}).get("keep_best")
+    lines = [f"<!-- report {cfg['out']} -->", f"## (i) From scratch, raw policy ({cfg['out']}, {cfg['train']['steps']} steps)", "",
+             f"Training: {cfg.get('optim', {})}. Validation and probe, % correct, "
+             + ("at the best-validation step" if keep else "at the last step")
+             + "; probes 1000 (5x5) and 304 (10x7).", "",
               "| arm | seed | params | val 5x5 | val 10x7 | probe 5x5 | probe 10x7 [95%] |",
               "|---|---:|---:|---:|---:|---:|---:|"]
     best = {}
@@ -303,7 +335,7 @@ def cmd_report(cfg):
         for seed in seeds:
             name = run_name(arm, seed)
             t = json.loads((out / f"{name}_train.json").read_text())
-            v = t["log"][-1]["val"]
+            v = next(r for r in t["log"] if r["step"] == t["best_step"])["val"] if keep else t["log"][-1]["val"]
             p = probe[name]
             k, n = sum(p["10x7"]), len(p["10x7"])
             lo, hi = wilson(k, n)
@@ -316,7 +348,13 @@ def cmd_report(cfg):
     for a, b in [("Gc", "C"), ("Gc", "Ch"), ("Ga", "C"), ("Gc", "Ga")]:
         n01, n10, p = mcnemar(probe[best[b]]["10x7"], probe[best[a]]["10x7"])
         lines.append(f"| {best[a]} vs {best[b]} | {n01} | {n10} | {p:.3g} |")
-    (ROOT / "docs/graph_hand.md").write_text("\n".join(lines) + "\n")
+    lines.append(f"<!-- end report {cfg['out']} -->")
+    doc = ROOT / "docs/graph_hand.md"
+    text = doc.read_text() if doc.exists() else ""
+    a, b = lines[0], lines[-1]
+    if a in text:
+        text = text[:text.index(a)] + text[text.index(b) + len(b) + 1:]
+    doc.write_text(text.rstrip("\n") + "\n\n" + "\n".join(lines) + "\n")
     print("\n".join(lines))
 
 
