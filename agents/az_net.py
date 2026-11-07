@@ -376,6 +376,10 @@ def net_planes(net) -> int:
 
 def make_net(cfg: dict):
     n = cfg["net"]
+    if n.get("arch") == "graph":
+        from agents.graph_net import GraphNet
+
+        return GraphNet(n["layers"], n["width"], n.get("pool", 16), n.get("segments", True))
     if n.get("arch") == "dot2":
         gp = n.get("gpool_blocks", (2, 4))
         return AZNet2(n["blocks"], n["channels"], n.get("score_head", True), gp if gp == "all" else tuple(gp),

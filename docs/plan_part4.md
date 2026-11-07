@@ -156,7 +156,7 @@ search, no help from self-play.
   10-15 safe lines, about 700 decisive, up to 16 h at 60 s and 2 workers; same T1.
   Run only if T1 passes.
 
-Power: base is wrong on 26 of 199 held-out positions. p < 0.025 needs about 12 up
+Power: base is wrong on 26 of 199 held-out positions. p < 0.025 needs about 10 up
 / 2 down or 6 up / 0 down, so a small gain will not pass; r30 on the CNN (11 / 4)
 did not reach even p < 0.05.
 

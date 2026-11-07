@@ -1,0 +1,2 @@
+# Part 4: graph network (c), boxes, lines and segment nodes (agents/graph_net.py).
+net: {arch: graph, layers: 8, width: 50, pool: 16, segments: true}

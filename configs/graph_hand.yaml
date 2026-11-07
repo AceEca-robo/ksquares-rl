@@ -1,0 +1,36 @@
+# Part 4, stage 0 and experiment (i) of docs/plan_part4.md (scripts/graph_hand.py).
+seed: 4100
+device: cuda
+out: runs/graph_hand
+parity_config: configs/parity_hand.yaml   # judge sets, their split and the probe sets
+
+limits:                          # overnight limits of the user, 2026-11-07
+  gpu_memory_fraction: 0.4
+  gpu_duty: 0.4                  # share of wall time the trainer may keep the GPU busy
+  min_available_gb: 12           # training waits below this
+  cpu_threads: 2
+
+arms:
+  C:
+    net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true}
+  Ch:
+    net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true, planes: 17}
+  Ga: {config: configs/graph_ga.yaml}
+  Gc: {config: configs/graph_gc.yaml}
+
+stage0:
+  arms: [Gc, Ga, C]
+  n_train: 20000                 # per size, random safe-move playouts
+  n_val: 2000
+  steps: 6000
+  batch: 128
+  lr: 0.0005
+  log_every: 500
+  pass_acc: 95.0                 # Gc, validation, both sizes
+
+train:
+  seeds: [1, 2, 3]
+  steps: 30000
+  batch: 128                     # sizes alternate
+  lr: 0.0005
+  log_every: 2500
