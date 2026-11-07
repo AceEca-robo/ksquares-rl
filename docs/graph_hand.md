@@ -65,3 +65,20 @@ runs/graph_hand/stage0_{alt,deep}.json; log every 500 steps.
 one sign (loss about 2: tanh saturated, the same failure as the sin / cos run) and
 never recovered. The check at the last step failed, so (b) was not run and (c) was.
 (c) never left chance on 10x7 alone, nor did the earlier 10x7-only run of Gc.
+
+## Stage 0, third round (2026-11-07): clipping 1.0, cosine lr, best checkpoint
+
+Rule fixed before the run: best point >= 95% on both sizes, and every log from the
+first such point to the end >= 90% on both. runs/graph_hand2/stage0_{alt,curr}.json.
+
+| run | 5x5 first >= 95% | 10x7 first >= 95% | at step 20000 (5x5 / 10x7) | rule |
+|---|---:|---:|---:|---|
+| (a) alternating | never (max 76%) | never (max 53%) | 76.1 / 52.9 | FAIL |
+| (b) curriculum, switch to 10x7 at 5500 | 5500 | 6000 | 20.8 / 99.2 | FAIL |
+
+- (a): from step 5000 to 20000 the validation numbers do not change at all (76.1 / 52.9):
+  the net is stuck, not learning slowly.
+- (b): 10x7 clicks 500 steps after the switch and holds 97-99% to the end. 5x5,
+  no longer trained, falls to 13-41%, below chance: the net gives the wrong sign
+  on 5x5, so what it learned on 10x7 does not carry back to 5x5.
+- Stage 0 failed by the rule; (i) was not rerun. Part 4 stops at stage 0.
