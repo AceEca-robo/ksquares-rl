@@ -85,7 +85,7 @@ def settled_boards(w, h, n, rng):
     return out
 
 
-def cmd_stage0(cfg, lim):
+def cmd_stage0(cfg, lim, tag):
     import torch
     import torch.nn.functional as F
 
@@ -95,8 +95,11 @@ def cmd_stage0(cfg, lim):
     dev = cfg["device"]
     out = ROOT / cfg["out"]
     rng = random.Random(cfg["seed"])
-    res_path = out / "stage0.json"
+    rc = sc["runs"][tag]
+    res_path = out / f"stage0_{tag}.json"
     res = json.loads(res_path.read_text()) if res_path.exists() else {}
+    if "log" in res:
+        return stage0_verdict(sc, rc, res)
     t0 = time.time()
     data = {}
     for wh in ((5, 5), (10, 7)):
@@ -108,13 +111,13 @@ def cmd_stage0(cfg, lim):
         print(f"{wh}: mover favoured {np.mean(data[wh][2] > 0):.3f} ({time.time() - t0:.0f} s)", flush=True)
     res["base_rate"] = {f"{k[0]}x{k[1]}": float(np.mean(v[2] > 0)) for k, v in data.items()}
     n = sc["n_train"]
-    for arm in sc["arms"]:
-        if arm in res:
-            continue
+    for arm in [rc["arm"]]:
         net = make_arm(cfg, arm, cfg["seed"]).to(dev)
+        res["params"] = sum(p.numel() for p in net.parameters())
         opt = torch.optim.Adam(net.parameters(), lr=sc["lr"])
         np_rng = np.random.default_rng(cfg["seed"])
-        sizes = [wh for wh in data if f"{wh[0]}x{wh[1]}" in sc["train_sizes"]]
+        sizes = [wh for wh in data if f"{wh[0]}x{wh[1]}" in rc["train_sizes"]]
+        switched = None
 
         def validate():
             net.eval()
@@ -146,14 +149,27 @@ def cmd_stage0(cfg, lim):
             lim.tick()
             if step % sc["log_every"] == 0:
                 log.append({"step": step, "loss": loss, "val": validate()})
-                print(f"stage0 {arm}: {log[-1]}", flush=True)
-        res[arm] = log
+                print(f"stage0 {tag}: {log[-1]}", flush=True)
+                if rc.get("curriculum") and switched is None and log[-1]["val"]["5x5"] >= sc["pass_acc"]:
+                    switched = step                  # 5x5 has clicked: 10x7 only from here
+                    sizes = [(10, 7)]
+                    print(f"stage0 {tag}: curriculum switch to 10x7 at step {step}", flush=True)
+        res.update(run=rc, log=log, switched=switched)
         res_path.write_text(json.dumps(res, indent=1))
         del net, opt
         torch.cuda.empty_cache()
-    gc = res["Gc"][-1]["val"]
-    ok = min(gc[b] for b in sc["train_sizes"]) >= sc["pass_acc"]
-    print("stage 0:", "PASS" if ok else "FAIL", gc, flush=True)
+    return stage0_verdict(sc, rc, res)
+
+
+def first_at(log, size, acc):
+    return next((r["step"] for r in log if r["val"][size] >= acc), None)
+
+
+def stage0_verdict(sc, rc, res):
+    v = res["log"][-1]["val"]
+    ok = v["10x7"] >= sc["pass_acc"]
+    print("stage 0:", "PASS" if ok else "FAIL", v, "| 95% first reached at",
+          {b: first_at(res["log"], b, sc["pass_acc"]) for b in v}, flush=True)
     if not ok:
         raise SystemExit(3)
 
@@ -309,6 +325,7 @@ def main() -> None:
     ap.add_argument("cmd", choices=["stage0", "train", "probe", "report"])
     ap.add_argument("--config", default="configs/graph_hand.yaml")
     ap.add_argument("--steps", type=int, help="train: overrides train.steps")
+    ap.add_argument("--run", default="v1", help="stage0: a key of stage0.runs")
     a = ap.parse_args()
     cfg = load_config(ROOT / a.config)
     if a.steps:
@@ -317,7 +334,7 @@ def main() -> None:
     if a.cmd == "report":
         return cmd_report(cfg)
     lim = Limits(cfg["limits"])
-    {"stage0": lambda: cmd_stage0(cfg, lim), "train": lambda: cmd_train(cfg, lim),
+    {"stage0": lambda: cmd_stage0(cfg, lim, a.run), "train": lambda: cmd_train(cfg, lim),
      "probe": lambda: cmd_probe(cfg)}[a.cmd]()
 
 

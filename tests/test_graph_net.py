@@ -65,7 +65,7 @@ def test_evaluator_mixed_sizes():
     assert abs(sum(pri[0]) - 1) < 1e-4 and val.shape == (2,)
 
 
-@pytest.mark.parametrize("cfg", ["configs/graph_gc.yaml", "configs/graph_ga.yaml"])
+@pytest.mark.parametrize("cfg", ["configs/graph_gc.yaml", "configs/graph_ga.yaml", "configs/graph_gc16.yaml"])
 def test_budget(cfg):
     from agents.az_net import make_net
     from scripts._common import load_config

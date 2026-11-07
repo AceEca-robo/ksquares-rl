@@ -16,17 +16,20 @@ arms:
     net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true, planes: 17}
   Ga: {config: configs/graph_ga.yaml}
   Gc: {config: configs/graph_gc.yaml}
+  Gc16: {config: configs/graph_gc16.yaml}
 
 stage0:
-  arms: [Gc]                     # first run, all three arms, both sizes, 6000 steps: docs/overnight.md
-  train_sizes: [10x7]            # the 5x5 "click" came at 4500 steps; 10x7 had not clicked by 6000
+  runs:                          # earlier runs (6000 steps, Gc / Ga / C, both sizes; Gc 10x7 only): docs/overnight.md
+    alt: {arm: Gc, train_sizes: [5x5, 10x7]}                     # (a) does 10x7 click after 5x5?
+    curr: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true}   # (b) 5x5 until 95%, then 10x7 only
+    deep: {arm: Gc16, train_sizes: [10x7]}                        # (c) range: 16 layers
   n_train: 20000                 # per size, random safe-move playouts
   n_val: 2000
   steps: 20000
   batch: 128
   lr: 0.0005
   log_every: 500
-  pass_acc: 95.0                 # Gc, validation, on train_sizes
+  pass_acc: 95.0                 # validation 10x7; also the curriculum switch on 5x5
 
 train:
   seeds: [1, 2, 3]
