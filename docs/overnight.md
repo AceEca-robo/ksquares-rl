@@ -1185,3 +1185,9 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - All arms overfit: train loss 0.05-0.11 at the end, 10x7 validation flat from step 7500.
 - Reading by the plan's table: "Gc <= C in (i)" holds (no difference) -> stop. But stage 0 also failed, which the plan reads as a readout defect, not a finding; so (i) is not a clean negative for graphs.
 - Unclear: why 5x5 clicked in run 1 and 10x7 never did; whether 5x5 data in the mix helped (run 3 trained on 10x7 only).
+
+## 2026-11-07 (afternoon): stage 0, second round
+
+- (a) Gc alternating 5x5 / 10x7, 20000 steps: 5x5 clicks at 6000-6500, 10x7 follows at 7500 (99.1%), then at 8500 the value saturates to one sign and stays there to step 20000. Final check FAIL, so the chain ran (c), not (b).
+- (c) Gc16 (16 layers, width 35, 0.51M), 10x7 only, 20000 steps: chance throughout.
+- Reading: the net can count chains on 10x7 when 5x5 is in the mix, so "counts on 5x5 but not on 10x7" is not what happened. The failure is training instability (no gradient clipping, constant lr 5e-4, tanh value). Not decided: whether the threshold reached mid-run counts; left to the user. Details docs/graph_hand.md.

@@ -37,3 +37,31 @@ Best-validation seed of each arm, McNemar on the 10x7 probe (positions only the 
 | Gc_s3 vs Ch_s3 | 44 | 40 | 0.744 |
 | Ga_s1 vs C_s2 | 38 | 41 | 0.822 |
 | Gc_s3 vs Ga_s1 | 36 | 36 | 1 |
+
+## Stage 0, second round (2026-11-07)
+
+Value sign vs "the long chain rule favours the mover", validation, Gc unless noted.
+runs/graph_hand/stage0_{alt,deep}.json; log every 500 steps.
+
+| run | steps | 5x5 first >= 95% | 10x7 first >= 95% | 10x7 at the end |
+|---|---:|---:|---:|---:|
+| (a) alternating 5x5 / 10x7 | 20000 | 6500 | 7500 (99.1%) | 48.1% |
+| (c) Gc16 (16 layers, width 35), 10x7 only | 20000 | - | never | 51.9% |
+
+(a) around the click:
+
+| step | loss (last batch) | 5x5 | 10x7 |
+|---:|---:|---:|---:|
+| 5000 | 0.999 | 51.0 | 51.9 |
+| 6000 | 0.229 | 93.3 | 59.7 |
+| 6500 | 0.008 | 97.8 | 76.6 |
+| 7000 | 0.038 | 97.8 | 58.8 |
+| 7500 | 0.126 | 98.5 | 99.1 |
+| 8000 | 0.119 | 98.5 | 91.0 |
+| 8500 | 2.164 | 49.4 | 48.1 |
+| 9000-20000 | ~2 | 49 | 48 |
+
+10x7 clicked about 1000 steps after 5x5, then at step 8500 the value collapsed to
+one sign (loss about 2: tanh saturated, the same failure as the sin / cos run) and
+never recovered. The check at the last step failed, so (b) was not run and (c) was.
+(c) never left chance on 10x7 alone, nor did the earlier 10x7-only run of Gc.
