@@ -27,19 +27,17 @@ from parity_probe import mcnemar, wilson
 
 
 class Limits:
-    """Holds the trainer to the configured GPU duty and free memory."""
+    """Holds the trainer to the configured GPU memory and free memory."""
 
     def __init__(self, c: dict):
         import torch
 
         torch.set_num_threads(c["cpu_threads"])
         torch.cuda.set_per_process_memory_fraction(c["gpu_memory_fraction"])
-        self.idle = (1 - c["gpu_duty"]) / c["gpu_duty"]
         self.min_kb = c["min_available_gb"] * 1024 * 1024
         self.n = 0
 
-    def tick(self, busy: float) -> None:
-        time.sleep(busy * self.idle)
+    def tick(self) -> None:
         self.n += 1
         if self.n % 100 == 0:
             while self.available_kb() < self.min_kb:
@@ -116,7 +114,7 @@ def cmd_stage0(cfg, lim):
         net = make_arm(cfg, arm, cfg["seed"]).to(dev)
         opt = torch.optim.Adam(net.parameters(), lr=sc["lr"])
         np_rng = np.random.default_rng(cfg["seed"])
-        sizes = list(data)
+        sizes = [wh for wh in data if f"{wh[0]}x{wh[1]}" in sc["train_sizes"]]
 
         def validate():
             net.eval()
@@ -134,8 +132,7 @@ def cmd_stage0(cfg, lim):
         log = []
         net.train()
         for step in range(1, sc["steps"] + 1):
-            t1 = time.time()
-            c, X, Y = data[sizes[step % 2]]
+            c, X, Y = data[sizes[step % len(sizes)]]
             idx = np_rng.integers(0, n, sc["batch"])
             xb = X[idx]
             if not is_graph(net):
@@ -146,7 +143,7 @@ def cmd_stage0(cfg, lim):
             loss.backward()
             opt.step()
             loss = loss.item()
-            lim.tick(time.time() - t1)
+            lim.tick()
             if step % sc["log_every"] == 0:
                 log.append({"step": step, "loss": loss, "val": validate()})
                 print(f"stage0 {arm}: {log[-1]}", flush=True)
@@ -155,7 +152,10 @@ def cmd_stage0(cfg, lim):
         del net, opt
         torch.cuda.empty_cache()
     gc = res["Gc"][-1]["val"]
-    print("stage 0:", "PASS" if min(gc.values()) >= sc["pass_acc"] else "FAIL", gc, flush=True)
+    ok = min(gc[b] for b in sc["train_sizes"]) >= sc["pass_acc"]
+    print("stage 0:", "PASS" if ok else "FAIL", gc, flush=True)
+    if not ok:
+        raise SystemExit(3)
 
 
 def run_name(arm, seed):
@@ -209,8 +209,7 @@ def cmd_train(cfg, lim):
             log, acc, t0 = [], 0.0, time.time()
             net.train()
             for step in range(1, tc["steps"] + 1):
-                t1 = time.time()
-                b = sizes[step % len(sizes)]
+                    b = sizes[step % len(sizes)]
                 codec, X, M = par[b][0]
                 idx = rng.integers(0, len(X), tc["batch"])
                 x, m = parity_hand.augment(rng, codec, X[idx], M[idx], on=not graph)
@@ -223,7 +222,7 @@ def cmd_train(cfg, lim):
                 loss.backward()
                 opt.step()
                 acc += loss.item()
-                lim.tick(time.time() - t1)
+                lim.tick()
                 if step % tc["log_every"] == 0:
                     net.eval()
                     val = {k: 100 * float(np.mean(correct_rate(net, *par[k][1], dev))) for k in sizes}
@@ -309,8 +308,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["stage0", "train", "probe", "report"])
     ap.add_argument("--config", default="configs/graph_hand.yaml")
+    ap.add_argument("--steps", type=int, help="train: overrides train.steps")
     a = ap.parse_args()
     cfg = load_config(ROOT / a.config)
+    if a.steps:
+        cfg["train"]["steps"] = a.steps
     (ROOT / cfg["out"]).mkdir(parents=True, exist_ok=True)
     if a.cmd == "report":
         return cmd_report(cfg)

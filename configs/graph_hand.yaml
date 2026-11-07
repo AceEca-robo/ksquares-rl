@@ -5,8 +5,7 @@ out: runs/graph_hand
 parity_config: configs/parity_hand.yaml   # judge sets, their split and the probe sets
 
 limits:                          # overnight limits of the user, 2026-11-07
-  gpu_memory_fraction: 0.4
-  gpu_duty: 0.4                  # share of wall time the trainer may keep the GPU busy
+  gpu_memory_fraction: 0.4       # GPU load is not limited
   min_available_gb: 12           # training waits below this
   cpu_threads: 2
 
@@ -19,18 +18,19 @@ arms:
   Gc: {config: configs/graph_gc.yaml}
 
 stage0:
-  arms: [Gc, Ga, C]
+  arms: [Gc]                     # first run, all three arms, both sizes, 6000 steps: docs/overnight.md
+  train_sizes: [10x7]            # the 5x5 "click" came at 4500 steps; 10x7 had not clicked by 6000
   n_train: 20000                 # per size, random safe-move playouts
   n_val: 2000
-  steps: 6000
+  steps: 20000
   batch: 128
   lr: 0.0005
   log_every: 500
-  pass_acc: 95.0                 # Gc, validation, both sizes
+  pass_acc: 95.0                 # Gc, validation, on train_sizes
 
 train:
   seeds: [1, 2, 3]
-  steps: 30000
+  steps: 30000                   # 18000 (3 x the 6000 that sufficed on 5x5) if stage 0 fails, --steps
   batch: 128                     # sizes alternate
   lr: 0.0005
   log_every: 2500

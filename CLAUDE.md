@@ -9,5 +9,6 @@ Goal: train an RL agent to play Dots and Boxes in KSquares 21.12.3 (KDE, Matt Wi
 - docs/overnight.md — the experiment log: chronology, decisions, unclear points and "Ideas for later"; each session adds a dated section. docs/results.md — the results tables.
 - runs/ — runs and checkpoints, not in git (.gitignore).
 - Python 3.10+, environment .venv. Run pytest before committing. Training longer than 10 minutes only in tmux.
+- GPU limits: memory at most 40%; GPU load is not limited.
 - Commits use AceEca-robo@users.noreply.github.com (set in the project's git config).
 - Language: answer the user in Russian; code, documentation and commit messages in English.

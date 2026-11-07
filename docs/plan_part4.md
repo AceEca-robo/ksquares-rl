@@ -221,7 +221,8 @@ G18: Ryzen 9 9955HX (16 cores / 32 threads), RTX 5070 8 GB, 32 GB RAM, Windows, 
 Linux; WSL2 not installed, CUDA in it not checked. The plan runs on G16; G18 is the
 reserve for (iii), if it comes to that.
 
-Overnight limits (user, 2026-11-07): workers <= 2, judge <= 2, nice, GPU 40%,
+Overnight limits (user, 2026-11-07): workers <= 2, judge <= 2, nice, GPU memory 40%
+(load not limited),
 free memory >= 12 GB. Runs over 10 minutes go in tmux.
 
 | step | machine | time, estimate |
