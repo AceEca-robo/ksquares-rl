@@ -110,6 +110,11 @@ mod 2 on settled positions, seen from the mover. Positions: random safe-move
 playouts to the end of the safe lines, on 5x5 and 10x7. Pass: Gc >= 95% on
 positions from other games. If (c) cannot learn this directly, stop and fix the
 readout before anything else.
+Amended 2026-11-07 (user): the target of part 4 is 10x7, so stage 0 passes on
+10x7 alone (best point >= 95%, every later log >= 90%); "both sizes at once" is
+dropped. Passed by Gc with the 5x5 -> 10x7 curriculum (docs/graph_hand.md). (i)
+then uses the same curriculum for all four nets: judge 5x5 positions for 5500
+steps, then 10x7 only; best point by 10x7 validation.
 
 **(i) From scratch on the judge's late positions.** Purpose: parity without
 search, no help from self-play.

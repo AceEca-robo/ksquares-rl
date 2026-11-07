@@ -1,7 +1,7 @@
 # Part 4, stage 0 and experiment (i) of docs/plan_part4.md (scripts/graph_hand.py).
 seed: 4100
 device: cuda
-out: runs/graph_hand2            # first round (no clipping, constant lr, last step): runs/graph_hand
+out: runs/graph_hand2            # stage 0 rounds 3-4; first rounds: runs/graph_hand; (i) curriculum: --out runs/graph_hand3
 optim: {clip: 1.0, cosine: true, keep_best: true}   # all arms, stage 0 and (i); user, 2026-11-07
 parity_config: configs/parity_hand.yaml   # judge sets, their split and the probe sets
 
@@ -23,6 +23,8 @@ stage0:
   runs:                          # earlier runs (6000 steps, Gc / Ga / C, both sizes; Gc 10x7 only): docs/overnight.md
     alt: {arm: Gc, train_sizes: [5x5, 10x7]}                     # (a) does 10x7 click after 5x5?
     curr: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true}   # (b) 5x5 until 95%, then 10x7 only
+    curr_r: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true}  # (b) again, keeps the final net
+    mixft: {arm: Gc, train_sizes: [5x5, 10x7], init: stage0_curr_r_final.pt, lr_scale: 0.1, steps: 5000}  # both sizes?
     deep: {arm: Gc16, train_sizes: [10x7]}                        # (c) range: 16 layers (first round only)
   n_train: 20000                 # per size, random safe-move playouts
   n_val: 2000
@@ -35,6 +37,8 @@ stage0:
 
 train:
   arms: [C, Ch, Ga, Gc]
+  curriculum: {5x5: 5500}        # as stage 0 (b): judge 5x5 positions only, then 10x7 only (user, 2026-11-07)
+  select_on: 10x7                # best point by 10x7 validation
   seeds: [1, 2, 3]
   steps: 30000                   # 18000 (3 x the 6000 that sufficed on 5x5) if stage 0 fails, --steps
   batch: 128                     # sizes alternate

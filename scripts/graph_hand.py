@@ -138,9 +138,14 @@ def cmd_stage0(cfg, lim, tag):
     res["base_rate"] = {f"{k[0]}x{k[1]}": float(np.mean(v[2] > 0)) for k, v in data.items()}
     n = sc["n_train"]
     for arm in [rc["arm"]]:
-        net = make_arm(cfg, arm, cfg["seed"]).to(dev)
+        net = make_arm(cfg, arm, cfg["seed"])
+        if rc.get("init"):                           # fine-tune a finished stage 0 net
+            import torch as _t
+            net.load_state_dict(_t.load(out / rc["init"], map_location="cpu"))
+        net.to(dev)
         res["params"] = sum(p.numel() for p in net.parameters())
-        opt = Optim(net, sc["lr"], sc["steps"], cfg.get("optim", {}))
+        steps = rc.get("steps", sc["steps"])
+        opt = Optim(net, sc["lr"] * rc.get("lr_scale", 1.0), steps, cfg.get("optim", {}))
         best = (-1.0, None, None)
         np_rng = np.random.default_rng(cfg["seed"])
         sizes = [wh for wh in data if f"{wh[0]}x{wh[1]}" in rc["train_sizes"]]
@@ -161,7 +166,9 @@ def cmd_stage0(cfg, lim, tag):
 
         log = []
         net.train()
-        for step in range(1, sc["steps"] + 1):
+        log.append({"step": 0, "loss": None, "val": validate()})
+        print(f"stage0 {tag}: {log[-1]}", flush=True)
+        for step in range(1, steps + 1):
             c, X, Y = data[sizes[step % len(sizes)]]
             idx = np_rng.integers(0, n, sc["batch"])
             xb = X[idx]
@@ -184,6 +191,7 @@ def cmd_stage0(cfg, lim, tag):
                     print(f"stage0 {tag}: curriculum switch to 10x7 at step {step}", flush=True)
         res.update(run=rc, log=log, switched=switched, best_step=best[1])
         torch.save(best[2], out / f"stage0_{tag}_best.pt")
+        torch.save(best_state(net), out / f"stage0_{tag}_final.pt")
         res_path.write_text(json.dumps(res, indent=1))
         del net, opt
         torch.cuda.empty_cache()
@@ -260,7 +268,8 @@ def cmd_train(cfg, lim):
             log, acc, t0 = [], 0.0, time.time()
             net.train()
             for step in range(1, tc["steps"] + 1):
-                b = sizes[step % len(sizes)]
+                cur = tc.get("curriculum")           # {"5x5": n}: 5x5 only for n steps, then 10x7 only
+                b = sizes[step % len(sizes)] if not cur else ("5x5" if step <= cur["5x5"] else "10x7")
                 codec, X, M = par[b][0]
                 idx = rng.integers(0, len(X), tc["batch"])
                 x, m = parity_hand.augment(rng, codec, X[idx], M[idx], on=not graph)
@@ -280,7 +289,7 @@ def cmd_train(cfg, lim):
                                 "seconds": time.time() - t0})
                     acc = 0.0
                     print(f"{name}: {log[-1]}", flush=True)
-                    mv = float(np.mean(list(val.values())))
+                    mv = val[tc["select_on"]] if tc.get("select_on") else float(np.mean(list(val.values())))
                     if mv > best[0]:
                         best = (mv, step, best_state(net))
             net.cpu()
@@ -364,8 +373,11 @@ def main() -> None:
     ap.add_argument("--config", default="configs/graph_hand.yaml")
     ap.add_argument("--steps", type=int, help="train: overrides train.steps")
     ap.add_argument("--run", default="v1", help="stage0: a key of stage0.runs")
+    ap.add_argument("--out", help="overrides out")
     a = ap.parse_args()
     cfg = load_config(ROOT / a.config)
+    if a.out:
+        cfg["out"] = a.out
     if a.steps:
         cfg["train"]["steps"] = a.steps
     (ROOT / cfg["out"]).mkdir(parents=True, exist_ok=True)
