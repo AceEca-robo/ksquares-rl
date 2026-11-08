@@ -159,8 +159,11 @@ results runs/graph_hand2/stage0_det_s*.json, log runs/graph_part4_det.log.
 
 - Result: 1 of 5 seeds reaches 95% on 10x7 (seed 5, at step 3500); seed 3 reaches 91%.
   Seeds 1, 2, 4 stay at chance on 10x7 (seeds 1, 4 also at chance on 5x5; seed 2 stuck at 76% on 5x5, as (a)).
-- In both successful seeds 10x7 clicks at 3500-4000, before the switch, while training on 5x5 only:
-  the 5x5 click carries over to 10x7 at once. The 10x7-only phase after 5500 adds nothing.
+- In both successful seeds 10x7 clicks at 3500-4000, before the switch. Correction (2026-11-08,
+  series 1): before the switch the runs alternate 5x5 and 10x7 every step (train_sizes both), not
+  5x5 only, so this is not transfer without 10x7 data. The 10x7-only phase after 5500 adds nothing.
+- Series 1 (docs/graph_s1.md): on 5x5 alone the same Gc and optimiser click in 5 of 5 seeds, so the
+  unreliability here likely comes from mixing the sizes, not from the optimiser.
 - After the click both validations are flat to 0.1% for 16000 steps though the 10x7 train loss
   is not zero (0.08-0.44): the outputs look saturated. Not checked further.
 - So the 99% of the first stage 0 (b) run was a lucky draw, not a property of the config: whether the

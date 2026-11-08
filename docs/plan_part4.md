@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Nothing in it has been run yet.
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -51,7 +51,8 @@ Goal: a recipe with which Gc reaches 95% on 5x5 validation in 5 of 5 seeds.
 - Protocol: configs/graph_s1.yaml, scripts/graph_s1.py; R1 is chosen by the rule
   written in the config (a factor joins if its click share is above B's; in a
   group of exclusive factors the higher share, then the lower median step).
-- Baseline B: stage 0 (b) as run on 2026-11-08 (tanh V, MSE, lr 5e-4, cosine,
+- Baseline B: the optimiser of stage 0 (b) of 2026-11-08 (note: (b) alternated 5x5 and 10x7
+  before its switch; B is 5x5 only) (tanh V, MSE, lr 5e-4, cosine,
   clip 1.0, batch 128).
 - Factors, one at a time against B (each variant = B with one change):
 
