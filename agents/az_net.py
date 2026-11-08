@@ -379,7 +379,8 @@ def make_net(cfg: dict):
     if n.get("arch") == "graph":
         from agents.graph_net import GraphNet
 
-        return GraphNet(n["layers"], n["width"], n.get("pool", 16), n.get("segments", True))
+        return GraphNet(n["layers"], n["width"], n.get("pool", 16), n.get("segments", True),
+                        n.get("v_out", "tanh"), n.get("readout_norm", False), n.get("readout_init"))
     if n.get("arch") == "dot2":
         gp = n.get("gpool_blocks", (2, 4))
         return AZNet2(n["blocks"], n["channels"], n.get("score_head", True), gp if gp == "all" else tuple(gp),

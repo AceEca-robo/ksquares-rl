@@ -1,0 +1,46 @@
+# Part 4, series 1 of docs/plan_part4.md (scripts/graph_s1.py): reliable training of Gc
+# on stage 0, 5x5 only. Protocol fixed before the first run (2026-11-08); a change = a new series.
+data_seed: 4100                  # stage 0 boards, the same for every run
+device: cuda
+out: runs/graph_s1
+arm: configs/graph_gc.yaml
+n_train: 20000                   # 5x5, random safe-move playouts to the end of the safe lines
+n_val: 2000                      # 5x5 and 10x7 (10x7 logged only)
+steps: 18000                     # timing run 2026-11-08: B, 2000 steps in 65 s on G16 -> 18500 per 10 min; the same in every variant
+log_every: 250
+pass_acc: 95.0                   # click: first 5x5 validation >= this
+hold_acc: 90.0                   # every later log >= this on 5x5
+sat: 0.99                        # |V| above this counts as saturated
+
+limits: {gpu_memory_fraction: 0.4, min_available_gb: 12, cpu_threads: 2}
+
+base:                            # B = stage 0 (b) of 2026-11-08
+  v_out: tanh                    # tanh | linear
+  loss: mse                      # mse | sign (logistic on the raw V) | clip (MSE on clip(V, -1, 1))
+  readout_init: null             # std of the last V layer, bias 0
+  readout_norm: false
+  lr: 0.0005
+  warmup: 0.0                    # share of steps with linear lr warm-up, then cosine
+  batch: 128
+  clip: 1.0
+  cosine: true
+
+variants:                        # each = B with one change
+  B: {}
+  V-sign: {v_out: linear, loss: sign}
+  V-clip: {v_out: linear, loss: clip}
+  init: {readout_init: 0.001}
+  lr1e-4: {lr: 0.0001}
+  lr1e-3: {lr: 0.001}
+  warmup: {warmup: 0.05}
+  norm: {readout_norm: true}
+  b64: {batch: 64}
+  b512: {batch: 512}
+seeds: [1, 2, 3, 4, 5]
+
+r1:                              # combination, run after the 50 runs on new seeds
+  seeds: [6, 7, 8, 9, 10]
+  # A factor joins R1 if its click share is above B's. Groups that exclude each other
+  # (V-sign / V-clip, lr1e-4 / lr1e-3, b64 / b512): the higher share, then the lower
+  # median click step, then the first listed. No factor above B: R1 = B.
+  groups: [[V-sign, V-clip], [init], [lr1e-4, lr1e-3], [warmup], [norm], [b64, b512]]

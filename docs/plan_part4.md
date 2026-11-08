@@ -1,246 +1,192 @@
 Goal of part 4: does a graph network generalise the middle game where the convolution did not?
 
-# Part 4 plan: a graph network for Dot
+# Part 4 plan: a graph network for Dot, as a research plan
 
-Status: agreed 2026-11-07. Stage 0 and (i) run first, overnight on G16.
+Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
+(docs/graph_hand.md). Nothing in it has been run yet.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
-## Why
+## Rules for every series
 
-Part 3 left this:
+- The protocol of a series (configs, seeds, steps, metrics, criterion) is fixed
+  in this file and committed before the first run. It does not change during
+  the series. Any change, including "one more seed" or "more steps", is a new
+  series with its own number and its own entry here.
+- Deterministic mode in every run: `torch.use_deterministic_algorithms(True)`,
+  cudnn deterministic, fixed random / numpy / CPU / GPU seeds. A series runs on
+  one machine only (determinism does not hold across GPUs).
+- Seeds are fixed in the config. Seed changes net init and batches; the data
+  seed stays 4100 within a series.
+- All runs are reported, including failed ones. The probes are read once, after
+  training, and never used for selection.
+- Limits (CLAUDE.md, user 2026-11-07): GPU memory <= 40%, free RAM >= 12 GB, nice,
+  runs over 10 minutes in tmux.
 
-- The hand generalises late parity (a2: raw 10x7 probe 87.5%), not the middle
-  game: 80 rout mistakes held out 2/24 -> 6/24, p 0.14; set mid held out
-  (decisive) 86.9 -> 90.5%, p 0.059. Neither passed the rule.
-- Search carries the play: MCTS stays at 86-100% where the hand falls to
-  53-85% (15-18 safe lines).
-- Fine-tuning that moved V damaged play (b1, b2: routs 42-46 of 200, base 11).
+## What is known (from the first plan, docs/graph_hand.md)
 
-The question: is the limit the representation? Part 3 (c) asked for a graph
-only if b2 moved the probe and b1 did not. That evidence is weak: b2 82.6
-[78-86] vs b1 78.0% overlap, and a3 showed the chain planes add nothing to the
-head over a1. So this part starts with cheap checks and stops early.
+- Gc can learn dots + long chains mod 2 on settled positions, but not reliably:
+  config (b), 5 deterministic seeds, 5x5 clicks in 2 of 5; 10x7 >= 95% in 1 of 5.
+- When it clicks, 10x7 clicks at the same step while training on 5x5 only
+  (3500-4000): the transfer comes for free, the 10x7 phase adds nothing.
+- After the click both validations are flat to 0.1% for 16000 steps while the
+  train loss is not zero: V (tanh) looks saturated. Not checked.
+- (i) with the curriculum: no arm above 65% on 10x7 validation, probe 10x7
+  C 68.9 / C+h 71.8 / Ga 70.4 / Gc 72.6% (3-seed means); Gc vs C+h p 0.90.
+  Seed picked by the single best validation; Ch s3's best point was before the
+  switch, so it was a 5x5-only net.
 
-## 0. Facts measured for this plan (2026-11-06, this machine)
+So the open problem comes first: training is a lottery. Until it is not, every
+comparison between arms measures luck.
 
-Throwaway benchmark, RTX 4060 Laptop 8 GB, not in the repo.
+## Series 1: reliable training of the graph net (stage 0, 5x5 only)
 
-| item | number |
-|---|---:|
-| AZNet2 with Evaluator, 10x7, batch 64 (encoding included) | 28k positions/s |
-| Prototype graph net, 8 layers, width 110, 0.70M, no feature extraction | 7.0k positions/s |
-| The same, 12 layers, width 90, 0.70M | 5.6k positions/s |
-| sim/chains.py analyse, Python | 35 us per position |
-| chain_solver.graph on random positions with 30-90 safe moves played | 60 of 300 parsed |
+Goal: a recipe with which Gc reaches 95% on 5x5 validation in 5 of 5 seeds.
 
-The prototype is unoptimised and its width is not the final one (0.5M = width
-about 93 at 8 layers). Expect a graph net 2-4x slower than AZNet2.
+- Task: stage 0 target (sign of dots + long chains mod 2, seen from the mover),
+  settled positions from random safe-move playouts, 20000 train / 2000 val, 5x5
+  only. 10x7 validation is logged but plays no role here.
+- Steps: 18000 per run, the same in every variant (b64 / b512 included). Fixed
+  from one timing run of B before the series (2000 steps in 65 s on G16, about 10
+  minutes per run; not counted). Validation every 250 steps.
+- Protocol: configs/graph_s1.yaml, scripts/graph_s1.py; R1 is chosen by the rule
+  written in the config (a factor joins if its click share is above B's; in a
+  group of exclusive factors the higher share, then the lower median step).
+- Baseline B: stage 0 (b) as run on 2026-11-08 (tanh V, MSE, lr 5e-4, cosine,
+  clip 1.0, batch 128).
+- Factors, one at a time against B (each variant = B with one change):
 
-Correction to the starting assumption: chain_solver.graph does not parse the
-board in general. It raises Unsettled on capturable boxes and on any line
-between two ends, so it needs the final board F of a settled position, and that
-never exists at 20-40 safe lines (docs/chain_solver.md). The general
-decomposition has to be new; the logic of Codec.chain_hint (vectorised, same
-chains as sim/chains.py) is the closer starting point.
+| variant | change |
+|---|---|
+| B | baseline |
+| V-sign | V linear, loss on the sign (logistic on the logit) |
+| V-clip | V linear, clipped to [-1, 1] in the loss (MSE on clip(v)) |
+| init | readout last layer initialised small (std 1e-3), bias 0 |
+| lr1e-4 | lr 1e-4 |
+| lr1e-3 | lr 1e-3 |
+| warmup | linear lr warm-up over the first 5% of steps, then cosine |
+| norm | readout sums divided by the node count of their kind |
+| b64 | batch 64 |
+| b512 | batch 512 |
 
-## 1. Board as a graph
+  10 variants x 5 seeds (1-5) = 50 runs.
+- Metrics per run: does 5x5 click (first val >= 95%), the step of the click,
+  holding >= 90% to the end, the 5x5 and 10x7 validation curves.
+- Freeze diagnosis: at every validation, a histogram of V before and after the
+  output nonlinearity on the 5x5 and 10x7 validation sets, and the share with
+  |v| > 0.99; gradient norm of the readout. Saturation is confirmed if, after
+  the click, the share > 0.9 and the readout gradient is near zero.
+- Combination: the factors that raise the click share go together into one
+  recipe R1, run on 5 new seeds (6-10). That is fixed now and is part of this
+  series. 5 runs.
+- Criterion, on the variants: click share first, the median click step second.
 
-Candidates:
-
-- **(a) Graph as it stands.** Box and line nodes, line-box incidence. Works at
-  every stage, and the topology is fixed per board size. Two defects: a chain of
-  9+ boxes (9% of chains on 10x7) needs 18+ rounds to be crossed, and plain
-  message passing (1-WL) cannot tell one 8-loop from two 4-loops, a difference
-  the chain count depends on.
-- **(b) Chain graph.** Chains and loops are nodes. Parity is nearly local, but
-  it is defined only late. Early the board is one blob, so (b) has to fall back
-  to (a) anyway.
-
-**Recommended: (c) = (a) plus one segment layer.** Keep (a) as the base and add
-segment nodes computed for the current board, not for the unknown final one:
-
-- A segment is a maximal run of link boxes (two undrawn sides), with its length,
-  kind (chain / loop), open ends (ground / junction / capturable) and count of
-  ground ends. Each junction box (3-4 undrawn sides) and each untouched region
-  stays in the base graph.
-- Middle game: no "potential chains" are predicted. A partial chain is a short
-  segment; a box with one drawn side is a box feature. A line carries: drawn,
-  safe, boxes it would give, position in its segment (end / middle). What will
-  form is left to the net, because predicting it needs the fight that the net
-  has to judge.
-- Safe lines need no separate nodes: they are line nodes with a flag, and the
-  fact that two safe lines spoil each other travels through their shared box.
-- The ground is a flag on lines, not one hub node. A hub would mix the whole
-  border and hide the effect of the global readout.
-- Not given as input: s, the long chain count, dots + long chains mod 2, any
-  solver value. b2 already tested "telling" the count. Here the net must add it
-  up. Otherwise arm (c) only repeats b2.
-
-**Move.** Always a score on the line node, with the line mask of today. MCTS
-priors, targets and the loss stay as they are, and all lines are covered at all
-stages. "Chain + which line" is rejected: it needs chains at every stage and a
-factorised target, and the difference inside a chain (the middle of a 2-chain,
-the end of a longer one) is given by the position feature.
-
-## 2. Architecture
-
-- GIN-style sum aggregation with residual MLPs. Parity needs counts, and GAT's
-  normalised attention loses them. GAT is not tried unless (i) asks for it.
-- Layer: boxes <-> lines, lines <-> segments, a global vector into every node.
-- 8 layers: segments already shorten long chains. 12 is the alternative tried in
-  stage (i) only.
-- Global readout: sums per node kind (segments by length class, junctions, safe
-  lines), then an MLP, for V and score. Sum, not mean: a mean cannot count.
-- Same parameters on every board size. 0.5M +-5%, the budget counted for the
-  CNN arm too.
-- LayerNorm, no BatchNorm: it removes the trap of part 3 (b) (log 2026-10-31).
-- **Own code on torch, no PyG.** Topology is fixed per size, and segments are
-  one id per line, padded to n_boxes. So there are no variable batches: fixed
-  edge lists, index_add / scatter_add, masks. It fits Evaluator's call
-  `boards -> (priors, values)`, so the C tree and az_mcts do not change. PyG adds
-  a dependency to install.sh and to torch 2.14 for nothing used here.
-- Segments are computed inside forward from the same planes as AZNet2 (torch,
-  on the GPU), so Evaluator and the trainers do not change. C (agents/csrc) only
-  if it takes over 20% of the time.
-
-## 3. Comparison protocol (the same for both networks)
-
-**Stage 0: capability, ~1 h.** Same data, target = sign of dots + long chains
-mod 2 on settled positions, seen from the mover. Positions: random safe-move
-playouts to the end of the safe lines, on 5x5 and 10x7. Pass: Gc >= 95% on
-positions from other games. If (c) cannot learn this directly, stop and fix the
-readout before anything else.
-Amended 2026-11-07 (user): the target of part 4 is 10x7, so stage 0 passes on
-10x7 alone (best point >= 95%, every later log >= 90%); "both sizes at once" is
-dropped. Passed by Gc with the 5x5 -> 10x7 curriculum (docs/graph_hand.md). (i)
-then uses the same curriculum for all four nets: judge 5x5 positions for 5500
-steps, then 10x7 only; best point by 10x7 validation.
-
-**(i) From scratch on the judge's late positions.** Purpose: parity without
-search, no help from self-play.
-
-- Data: data/parity_hand_{5x5,10x7}.jsonl.gz, 5000 per size, loss as part 3
-  (mass on correct moves). Probes 1000 (5x5) and 304 (10x7) stay held out. 10%
-  of the training positions for validation.
-- Arms, 3 seeds each, same steps and batch: **C** AZNet2, **C+h** AZNet2 with
-  chain planes, **Ga** graph (a), **Gc** graph (c). C+h is added because Gc
-  contains chain features: without it the comparison mixes "graph" with "chain
-  view".
-- The arm for (ii) is chosen on validation. The probes are read once, after.
-- The test against C uses each arm's best-validation seed, McNemar on the same
-  probe positions. All seeds are reported.
-- Other reference points on the 10x7 probe: greedy 66%, Hard 64%, formula + one
-  ply 84% (on the hard judge sets), a2 87.5%.
-
-**(ii) Fine-tuning on mid and the 80 mistakes: the main experiment.**
-
-- A graph net needs a start comparable with Dot-2, and a net trained in (i)
-  has never seen a whole game. So: distil from Dot-2 on the dot2c replay buffers
-  (scripts/distill.py), policy and V. Entry check: raw Elo 10x7 >= 1400 and V sign
-  agreement with Dot-2 >= 90%. If it fails, (ii) is not comparable: stop and
-  report.
-- Fine-tune: Dot-2 and the distilled G from the same data, 4000 steps,
-  buffers mixed as in configs/mid_hand.yaml, the same split (seed, whole games:
-  1387 / 538, 199 decisive; mistakes 56 / 24). Two body variants for each net,
-  as a1 / a2 of part 3: **frozen** (body and V frozen, bitwise check) and
-  **lr0.1** (body and V at 0.1x lr, self-play V loss kept). The trainable heads
-  must have parameter counts within 10%: the CNN head may simply lack capacity
-  (docs/mid_hand.md, item 2).
-- One share fixed in advance as primary: **r30**. r10 is descriptive only.
-  Two body variants are two tests, so T1 and T2 use p < 0.025 each (Bonferroni);
-  T1 passes if either variant passes, and T2 is read for that variant.
-  lr0.1 also reports the V sign agreement with Dot-2 before and after: b1 / b2
-  showed that a moved V can damage play. (ii) plays no games, so that risk is
-  measured here and only matters for (iii).
-- Tests on set mid, decisive held out: **T1** G before -> after, one-sided sign
-  test, p < 0.05. **T2** G after vs CNN after, same test on the same positions.
-- The 24 mistakes are descriptive only. They are selected from Dot-2's errors,
-  so any other net starts higher (regression to the mean) and 24 has no power.
-- **Confirmation before (iii):** set mid is already read in part 3, and
-  docs/mid_hand.md asks for a new set fixed in advance. 2000 new positions at
-  10-15 safe lines, about 700 decisive, up to 16 h at 60 s and 2 workers; same T1.
-  Run only if T1 passes.
-
-Power: base is wrong on 26 of 199 held-out positions. p < 0.025 needs about 10 up
-/ 2 down or 6 up / 0 down, so a small gain will not pass; r30 on the CNN (11 / 4)
-did not reach even p < 0.05.
-
-**(iii) Self-play on 10x7, only if (ii) passes.** 10 rounds from the distilled
-and fine-tuned G, gate 55%, as dot2c. Then: Elo with MCTS and raw; routs on 1200
-games on the six seed sets of rout_mistakes (base 47, 77 losses); bridge 20 games
-vs the real Hard. Dot2c failed all six gates after gen 16, and b1 / b2 failed all
-ten: a failed gate here is the expected case, not news. If no candidate passes,
-the fine-tuned net is what is evaluated.
-
-## 4. Success and failure
-
-Success:
-
-- **Main:** T1 p < 0.05 on the old held-out, confirmed on the new set.
-- **Probe:** raw 10x7 > 80% from scratch, and above C on the same positions
-  (p < 0.05). Added to the threshold because 80% alone says little: a CNN
-  fine-tune got 87.5%, formula + one ply 84%.
-- **Play, full success:** routs <= 31 of 1200 vs base 47 (one-sided p < 0.05), raw
-  Elo 10x7 >= 1520, bridge no worse than 19-1, no rout.
-
-Failure and what it means:
-
-| result | reading | action |
+| result | reading | next |
 |---|---|---|
-| Stage 0 fails | readout defect, not a finding | fix, rerun |
-| Gc <= C+h in (i) | graph gives nothing beyond chain planes | stop |
-| Gc <= C in (i) | representation is not the limit even late | stop |
-| Distillation misses the entry check | comparison impossible at this cost; nothing about GNNs | stop, or decide on a 24 h from-scratch curriculum |
-| (i) passes, T1 fails | it sees late parity, not the middle game: the limit is the signal (too few, too hard positions), not the architecture | stop; state it as the answer of part 3 and 4 |
-| T1 passes, T2 does not | fine-tuning helps but no more than for the CNN | report, no (iii) |
-| T1 passes, confirmation fails | the first pass was noise or the used set | stop |
-| (ii) passes, routs do not fall | better hand, same play: routs come from V or search | report; next look at V |
+| R1 clicks in 5 of 5 (seeds 6-10) | recipe found | series 2 with R1 |
+| best is 3-4 of 5 | better, not reliable | new series 1b (combinations, more seeds); no series 2 yet |
+| no variant above 2 of 5 | not the optimiser: a readout / architecture defect | stop; redesign the readout, then a new series |
+| saturation confirmed and V-sign / V-clip fix it | the flat curves were tanh | V linear in all later series and in the CNN arms |
 
-No reruns with other shares or steps to pass a threshold.
+Runs: 55, 10 min each.
 
-## 5. Risks
+## Series 2: transfer to 10x7
 
-- **Speed.** 2-4x fewer positions per second. At MCTS 200 the app's move time
-  grows; the net's share of self-play sets the real cost. Measured first; if over
-  4x, move segment ids to C before (iii).
-- **Variable batches.** Avoided by fixed topology and padded segments. A batch
-  of mixed sizes is already split per size in Evaluator.
-- **Symmetries.** Lines and boxes carry no coordinates, so the graph net is
-  equivariant by construction: no augmentation, an advantage. Equivalent lines
-  get equal scores. CNN arms keep augmentation. Test: a reflected board gives
-  the reflected policy to fp32 error.
-- **Overfitting on 80.** It hits any net (12.5 -> 100% on train, as seen). The
-  mistakes are therefore a small share of a large mix, and they never decide.
-- **The graph is still most of the board early.** Part 3 flagged this. The
-  routs start at 7-20 safe lines, where segments exist, but before them (c) has
-  little over (a). Accepted: the tests are at 10-15 safe lines.
-- **Distilled knowledge.** G starts from Dot-2's beliefs, and a frozen body may
-  hide what a graph could learn. Hence the lr0.1 variant in (ii). (i) stays the
-  only test free of this.
-- **Selection.** Arms are chosen on validation, the primary test is fixed here.
+Goal: does the 5x5 skill carry to 10x7 without any 10x7 example, and does it
+for the convolution too.
 
-## 6. Time and where
+- 2a. Gc, recipe R1, 5x5 only, 10 seeds (11-20), 10x7 validation logged.
+  Metric: share of seeds with 10x7 >= 95% at the best 5x5 point and holding
+  >= 90% to the end.
+- 2b. Event curriculum: Gc, R1, the same 10 seeds; switch to 10x7 only when 5x5
+  validation >= 95% (not at a fixed step), then 10x7 to the end. Same metric.
+- 2c. Control: C (AZNet2) and C+h (AZNet2 + chain planes), recipe R1 where it
+  applies (the V and lr factors; the readout factors have no CNN analogue and
+  are left as in the CNN), 5x5 only, the same 10 seeds. Same metric.
+- Runs: 10 + 10 + 20 = 40.
 
-Machines: G16 (this one): RTX 4060 Laptop 8 GB, 30 GB RAM, 8 cores / 20 threads.
-G18: Ryzen 9 9955HX (16 cores / 32 threads), RTX 5070 8 GB, 32 GB RAM, Windows, no
-Linux; WSL2 not installed, CUDA in it not checked. The plan runs on G16; G18 is the
-reserve for (iii), if it comes to that.
-
-Overnight limits (user, 2026-11-07): workers <= 2, judge <= 2, nice, GPU memory 40%
-(load not limited),
-free memory >= 12 GB. Runs over 10 minutes go in tmux.
-
-| step | machine | time, estimate |
+| result | reading | next |
 |---|---|---|
-| Graph code, Evaluator path, tests | any | 1-2 days of work |
-| Stage 0 | G16 | 1 h |
-| (i) 12 runs + probes | G16 | one night |
-| Distillation + entry check | G16 | 2-4 h |
-| (ii) fine-tune and tests | G16 | 1 h |
-| Confirmation set | G16, 2 judge workers | up to 16 h |
-| (iii) 10 rounds | G16, G18 in reserve | 10-20 h (dot2c 25 min per round x 2-4, plus gating) |
-| Elo, 1200 games, bridge | G16 (bridge needs the built game) | 4 h |
+| 2a >= 8 of 10 | transfer is a property of Gc with R1 | series 3, 5x5 then 10x7 by event |
+| 2a <= 2 of 10 | 10x7 needs 10x7 data | series 3 with the event curriculum |
+| 2b above 2a (Fisher one-sided p < 0.05) | 10x7 phase helps | series 3 with the event curriculum |
+| 2b not above 2a | 10x7 phase adds nothing (as seen) | series 3 keeps the simpler of the two |
+| C / C+h transfer as often as Gc | transfer is not a graph property | report; series 3 still runs |
+| C / C+h do not transfer, Gc does | first evidence of a graph advantage | series 3 |
 
-Up to the verdict of (ii): about 2 days of machine time at most. With (iii):
-about 4. Reading the first part only: stage 0 + (i) fit in one night.
+## Series 3: parity probe on real positions (the former (i))
 
+Goal: does the graph see late parity better than the convolution with chain
+planes, on judged positions.
+
+- Data and loss as before: data/parity_hand_{5x5,10x7}.jsonl.gz, 5000 per size,
+  loss -log(mass on the correct moves), 10% validation; probes 1000 (5x5) and
+  304 (10x7) held out.
+- Arms C, C+h, Ga, Gc, recipe R1, curriculum as chosen by series 2, 5 seeds each
+  (1-5): 20 runs, 30000 steps.
+- Best point by 10x7 validation, and only after the switch to 10x7 (a best point
+  before it is not admitted; the lesson of Ch s3). Logged every 500 steps.
+- Test per pair (Gc-C, Gc-C+h, Ga-C, Gc-Ga), on the 10x7 probe:
+  - all 25 seed pairs, McNemar each, descriptive;
+  - primary: bootstrap over seeds and positions (10000 resamples: seeds drawn
+    with replacement within each arm, positions with replacement, the same
+    positions for both arms), difference of mean accuracy; one-sided 95% bound.
+  Gc-C+h is the primary pair; the other three are secondary.
+- Runs: 20; then probes once.
+
+| result | reading | next |
+|---|---|---|
+| Gc - C+h lower bound > 0 and Gc probe > 80% | graph adds something beyond chain planes, late | series 4 |
+| Gc - C+h lower bound > 0, probe <= 80% | a small gain, still weak | series 4, report it as weak |
+| Gc <= C+h (bound includes 0) | graph gives nothing beyond chain planes late | stop part 4 |
+| Gc <= C | representation is not the limit even late | stop part 4 |
+
+## Series 4: middle game (the former (ii))
+
+Goal: does the graph generalise the middle game where the convolution did not.
+Only if series 3 says "series 4".
+
+- Start: distil Gc and C+h from Dot-2 on the dot2c replay buffers
+  (scripts/distill.py), policy and V; C = Dot-2 itself. Entry check for each
+  distilled net: raw Elo 10x7 >= 1400 and V sign agreement with Dot-2 >= 90%. If
+  one fails, series 4 is not comparable: stop and report.
+- Fine-tune on mid + the 80 rout mistakes, buffers mixed as in
+  configs/mid_hand.yaml, 4000 steps, the same split (whole games: 1387 / 538, 199
+  decisive held out; mistakes 56 / 24). Two variants for each of Gc, C, C+h:
+  **frozen** (body and V frozen, bitwise check) and **lr0.1** (body and V at 0.1x
+  lr, self-play V loss kept). Trainable heads within 10% in parameter count.
+  Primary share r30.
+- Tests on set mid, decisive held out, one-sided sign test:
+  **T1** Gc before -> after; **T2** Gc after vs C after; **T3** Gc after vs C+h
+  after. Two variants = two tests: p < 0.025 each (Bonferroni, overall p < 0.05).
+  The 24 mistakes are descriptive only.
+- Confirmation: 2000 new positions at 10-15 safe lines (~700 decisive), fixed in
+  advance; same T1. Only if T1 passes.
+- Runs: 2 distillations, 2 entry checks, 6 fine-tunes, tests; confirmation set.
+
+| result | reading | next |
+|---|---|---|
+| distillation misses the entry check | comparison impossible at this cost | stop, or a new series from scratch |
+| T1 fails | late parity, not the middle game: the limit is the signal, not the architecture | stop; answer of parts 3 and 4 |
+| T1 passes, T2 / T3 do not | fine-tuning helps, no more than for the CNN | report, stop |
+| T1, T2, T3 pass, confirmation fails | the first pass was noise or the used set | stop |
+| all pass, confirmed | the graph generalises the middle game | self-play on 10x7 as a new series (former (iii)), planned then |
+
+## Time
+
+Measured on G16 (RTX 4060 Laptop 8 GB, limits above): stage 0 (b) 20000 steps
+~30 min (mostly the 10x7 phase); (i) 30000 steps C 10, C+h 10, Ga 14, Gc 19 min;
+CNN distillation 30k steps 27 min. G18 (RTX 5070, Ryzen 9 9955HX) is not
+measured and has no Linux: WSL2 + CUDA setup 0.5-1 day, then by spec about
+1.5x G16 on the GPU (estimate). Since a series stays on one machine, G18 can
+only take whole series.
+
+| series | code to write | runs | G16 | G18 (estimate) |
+|---|---|---:|---:|---:|
+| 1 | V-linear, readout init / norm, warm-up, histograms, 5x5-only stage 0: 0.5 day | 55 x 10 min | 9 h | 6 h |
+| 2 | event switch, CNN in stage 0: 2 h | 40 | 2a 2 h, 2b 5 h, 2c 3.5 h = 10.5 h | 7 h |
+| 3 | seed bootstrap, best-after-switch: 2 h | 20 + probes | 5 h | 3.5 h |
+| 4 | graph distillation path: 0.5-1 day | 2 distil + 6 fine-tunes + set | distil 2-4 h, checks 1 h, fine-tune 1 h, confirmation up to 16 h = 20-22 h | 14-15 h (the judge is CPU, faster on 16 cores) |
+
+Total machine time to the end of series 4: about 45 h on G16 (4-5 nights), about
+30 h on G18 after its setup. With the code: about one week of calendar time if
+every series goes on; stops are likely after series 1 or 3, at about 2-3 days.

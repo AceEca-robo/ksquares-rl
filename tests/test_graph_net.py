@@ -72,3 +72,23 @@ def test_budget(cfg):
 
     n = sum(p.numel() for p in make_net(load_config(cfg)).parameters())
     assert 475_000 <= n <= 525_000, n
+
+
+def test_series1_options():
+    """v_out linear returns the raw V (= v_pre), tanh its tanh; readout_init
+    small gives a near-zero V at start; readout_norm keeps shapes."""
+    rng = random.Random(3)
+    c = Codec(5, 5, 12)
+    x = torch.from_numpy(c.encode_boards([random_board(5, 5, n, rng) for n in (5, 20, 40)]))
+    for kw in ({}, {"v_out": "linear"}, {"readout_norm": True}, {"readout_init": 1e-3}):
+        torch.manual_seed(0)
+        net = GraphNet(2, 16, 4, **kw).eval()
+        with torch.no_grad():
+            p, v, s = net(x)
+        assert v.shape == (3,) and p.shape[0] == 3
+        if kw.get("v_out") == "linear":
+            assert torch.equal(v, net.v_pre)
+        else:
+            assert torch.allclose(v, torch.tanh(net.v_pre))
+        if "readout_init" in kw:
+            assert v.abs().max() < 0.05

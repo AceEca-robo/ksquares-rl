@@ -55,11 +55,14 @@ def _pad(x: torch.Tensor) -> torch.Tensor:
 class Pool(nn.Module):
     """Sums per node kind -> one vector per board."""
 
-    def __init__(self, d: int, q: int, kinds: int):
+    def __init__(self, d: int, q: int, kinds: int, norm: bool = False):
         super().__init__()
         self.q = nn.ModuleList([nn.Linear(d, q) for _ in range(kinds)])
+        self.norm = norm                                   # divide each sum by its node count (+1)
 
     def forward(self, hs):
+        if self.norm:
+            return torch.cat([(q(h) * m).sum(1) / (1 + m.sum(1)) for q, (h, m) in zip(self.q, hs)], 1)
         return torch.cat([(q(h) * m).sum(1) / POOL_SCALE for q, (h, m) in zip(self.q, hs)], 1)
 
 
@@ -104,8 +107,14 @@ class GraphLayer(nn.Module):
 
 
 class GraphNet(nn.Module):
-    def __init__(self, layers: int = 8, width: int = 93, pool: int = 16, segments: bool = True):
+    def __init__(self, layers: int = 8, width: int = 93, pool: int = 16, segments: bool = True,
+                 v_out: str = "tanh", readout_norm: bool = False, readout_init: float | None = None):
+        """v_out "tanh" (default) or "linear" (the raw V; the loss decides how to
+        bound it). readout_norm: final readout sums per node count. readout_init:
+        std of the last V layer's weights, bias 0 (None: torch default)."""
         super().__init__()
+        self.v_out = v_out
+        self.v_pre = None                                  # last raw V, for the series 1 histograms
         self.planes = N_PLANES_2
         self.segments = segments
         d = width
@@ -116,10 +125,14 @@ class GraphNet(nn.Module):
             self.e_seg = nn.Linear(SEG_FEATS, d)
         self.layers = nn.ModuleList([GraphLayer(d, pool, segments) for _ in range(layers)])
         kinds = 6 if segments else 3
-        self.readout = Pool(d, pool, kinds)
+        self.readout = Pool(d, pool, kinds, readout_norm)
         self.p_out = _mlp(2 * d, d, 1)
         self.v_fc = nn.Sequential(nn.Linear(d + kinds * pool, d), nn.ReLU(), _mlp(d, d, 1))
         self.s_fc = nn.Sequential(nn.Linear(d + kinds * pool, d), nn.ReLU(), _mlp(d, d, 1))
+        if readout_init is not None:
+            last = self.v_fc[2][2]
+            nn.init.normal_(last.weight, std=readout_init)
+            nn.init.zeros_(last.bias)
         self._topo = {}
 
     def topo(self, rows: int, cols: int) -> Topology:
@@ -224,4 +237,6 @@ class GraphNet(nn.Module):
         g = s["g"]
         p = self.p_out(torch.cat([s["line"], g[:, None].expand(-1, t.n_lines, -1)], 2)).squeeze(2)
         r = torch.cat([g, self.readout(kinds(s))], 1)
-        return p, torch.tanh(self.v_fc(r)).squeeze(1), self.s_fc(r).squeeze(1)
+        v = self.v_fc(r).squeeze(1)
+        self.v_pre = v.detach()
+        return p, (torch.tanh(v) if self.v_out == "tanh" else v), self.s_fc(r).squeeze(1)
