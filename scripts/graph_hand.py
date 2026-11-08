@@ -52,6 +52,22 @@ class Limits:
         raise RuntimeError("no MemAvailable")
 
 
+def set_deterministic(seed):
+    """Deterministic torch kernels and fixed CPU / GPU / numpy / random seeds."""
+    import os
+
+    import torch
+
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+
 def make_arm(cfg, arm, seed):
     import torch
 
@@ -138,7 +154,10 @@ def cmd_stage0(cfg, lim, tag):
     res["base_rate"] = {f"{k[0]}x{k[1]}": float(np.mean(v[2] > 0)) for k, v in data.items()}
     n = sc["n_train"]
     for arm in [rc["arm"]]:
-        net = make_arm(cfg, arm, cfg["seed"])
+        seed = rc.get("seed", cfg["seed"])          # data stay on cfg["seed"]; init and batches on this
+        if rc.get("deterministic"):
+            set_deterministic(seed)
+        net = make_arm(cfg, arm, seed)
         if rc.get("init"):                           # fine-tune a finished stage 0 net
             import torch as _t
             net.load_state_dict(_t.load(out / rc["init"], map_location="cpu"))
@@ -147,7 +166,7 @@ def cmd_stage0(cfg, lim, tag):
         steps = rc.get("steps", sc["steps"])
         opt = Optim(net, sc["lr"] * rc.get("lr_scale", 1.0), steps, cfg.get("optim", {}))
         best = (-1.0, None, None)
-        np_rng = np.random.default_rng(cfg["seed"])
+        np_rng = np.random.default_rng(seed)
         sizes = [wh for wh in data if f"{wh[0]}x{wh[1]}" in rc["train_sizes"]]
         switched = None
 
@@ -169,6 +188,8 @@ def cmd_stage0(cfg, lim, tag):
         log.append({"step": 0, "loss": None, "val": validate()})
         print(f"stage0 {tag}: {log[-1]}", flush=True)
         for step in range(1, steps + 1):
+            if rc.get("switch_at") and step == rc["switch_at"] + 1:
+                switched, sizes = rc["switch_at"], [(10, 7)]   # fixed curriculum switch
             c, X, Y = data[sizes[step % len(sizes)]]
             idx = np_rng.integers(0, n, sc["batch"])
             xb = X[idx]
@@ -185,7 +206,7 @@ def cmd_stage0(cfg, lim, tag):
                 m = min(log[-1]["val"].values())
                 if m > best[0]:
                     best = (m, step, best_state(net))
-                if rc.get("curriculum") and switched is None and log[-1]["val"]["5x5"] >= sc["pass_acc"]:
+                if rc.get("curriculum") and not rc.get("switch_at") and switched is None and log[-1]["val"]["5x5"] >= sc["pass_acc"]:
                     switched = step                  # 5x5 has clicked: 10x7 only from here
                     sizes = [(10, 7)]
                     print(f"stage0 {tag}: curriculum switch to 10x7 at step {step}", flush=True)

@@ -130,3 +130,48 @@ Best-validation seed of each arm, McNemar on the 10x7 probe (positions only the 
 - Mean 10x7 probe over 3 seeds: C 68.9, C+h 71.8, Ga 70.4, Gc 72.6%. No arm reaches 80%.
 - Reading by the plan: Gc > C (p < 0.05) but not over C+h, and the probe is below
   80%: the row "Gc <= C+h in (i): graph gives nothing beyond chain planes -> stop".
+
+## Stage 0 (b) reproducibility, deterministic, 5 seeds (2026-11-08)
+
+Config (b): Gc, judge-free stage 0 data (same 20000 + 2000 boards per size, data seed 4100),
+5x5 only to step 5500 (fixed switch), then 10x7 only, 20000 steps. Deterministic mode:
+`torch.use_deterministic_algorithms(True)`, cudnn deterministic, fixed random / numpy / CPU / GPU
+seeds = the run seed (net init and batches). Runs `det_s1`..`det_s5` (configs/graph_hand.yaml),
+results runs/graph_hand2/stage0_det_s*.json, log runs/graph_part4_det.log.
+
+10x7 validation (%) by step:
+
+| seed | 0 | 2k | 4k | 6k | 8k | 10k | 12k | 14k | 16k | 18k | 20k |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 48 | 52 | 52 | 48 | 52 | 48 | 52 | 48 | 52 | 52 | 52 |
+| 2 | 49 | 52 | 53 | 53 | 48 | 48 | 53 | 53 | 53 | 53 | 53 |
+| 3 | 51 | 52 | 91 | 91 | 91 | 91 | 91 | 91 | 91 | 91 | 91 |
+| 4 | 48 | 48 | 48 | 48 | 48 | 48 | 52 | 48 | 48 | 48 | 48 |
+| 5 | 48 | 51 | 96 | 96 | 96 | 96 | 96 | 96 | 96 | 96 | 96 |
+
+| seed | best 10x7 (step) | first 10x7 >= 95% | holds >= 90% to end | 5x5 at 5500 | 5x5 last |
+|---:|---:|---:|---|---:|---:|
+| 1 | 51.9 (4000) | never | - | 51.0 | 51.0 |
+| 2 | 52.8 (3000) | never | - | 76.1 | 76.1 |
+| 3 | 91.2 (4000) | never | yes (91.2 flat) | 100.0 | 100.0 |
+| 4 | 51.9 (500) | never | - | 51.0 | 49.0 |
+| 5 | 95.9 (4000) | 3500 | yes (95.9 flat) | 99.7 | 99.7 |
+
+- Result: 1 of 5 seeds reaches 95% on 10x7 (seed 5, at step 3500); seed 3 reaches 91%.
+  Seeds 1, 2, 4 stay at chance on 10x7 (seeds 1, 4 also at chance on 5x5; seed 2 stuck at 76% on 5x5, as (a)).
+- In both successful seeds 10x7 clicks at 3500-4000, before the switch, while training on 5x5 only:
+  the 5x5 click carries over to 10x7 at once. The 10x7-only phase after 5500 adds nothing.
+- After the click both validations are flat to 0.1% for 16000 steps though the 10x7 train loss
+  is not zero (0.08-0.44): the outputs look saturated. Not checked further.
+- So the 99% of the first stage 0 (b) run was a lucky draw, not a property of the config: whether the
+  net clicks depends on the seed (2 of 5), and when it does not click by 5500 the 10x7 phase does not rescue it.
+  Determinism within one seed was not tested (no repeat run, by the brief).
+
+### (i): best point before or after the switch
+
+In (i) (runs/graph_hand3, curriculum 5x5 to 5500, log every 2500, best by 10x7 validation) the best
+step is after the switch in 11 of 12 runs (7500-20000). Ch s3: best step 2500, before the switch, so
+its saved net and its probe numbers (val 10x7 59.8, probe 10x7 69.7%) are of a net trained on 5x5 only.
+The report (pick by sum of validations) picked Ch s3 for McNemar, so its row "Gc_s1 vs Ch_s3"
+compares against a 5x5-only net; the pick by 10x7 validation (Ch s1; Gc vs C+h, p 0.90) does not.
+The 3-seed mean probe of C+h (71.8%) includes Ch s3.

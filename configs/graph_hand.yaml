@@ -25,6 +25,12 @@ stage0:
     curr: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true}   # (b) 5x5 until 95%, then 10x7 only
     curr_r: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true}  # (b) again, keeps the final net
     mixft: {arm: Gc, train_sizes: [5x5, 10x7], init: stage0_curr_r_final.pt, lr_scale: 0.1, steps: 5000}  # both sizes?
+    # reproducibility of (b): fixed switch at 5500, deterministic kernels, 5 seeds (user, 2026-11-08)
+    det_s1: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true, switch_at: 5500, deterministic: true, seed: 1}
+    det_s2: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true, switch_at: 5500, deterministic: true, seed: 2}
+    det_s3: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true, switch_at: 5500, deterministic: true, seed: 3}
+    det_s4: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true, switch_at: 5500, deterministic: true, seed: 4}
+    det_s5: {arm: Gc, train_sizes: [5x5, 10x7], curriculum: true, switch_at: 5500, deterministic: true, seed: 5}
     deep: {arm: Gc16, train_sizes: [10x7]}                        # (c) range: 16 layers (first round only)
   n_train: 20000                 # per size, random safe-move playouts
   n_val: 2000
