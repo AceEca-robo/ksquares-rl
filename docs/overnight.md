@@ -1206,3 +1206,13 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - (i) with the 5x5 -> 10x7 curriculum, all four nets with clipping / cosine / best point: no click for any net; mean 10x7 probe C 68.9, C+h 71.8, Ga 70.4, Gc 72.6%. Gc beats C (p 0.041), not C+h (p 0.90). The convolutions did not click either, so "the school, not the graph" is not shown: nobody clicked.
 - Plan table: Gc <= C+h -> stop. docs/graph_hand.md.
 - Unclear: report.py picks seeds by the sum of both validations, this round's rule is 10x7; both are in graph_hand.md.
+
+## 2026-11-09: part 4, series 2 (transfer to 10x7)
+
+- Protocol rewritten by the user and committed before the runs (56daf69). Recipe B + V-sign by the user's decision; the series 1 rule gave R1 = B. GPU memory and worker limits lifted for this series only; 4 runs at once. 30 runs, about 7 h, none failed. Determinism alone vs in parallel checked on a short run: identical logs.
+- 2a (5x5 only): 0/10 on 10x7, best 86.1%. 2b (event curriculum): 7/10, all hold, Fisher vs 2a one-sided p 0.0016; 10x7 clicks 250-500 steps after the switch in 6 of 7, 2750 in one. Table row: 4-7 of 10 -> series 2'.
+- 2c: C never reached 95% on 5x5, so it never switched and never saw 10x7: the control does not answer its question. C+h 5/5 at step 250, because hint plane 15 is the target itself (found before the runs).
+- 2d: the 3 failed seeds are "does not find the rule" by the fixed rule: loss 0.69, gradient alive, V constant near 0. Post hoc: first loss after the switch >= 0.97 in those 3 and s4 (which recovered at 4500), <= 0.53 in the 6 quick ones.
+- A mistake on the way: a text replace first changed AZNet as well as AZNet2; 7 tests failed (3 from it, 4 test_app timeouts under load), fixed before the commit.
+- Unclear: whether the loss spike causes the collapse or only marks it; why C does not learn 5x5 in 20000 steps while Gc does in 500-1750.
+- Ideas for later: a series 2' with a softer switch (lower lr or a short mix of sizes at the switch); C+h without plane 15 as an honest hint control; C given longer or a 10x7 phase by a fixed step, so the control sees 10x7.

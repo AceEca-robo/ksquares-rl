@@ -433,3 +433,14 @@ Details and conclusions: docs/parity_hand.md. Base = dot2c gen 16.
 | base | 55.1 | 67.4 | 1695 | 1450 | 11 | 19-0-1 |
 | a1 (head only) | 65.0 | 77.0 | 1668 | 1467 | 10 | 19-1-0 |
 | a2 (body 0.1x lr) | 75.5 | 87.5 | 1633 | 1488 | 14 | 19-0-1 |
+
+## Part 4, series 2: transfer to 10x7 (2026-11-09)
+
+Details: docs/graph_s2.md. Recipe B + V-sign, 20000 steps, deterministic. Clicks on 10x7 (validation >= 95%).
+
+| run | data | seeds | 10x7 click | click and hold >= 90% |
+|---|---|---:|---:|---:|
+| 2a Gc | 5x5 only | 10 | 0/10 | 0/10 |
+| 2b Gc | 5x5 until 95%, then 10x7 | 10 | 7/10 | 7/10 |
+| 2c C | as 2b; never reached 95% on 5x5, no 10x7 phase | 5 | 0/5 | 0/5 |
+| 2c C+h | as 2b; hint plane 15 = target, not a test | 5 | 5/5 | 5/5 |
