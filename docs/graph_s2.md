@@ -95,5 +95,5 @@ Post hoc, read after the runs, not part of the protocol. Train loss over the fir
 
 - The split is clean: first loss <= 0.53 learns in 250-500 steps; first loss >= 0.97 collapses to V = constant at 0.69, and only 1 of 4 recovers. Hypothesis for series 2': overconfident wrong outputs at the switch cause a loss spike that pushes the net to the constant solution. 4 vs 6 runs, selected after seeing the data: to be tested, not a result.
 - 10x7 accuracy at the switch does not separate the groups (33-62% in both).
-- After the switch 5x5 is forgotten in most runs (last 5x5: 0.4-37% in 5 of 7 clicked runs, 91% in s7, down from 100%). Values far below 50% mean the sign of the rule is size-dependent. A net clicked on 10x7 is not a net for both sizes.
+- After the switch 5x5 is forgotten in most runs (last 5x5: 0.4-37% in 6 of 7 clicked runs, 91% in s7, down from 100%). Values far below 50% mean the sign of the rule is size-dependent. A net clicked on 10x7 is not a net for both sizes.
 - Seeds 1-5 were used to choose V-sign in series 1; 2b clicks there 4/5, on 6-10 3/5.
