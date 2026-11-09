@@ -261,9 +261,12 @@ class AZNet2(nn.Module):
     """Dot-2: ResNet body as Dot with global pooling, size-free heads."""
 
     def __init__(self, blocks: int = 6, channels: int = 64, score_head: bool = True,
-                 gpool_blocks=(2, 4), head_ch: int = 32, planes: int = N_PLANES_2, hint_head: bool = False):
+                 gpool_blocks=(2, 4), head_ch: int = 32, planes: int = N_PLANES_2, hint_head: bool = False,
+                 v_out: str = "tanh"):
         super().__init__()
         self.planes = planes
+        self.v_out = v_out                                 # "tanh" or "linear" (the raw V, as GraphNet)
+        self.v_pre = None
         if gpool_blocks == "all":
             gpool_blocks = range(blocks)
         self.stem = nn.Sequential(nn.Conv2d(planes, channels, 3, padding=1, bias=False),
@@ -311,7 +314,10 @@ class AZNet2(nn.Module):
             p = p + self.p_hint(torch.cat([x[:, N_PLANES_2:], mask], 1))
         p = self.p_out(p).flatten(1)[:, self.line_cells(x.shape[2], x.shape[3])]
         vf = global_pool(self.v_conv(y), mask)
-        v = torch.tanh(self.v_fc(vf)).squeeze(1)
+        v = self.v_fc(vf).squeeze(1)
+        self.v_pre = v.detach()
+        if self.v_out == "tanh":
+            v = torch.tanh(v)
         s = self.s_fc(vf).squeeze(1) if self.s_fc is not None else None
         return p, v, s
 
@@ -384,7 +390,8 @@ def make_net(cfg: dict):
     if n.get("arch") == "dot2":
         gp = n.get("gpool_blocks", (2, 4))
         return AZNet2(n["blocks"], n["channels"], n.get("score_head", True), gp if gp == "all" else tuple(gp),
-                      n.get("head_channels", 32), n.get("planes", N_PLANES_2), n.get("hint_head", False))
+                      n.get("head_channels", 32), n.get("planes", N_PLANES_2), n.get("hint_head", False),
+                      n.get("v_out", "tanh"))
     w, h = cfg["board"]
     return AZNet(w, h, n["blocks"], n["channels"], n.get("score_head", False))
 

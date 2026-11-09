@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md.
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 protocol fixed 2026-11-09.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -20,7 +20,7 @@ Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 - All runs are reported, including failed ones. The probes are read once, after
   training, and never used for selection.
 - Limits (CLAUDE.md, user 2026-11-07): GPU memory <= 40%, free RAM >= 12 GB, nice,
-  runs over 10 minutes in tmux.
+  runs over 10 minutes in tmux. Series 2 lifts the GPU memory and worker limits for itself only.
 
 ## What is known (from the first plan, docs/graph_hand.md)
 
@@ -92,27 +92,55 @@ Runs: 55, 10 min each.
 
 ## Series 2: transfer to 10x7
 
-Goal: does the 5x5 skill carry to 10x7 without any 10x7 example, and does it
-for the convolution too.
+Protocol rewritten by the user on 2026-11-09, before any run of it: configs/graph_s2.yaml,
+scripts/graph_s2.py. Replaces the earlier draft of this section (seeds 11-20, 2c without curriculum).
 
-- 2a. Gc, recipe R1, 5x5 only, 10 seeds (11-20), 10x7 validation logged.
-  Metric: share of seeds with 10x7 >= 95% at the best 5x5 point and holding
-  >= 90% to the end.
-- 2b. Event curriculum: Gc, R1, the same 10 seeds; switch to 10x7 only when 5x5
-  validation >= 95% (not at a fixed step), then 10x7 to the end. Same metric.
-- 2c. Control: C (AZNet2) and C+h (AZNet2 + chain planes), recipe R1 where it
-  applies (the V and lr factors; the readout factors have no CNN analogue and
-  are left as in the CNN), 5x5 only, the same 10 seeds. Same metric.
-- Runs: 10 + 10 + 20 = 40.
+Goal: does the 5x5 skill carry to 10x7 without any 10x7 example, does an event
+curriculum help, and does the convolution do the same at the same school.
+
+- Recipe: B + V-sign, lr of B (5e-4), cosine, clip 1.0, batch 128. This is the
+  user's decision: the rule of series 1 gave R1 = B, because V-sign's 5/5 was not
+  above B's 5/5. Note: V-sign clicked 5/5 and held, but its V does saturate by the
+  metric of series 1 (share |V| > 0.99 is 1.00 at the end of all five runs).
+- Limits lifted for this series only (user, 2026-11-09): GPU memory and workers are
+  not limited; 4 runs at once. Free RAM >= 12 GB, nice and tmux stay.
+- Data: seed 4100; 5x5 20000 train + 2000 val and 10x7 2000 val are those of
+  series 1; 10x7 20000 train is new, from the same stream. No judge in this series.
+- 20000 steps in total per run, validation of both sizes every 250 steps; deterministic.
+- 2a. Gc, 5x5 only, seeds 1-10. 10x7 is validation only.
+- 2b. Gc, seeds 1-10. Event curriculum: 5x5 until the first validation with
+  5x5 >= 95%, then 10x7 only to the end. A run that never reaches it stays on 5x5.
+  One cosine over the 20000 steps, not restarted at the switch.
+- 2c. Control: C and C+h, the same recipe (V linear, logistic on the sign, lr; the
+  readout factors have no CNN analogue) and the 2b curriculum, seeds 1-5. Symmetry
+  augmentation as in all CNN runs of part 4.
+- 2d. Diagnosis of the 2b runs without a 10x7 click. V histogram on 10x7 (raw, 20
+  bins) at the switch and at the end; readout gradient norm. Medians over the last
+  quarter of the logs. Rule: train loss < 0.3: fits the train set without the
+  rule. Otherwise readout gradient < 1e-3: frozen. Otherwise: does not find the
+  rule (gradient alive, loss not falling). A run that never switched: no 10x7 phase.
+- Seeds 1-5 are the seeds V-sign was chosen on in series 1 (user's choice of seeds
+  1-10), so the 5x5 click there is not an independent check. Transfer is.
+- Runs: 10 + 10 + 10 = 30.
+
+Definitions. Click on 10x7: some validation has 10x7 >= 95%. Hold: every later
+validation has 10x7 >= 90%. The share in the criterion counts clicks, as the
+question is worded; hold is reported next to it, and if counting click + hold
+would give another row of the table, the summary says so.
+Fisher: 2b vs 2a, one-sided (2b above 2a), clicks.
+"The convolutions click the same": C's share >= 2b's share - 0.2 and at least one
+C click; Fisher two-sided is reported, with 5 seeds it has little power.
+
+C+h is not a test of the school here: its hint plane 15 is the stage 0 target
+itself (agrees on 1000 of 1000 random positions on 5x5 and on 10x7, measured 2026-11-09). C+h clicking
+says only that the CNN can read a plane. The verdict on the school is taken on C alone.
 
 | result | reading | next |
 |---|---|---|
-| 2a >= 8 of 10 | transfer is a property of Gc with R1 | series 3, 5x5 then 10x7 by event |
-| 2a <= 2 of 10 | 10x7 needs 10x7 data | series 3 with the event curriculum |
-| 2b above 2a (Fisher one-sided p < 0.05) | 10x7 phase helps | series 3 with the event curriculum |
-| 2b not above 2a | 10x7 phase adds nothing (as seen) | series 3 keeps the simpler of the two |
-| C / C+h transfer as often as Gc | transfer is not a graph property | report; series 3 still runs |
-| C / C+h do not transfer, Gc does | first evidence of a graph advantage | series 3 |
+| 2b >= 8 of 10 | transfer works | series 3 |
+| 2b 4-7 of 10 | partly | series 2' (what gets in the way) |
+| 2b <= 3 of 10 | the graph does not transfer | stop with this conclusion |
+| C clicks the same as 2b | the school, not the graph | series 3 for comparison, also over the stop row |
 
 ## Series 3: parity probe on real positions (the former (i))
 
