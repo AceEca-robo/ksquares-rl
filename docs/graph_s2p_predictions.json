@@ -1,0 +1,102 @@
+{
+ "threshold": 0.75,
+ "runs_finished_when_written": [
+  11,
+  12,
+  13,
+  14,
+  15
+ ],
+ "predictions": [
+  {
+   "name": "b_Gc_s11",
+   "switch": 2000,
+   "first_loss": 1.046947074174881,
+   "threshold": 0.75,
+   "prediction": "collapses",
+   "written": 1794306062.4621189,
+   "val_10x7_now": 49.35
+  },
+  {
+   "name": "b_Gc_s12",
+   "switch": 750,
+   "first_loss": 0.8367419846057892,
+   "threshold": 0.75,
+   "prediction": "collapses",
+   "written": 1794305803.185861,
+   "val_10x7_now": 49.4
+  },
+  {
+   "name": "b_Gc_s13",
+   "switch": 750,
+   "first_loss": 0.5698296376466752,
+   "threshold": 0.75,
+   "prediction": "learns",
+   "written": 1794305847.0417724,
+   "val_10x7_now": 75.05
+  },
+  {
+   "name": "b_Gc_s14",
+   "switch": 500,
+   "first_loss": 0.4929637165186577,
+   "threshold": 0.75,
+   "prediction": "learns",
+   "written": 1794305790.3859975,
+   "val_10x7_now": 99.15
+  },
+  {
+   "name": "b_Gc_s15",
+   "switch": 1000,
+   "first_loss": 1.0446074882149696,
+   "threshold": 0.75,
+   "prediction": "collapses",
+   "written": 1794305963.647116,
+   "val_10x7_now": 49.45
+  },
+  {
+   "name": "b_Gc_s16",
+   "switch": 750,
+   "first_loss": 1.0357113025188447,
+   "threshold": 0.75,
+   "prediction": "collapses",
+   "written": 1794314508.5557396,
+   "val_10x7_now": 67.80000000000001
+  },
+  {
+   "name": "b_Gc_s17",
+   "switch": 1750,
+   "first_loss": 0.8819715817063115,
+   "threshold": 0.75,
+   "prediction": "collapses",
+   "written": 1794314852.6968927,
+   "val_10x7_now": 99.5
+  },
+  {
+   "name": "b_Gc_s18",
+   "switch": 1500,
+   "first_loss": 0.4226571059045964,
+   "threshold": 0.75,
+   "prediction": "learns",
+   "written": 1794314931.7435374,
+   "val_10x7_now": 99.8
+  },
+  {
+   "name": "b_Gc_s19",
+   "switch": 1500,
+   "first_loss": 0.6533589475579793,
+   "threshold": 0.75,
+   "prediction": "learns",
+   "written": 1794314981.3786998,
+   "val_10x7_now": 99.4
+  },
+  {
+   "name": "b_Gc_s20",
+   "switch": 1500,
+   "first_loss": 0.7660550165176392,
+   "threshold": 0.75,
+   "prediction": "collapses",
+   "written": 1794314988.6044915,
+   "val_10x7_now": 49.9
+  }
+ ]
+}
