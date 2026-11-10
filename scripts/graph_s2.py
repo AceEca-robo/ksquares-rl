@@ -94,7 +94,11 @@ def run_one(args):
             for k, (_, _, x, y) in sp.items():
                 pre = []
                 for i in range(0, len(x), 500):
-                    net(torch.from_numpy(x[i:i + 500, :planes]).to(dev))
+                    xv = x[i:i + 500, :planes]
+                    if zero:
+                        xv = xv.copy()
+                        xv[:, zero] = 0
+                    net(torch.from_numpy(xv).to(dev))
                     pre.append(net.v_pre.cpu().numpy())
                 pre = np.concatenate(pre)
                 bo = np.tanh(pre / 2)
@@ -105,15 +109,28 @@ def run_one(args):
         net.train()
         return res
 
+    # RL series 2' options (all off in series 2): soft switch, fixed switch step, zeroed input planes,
+    # first-loss prediction, final weights
+    mix, fixed, zero = pc.get("mix_steps", 0), pc.get("switch_at"), ac.get("zero_planes", [])
+
+    def train_size(step):
+        if switch is None or step > switch + mix:
+            return size
+        return "5x5" if step % 2 else "10x7"
+
     size, switch, acc_loss, t0 = "5x5", None, 0.0, time.time()
     log = [{"step": 0, "train_on": size, "val": validate()}]
     net.train()
     for step in range(1, steps + 1):
-        X, Y, _, _ = sp[size]
+        ts = train_size(step)
+        X, Y, _, _ = sp[ts]
         idx = np_rng.integers(0, len(X), r["batch"])
         xb = X[idx, :planes]
+        if zero:
+            xb = xb.copy()
+            xb[:, zero] = 0
         if not graph:
-            c = codecs[size]
+            c = codecs[ts]
             xb = augment(np_rng, c, xb.reshape(len(xb), planes, -1))[0].reshape(-1, planes, c.rows, c.cols)
         v = net(torch.from_numpy(xb).to(dev))[1]
         loss = F.binary_cross_entropy_with_logits(v, torch.from_numpy((Y[idx] > 0).astype(np.float32)).to(dev))
@@ -127,16 +144,25 @@ def run_one(args):
         if step % cfg["log_every"] == 0:
             g = math.sqrt(sum(float(p.grad.pow(2).sum()) for p in net.v_fc.parameters() if p.grad is not None))
             val = validate()
-            log.append({"step": step, "train_on": size, "loss": acc_loss / cfg["log_every"], "readout_grad": g,
+            log.append({"step": step, "train_on": "mix" if switch is not None and step <= switch + mix and mix else size, "loss": acc_loss / cfg["log_every"], "readout_grad": g,
                         "grad_total": total, "lr": sched.get_last_lr()[0], "val": val, "seconds": time.time() - t0})
             acc_loss = 0.0
-            if pc["curriculum"] and switch is None and val["5x5"]["acc"] >= cfg["pass_acc"]:
+            if pc.get("predict") and switch is not None and step == switch + cfg["log_every"]:
+                fl = log[-1]["loss"]
+                pred = {"name": name, "switch": switch, "first_loss": fl, "threshold": pc["predict"],
+                        "prediction": "learns" if fl < pc["predict"] else "collapses", "written": time.time(),
+                        "val_10x7_now": val["10x7"]["acc"]}
+                (ROOT / cfg["out"] / f"{name}.pred.json").write_text(json.dumps(pred))
+            if switch is None and (step == fixed if fixed else
+                                   pc["curriculum"] and val["5x5"]["acc"] >= cfg["pass_acc"]):
                 switch, size = step, "10x7"
             if step % (10 * cfg["log_every"]) == 0:
                 print(f"{name}: step {step} on {log[-1]['train_on']} 5x5 {val['5x5']['acc']:.1f} "
                       f"10x7 {val['10x7']['acc']:.1f} ({log[-1]['seconds']:.0f} s)", flush=True)
     res = {"part": part, "arm": arm, "seed": seed, "recipe": r, "steps": steps, "switch": switch, "log": log,
            **summary(cfg, log)}
+    if cfg.get("save_weights"):
+        torch.save(net.state_dict(), path.with_suffix(".pt"))
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(res))
     tmp.rename(path)

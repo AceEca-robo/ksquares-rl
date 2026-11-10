@@ -142,6 +142,56 @@ says only that the CNN can read a plane. The verdict on the school is taken on C
 | 2b <= 3 of 10 | the graph does not transfer | stop with this conclusion |
 | C clicks the same as 2b | the school, not the graph | series 3 for comparison, also over the stop row |
 
+## Series 2': what gets in the way of transfer
+
+Protocol set by the user on 2026-11-10 after series 2 (2b 7/10 on 10x7, row "series 2'"),
+committed before any run: configs/graph_s2p.yaml, scripts/graph_s2p.py (run loop of
+scripts/graph_s2.py with options that are off in series 2). Recipe, data, steps and
+validation are those of series 2. Limits lifted (user): GPU memory and workers not
+limited, 8 runs at once.
+
+- (g) first, no new training. 2b seeds whose last 5x5 is below 40% (s1, s2, s3, s4,
+  s8, s9) and the reference s7 (91%). Series 2 kept no weights, so these 7 runs are
+  reproduced bit-exact (series 2 is deterministic) to get the final weights; the
+  validation logs must equal the series 2 logs, otherwise (g) is reported on the
+  reproduced nets with that noted. On the 2000 5x5 validation positions: error share
+  by the number of long chains (0/1/2/3+), by their total length (0, 3-5, 6-8,
+  9-11, 12+) and by the number of loops (0/1/2+); agreement of the net's sign with
+  candidate rules "+1 iff (count % 2) == player" for counts of long chains (the
+  true rule), chains of 2+, all chains, chains of 1-2, loops, long chains + loops,
+  chains + loops, and with the player alone. Descriptive: no test.
+- (a) soft switch. Gc, seeds 1-10. After the event (5x5 >= 95%), 1000 steps of a
+  mix (batches alternate 5x5 / 10x7), then 10x7 only. Metrics: 10x7 click; hold
+  10x7 (every validation after the click >= 90%); hold 5x5 (every validation from
+  the end of the mix >= 90%); both (last validation >= 90% on both sizes).
+- (b) prediction from the first loss. Plain switch as 2b, new seeds 11-20. The mean
+  train loss of the first 250 steps after the switch is written with a prediction
+  as soon as it is known: below 0.75 (between 0.53 and 0.97 of series 2) "learns",
+  otherwise "collapses". The 10 predictions are committed as soon as all are known,
+  before the outcomes (docs/graph_s2p_predictions.json). Outcome "learns": 10x7
+  click within 1000 steps of the switch. Separation confirmed: Fisher one-sided
+  p < 0.05 on the 2x2 table; if all predictions fall in one class, not testable.
+- (c) controls. C with a fixed switch at step 5500 (5x5 until then whatever its
+  accuracy, then 10x7), seeds 1-5. C+h with plane 15 (the target) set to 0 in train
+  and validation, event switch, seeds 1-5.
+- Runs: 7 + 10 + 10 + 5 + 5 = 37. Report: docs/graph_s2p.md, four tables
+  ((g), (a), (b), (c)).
+
+| result | reading | next |
+|---|---|---|
+| (a) 10x7 clicks >= 8 of 10 | the soft switch fixes transfer | series 3, curriculum (a) |
+| (a) 4-7, (b) separation confirmed | the spike at the switch predicts the collapse | series 2'' aimed at the spike |
+| (a) 4-7, (b) not confirmed | partial transfer, cause not found | stop |
+| (a) <= 3 | the soft switch does not help | stop |
+| C fixed or C+h without plane 15 clicks >= 3 of 5 on 10x7 | the convolution learns it too | series 3 for comparison, over a stop row |
+
+Caveat found in the smoke test before the series (1500 steps, seed 1): C+h with plane 15
+zeroed reached 100% on 5x5 at step 500 and on 10x7 at 750. Plane 14 is the long chain
+count / 10 and plane 9 the mover, so the rule is still almost given. The arm is run as
+set; a C+h click is read as "the CNN reads plane 14", not as the school.
+
+Hold 5x5 and "both" are reported, not in the table: series 3 is judged on 10x7.
+
 ## Series 3: parity probe on real positions (the former (i))
 
 Goal: does the graph see late parity better than the convolution with chain

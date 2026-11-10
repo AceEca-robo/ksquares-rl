@@ -1,0 +1,46 @@
+# Part 4, series 2' of docs/plan_part4.md (scripts/graph_s2p.py, run loop of scripts/graph_s2.py).
+# Protocol fixed before the first run (user, 2026-11-10); a change = a new series.
+data_seed: 4100                  # the data of series 2, reused (runs/graph_s2/data.npz)
+device: cuda
+out: runs/graph_s2p
+n_train: 20000
+n_val: 2000
+steps: 20000
+log_every: 250
+pass_acc: 95.0
+hold_acc: 90.0
+sat: 0.99
+jobs: 8
+save_weights: true               # final state dict next to each run log
+
+# Limits lifted (user, 2026-11-10): GPU memory and workers not limited.
+limits: {gpu_memory_fraction: 1.0, min_available_gb: 8, cpu_threads: 2}
+
+recipe:                          # series 2 recipe, unchanged
+  v_out: linear
+  loss: sign
+  readout_init: null
+  readout_norm: false
+  lr: 0.0005
+  batch: 128
+  clip: 1.0
+  cosine: true
+
+arms:
+  Gc: {config: configs/graph_gc.yaml}
+  C: {net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true}}
+  Ch15: {net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true, planes: 17},
+         zero_planes: [15]}      # C+h with the target plane 15 set to 0 in train and val
+
+parts:
+  g: {arms: [Gc], curriculum: true, seeds: [1, 2, 3, 4, 7, 8, 9]}   # 2b reproduced for its weights; logs must equal series 2
+  b: {arms: [Gc], curriculum: true, predict: 0.75, seeds: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]}
+  a: {arms: [Gc], curriculum: true, mix_steps: 1000, seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+  cC: {arms: [C], curriculum: false, switch_at: 5500, seeds: [1, 2, 3, 4, 5]}
+  cCh: {arms: [Ch15], curriculum: true, seeds: [1, 2, 3, 4, 5]}
+
+prediction_window: 1000         # (b) outcome: 10x7 click within this many steps of the switch
+
+analysis:                        # (g)
+  low_5x5: 40.0                  # 2b seeds with last 5x5 below this
+  reference_seed: 7
