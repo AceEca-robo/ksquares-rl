@@ -19,7 +19,7 @@ import numpy as np
 
 from _common import ROOT, load_config
 
-from graph_hand import Limits, settled_boards, set_deterministic
+from graph_hand import CKPT_EVERY, Limits, load_checkpoint, save_checkpoint, settled_boards, set_deterministic, stop_requested
 from parity_hand import augment
 
 SIZES = {"5x5": (5, 5), "10x7": (10, 7)}
@@ -69,6 +69,8 @@ def run_one(args):
     path = ROOT / cfg["out"] / f"{name}.json"
     if path.exists():
         return name
+    if stop_requested(ROOT / cfg["out"]):
+        return None                          # series stopping: do not start new runs
     lim = Limits(cfg["limits"])
     dev, r, pc, steps = cfg["device"], cfg["recipe"], cfg["parts"][part], cfg["steps"]
     z = np.load(ROOT / cfg["out"] / "data.npz")
@@ -118,10 +120,17 @@ def run_one(args):
             return size
         return "5x5" if step % 2 else "10x7"
 
-    size, switch, acc_loss, t0 = "5x5", None, 0.0, time.time()
-    log = [{"step": 0, "train_on": size, "val": validate()}]
+    ckpt = ROOT / cfg["out"] / f"{name}.ckpt"
+    start, st = load_checkpoint(ckpt, net, opt, sched, np_rng)
+    if st:                                   # resume: loop state as saved at the checkpoint
+        size, switch, acc_loss, log = st["size"], st["switch"], st["acc_loss"], st["log"]
+        t0 = time.time() - st["seconds"]
+        print(f"{name}: resumed at step {start}", flush=True)
+    else:
+        size, switch, acc_loss, t0 = "5x5", None, 0.0, time.time()
+        log = [{"step": 0, "train_on": size, "val": validate()}]
     net.train()
-    for step in range(1, steps + 1):
+    for step in range(start + 1, steps + 1):
         ts = train_size(step)
         X, Y, _, _ = sp[ts]
         idx = np_rng.integers(0, len(X), r["batch"])
@@ -159,6 +168,13 @@ def run_one(args):
             if step % (10 * cfg["log_every"]) == 0:
                 print(f"{name}: step {step} on {log[-1]['train_on']} 5x5 {val['5x5']['acc']:.1f} "
                       f"10x7 {val['10x7']['acc']:.1f} ({log[-1]['seconds']:.0f} s)", flush=True)
+        if step % CKPT_EVERY == 0 and step < steps:
+            save_checkpoint(ckpt, step, net, opt, sched, np_rng,
+                            {"size": size, "switch": switch, "acc_loss": acc_loss, "log": log,
+                             "seconds": time.time() - t0})
+            if stop_requested(ROOT / cfg["out"]) or step == cfg.get("_stop_at"):
+                print(f"{name}: stopped at checkpoint {step}", flush=True)
+                return None
     res = {"part": part, "arm": arm, "seed": seed, "recipe": r, "steps": steps, "switch": switch, "log": log,
            **summary(cfg, log)}
     if cfg.get("save_weights"):
@@ -166,6 +182,7 @@ def run_one(args):
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(res))
     tmp.rename(path)
+    ckpt.unlink(missing_ok=True)
     print(f"{name}: switch {switch} click10 {res['click10']} hold10 {res['hold10']}", flush=True)
     return name
 
@@ -210,7 +227,10 @@ def cmd_run(cfg):
     jobs = [(cfg, part, arm, s) for part, pc in cfg["parts"].items() for s in pc["seeds"] for arm in pc["arms"]]
     with mp.get_context("spawn").Pool(cfg["jobs"], maxtasksperchild=1) as pool:
         for name in pool.imap_unordered(run_one, jobs):
-            print("done", name, flush=True)
+            if name:
+                print("done", name, flush=True)
+    if stop_requested(ROOT / cfg["out"]):
+        print("series stopped at checkpoints", flush=True)
 
 
 def fmt(x):

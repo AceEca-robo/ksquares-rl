@@ -68,6 +68,48 @@ def set_deterministic(seed):
     torch.cuda.manual_seed_all(seed)
 
 
+CKPT_EVERY = 500
+
+
+def stop_requested(out) -> bool:
+    """Series "stop" command: the file STOP in the run directory; runs exit at their next checkpoint."""
+    return (out / "STOP").exists()
+
+
+def save_checkpoint(path, step, net, opt, sched, np_rng, loop_state):
+    """Mid-run checkpoint: net, optimizer, lr schedule, step, torch/numpy/python RNG states and the
+    loop's own state; written to a temporary file and renamed, so a stop never leaves a torn file."""
+    import torch
+
+    ck = {"step": step, "net": net.state_dict(), "opt": opt.state_dict(), "sched": sched.state_dict(),
+          "torch_rng": torch.get_rng_state(),
+          "cuda_rng": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else [],
+          "np_rng": np_rng.bit_generator.state, "np_global": np.random.get_state(),
+          "py_rng": random.getstate(), "loop": loop_state}
+    tmp = path.with_name(path.name + ".tmp")
+    torch.save(ck, tmp)
+    tmp.replace(path)
+
+
+def load_checkpoint(path, net, opt, sched, np_rng):
+    """Restores what save_checkpoint wrote; returns (step, loop_state), or (0, None) without a checkpoint."""
+    import torch
+
+    if not path.exists():
+        return 0, None
+    ck = torch.load(path, map_location="cpu", weights_only=False)
+    net.load_state_dict(ck["net"])
+    opt.load_state_dict(ck["opt"])
+    sched.load_state_dict(ck["sched"])
+    torch.set_rng_state(ck["torch_rng"])
+    if ck["cuda_rng"]:
+        torch.cuda.set_rng_state_all(ck["cuda_rng"])
+    np_rng.bit_generator.state = ck["np_rng"]
+    np.random.set_state(ck["np_global"])
+    random.setstate(ck["py_rng"])
+    return ck["step"], ck["loop"]
+
+
 def make_arm(cfg, arm, seed):
     import torch
 

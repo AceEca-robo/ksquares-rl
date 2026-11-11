@@ -10,7 +10,7 @@ log_every: 250
 pass_acc: 95.0
 hold_acc: 90.0
 sat: 0.99
-jobs: 8
+jobs: 6
 save_weights: true               # final state dict next to each run log
 
 # Limits lifted (user, 2026-11-10): GPU memory and workers not limited.

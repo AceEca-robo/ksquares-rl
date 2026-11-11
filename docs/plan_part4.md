@@ -148,7 +148,7 @@ Protocol set by the user on 2026-11-10 after series 2 (2b 7/10 on 10x7, row "ser
 committed before any run: configs/graph_s2p.yaml, scripts/graph_s2p.py (run loop of
 scripts/graph_s2.py with options that are off in series 2). Recipe, data, steps and
 validation are those of series 2. Limits lifted (user): GPU memory and workers not
-limited, 8 runs at once.
+limited, 6 runs at once (8 ran out of GPU memory in the first minutes; restarted).
 
 - (g) first, no new training. 2b seeds whose last 5x5 is below 40% (s1, s2, s3, s4,
   s8, s9) and the reference s7 (91%). Series 2 kept no weights, so these 7 runs are
