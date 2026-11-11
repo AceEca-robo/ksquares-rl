@@ -187,6 +187,11 @@ def cmd_report(cfg):
          f"validation every {cfg['log_every']}. Click: first validation >= {cfg['pass_acc']}%; hold 10x7: every validation "
          f"after the click >= {cfg['hold_acc']}%; hold 5x5: every validation from the end of the mix (from the switch "
          f"when there is no mix) >= {cfg['hold_acc']}%; both: the last validation >= {cfg['hold_acc']}% on both sizes.", "",
+         "Restart (2026-11-11): the series was stopped on 2026-11-10 with g, b and a s1 finished and a s2-s7 "
+         "in progress (no mid-run checkpoints then). Finished runs were kept; a s2-s7 were restarted from scratch with "
+         "the same seeds, a s8-s10, cC and cCh started then. Runs are deterministic, so the restart does not change "
+         "results; from the restart on, runs checkpoint every 500 steps (resume checked bit-exact). The b predictions "
+         "for s16-s20 were checked against the saved logs: switch and first loss equal the committed values.", "",
          "## Table 1. (g) What the 2b nets learned instead of parity on 5x5", ""] + g_tables(cfg)
     counts = {}
     titles = {"a": "Table 2. (a) Soft switch: mix of sizes for {m} steps after the event, then 10x7 only",
