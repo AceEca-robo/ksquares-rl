@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2').
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -194,30 +194,61 @@ Hold 5x5 and "both" are reported, not in the table: series 3 is judged on 10x7.
 
 ## Series 3: parity probe on real positions (the former (i))
 
+Protocol set by the user on 2026-11-12 after series 2' (row "series 3, curriculum (a)"), committed
+before any run: configs/graph_s3.yaml, scripts/graph_s3.py. Replaces the earlier draft of this section.
+
 Goal: does the graph see late parity better than the convolution with chain
 planes, on judged positions.
 
-- Data and loss as before: data/parity_hand_{5x5,10x7}.jsonl.gz, 5000 per size,
-  loss -log(mass on the correct moves), 10% validation; probes 1000 (5x5) and
-  304 (10x7) held out.
-- Arms C, C+h, Ga, Gc, recipe R1, curriculum as chosen by series 2, 5 seeds each
-  (1-5): 20 runs, 30000 steps.
-- Best point by 10x7 validation, and only after the switch to 10x7 (a best point
-  before it is not admitted; the lesson of Ch s3). Logged every 500 steps.
-- Test per pair (Gc-C, Gc-C+h, Ga-C, Gc-Ga), on the 10x7 probe:
-  - all 25 seed pairs, McNemar each, descriptive;
-  - primary: bootstrap over seeds and positions (10000 resamples: seeds drawn
-    with replacement within each arm, positions with replacement, the same
-    positions for both arms), difference of mean accuracy; one-sided 95% bound.
-  Gc-C+h is the primary pair; the other three are secondary.
-- Runs: 20; then probes once.
+Divergences from the earlier draft and from series 1-2', written before the first run:
+- School (a) cannot run on the judge's positions: its event is 5x5 validation >= 95%, and in (i)
+  5x5 validation on data/parity_hand never went above 59% (runs/graph_hand3, all 12 runs, mostly
+  43-50%). There would be no switch and no "best point after the switch". The V-sign recipe also
+  has no role in a policy loss. User's decision (2026-11-12): two stages, below.
+- C did not learn the stage 0 rule in series 2' (0/5 even with a fixed switch); with the event
+  school it never reaches 95% on 5x5, so its stage 1 is 20000 steps of 5x5 stage 0 without a switch.
+- C+h's plane 15 is the stage 0 target; on the judge's positions it still carries the long chain
+  parity. Hence the arm C+h14 (plane 15 zeroed, as Ch15 of series 2'; plane 14 = long chain count / 10).
+- The earlier draft's secondary pairs (Gc-C, Ga-C, Gc-Ga) are now descriptive; a second test, Gc - C+h14,
+  is pre-registered.
+- Time: a Gc stage 1 took 2.4 h at 6 runs at once in series 2'; the series is about 10-12 h.
+
+Protocol:
+- Arms: C, C+h (17 planes), C+h14 (C+h with plane 15 zeroed in both stages, train, validation and
+  probe), Ga, Gc. Seeds 1-5. 25 runs, 6 at once, deterministic, limits lifted (user).
+- Stage 1: the school (a) of series 2' on the stage 0 target, unchanged (series 2 data, recipe B +
+  V-sign, 20000 steps, 5x5 until validation >= 95%, 1000 steps of alternating batches, then 10x7;
+  run loop of scripts/graph_s2.py). Gc s1-s5 stage 1 is series 2' a_Gc_s1..s5 (same config,
+  deterministic): copied with its weights, not rerun.
+- Stage 2: from the final stage 1 weights, the (i) data and loss: data/parity_hand_{5x5,10x7}, 5000
+  per size, 10% validation, loss -log(mass on the correct moves), Adam on all parameters, lr 5e-4,
+  cosine over the 30000 steps of stage 2, clip 1.0, batch 128; judge 5x5 positions to step 5500,
+  then 10x7 only (as (i)). Symmetry augmentation for the CNN arms. Validation every 500 steps.
+- Best point by 10x7 validation, and only after the switch of stage 2 (steps > 5500). The best
+  net is saved and probed.
+- Diagnostic (user, 2026-11-12), not used for selection: at every validation of stage 2, the V-sign
+  accuracy on the stage 0 validation sets (10x7, and 5x5 alongside): does the net keep the chain
+  count while it learns to choose the move, or forget it as it forgot 5x5?
+- Probes once, after all training: 1000 (5x5), 304 (10x7), held out.
+- Primary test: Gc - C+h on the 10x7 probe, bootstrap over seeds and positions (10000 resamples:
+  seeds with replacement within each arm, positions with replacement, the same positions for both
+  arms), difference of mean accuracy, one-sided 95% lower bound. Second test, pre-registered: Gc - C+h14,
+  the same way, at its own 95%. Descriptive: Gc - C, Ga - C, Gc - Ga, C+h - C+h14 (same bootstrap),
+  and for every pair the 25 seed pairs' McNemar tests (counts of p < 0.05 each way).
+
+How C's row is read (written before the runs): C enters stage 2 without the rule (its stage 1 never
+switches). Gc - C therefore measures architecture and school together: Gc > C is not evidence that
+the graph beats the convolution at an equal school, and it is not used for the verdict. The row
+"Gc <= C" still stands: if Gc, with the rule learned in stage 1, is not above a C that never learned
+it, the school and the graph add nothing late. C's stage 0 diagnostic is expected to stay near 50%.
 
 | result | reading | next |
 |---|---|---|
 | Gc - C+h lower bound > 0 and Gc probe > 80% | graph adds something beyond chain planes, late | series 4 |
 | Gc - C+h lower bound > 0, probe <= 80% | a small gain, still weak | series 4, report it as weak |
-| Gc <= C+h (bound includes 0) | graph gives nothing beyond chain planes late | stop part 4 |
-| Gc <= C | representation is not the limit even late | stop part 4 |
+| Gc <= C+h (bound includes 0), Gc - C+h14 bound > 0 | graph beats the chain count alone, not the count with the target plane | stop part 4; reported |
+| Gc <= C+h and Gc <= C+h14 | graph gives nothing beyond chain planes late | stop part 4 |
+| Gc <= C (descriptive bound includes 0 and Gc mean <= C mean) | representation is not the limit even late | stop part 4 |
 
 ## Series 4: middle game (the former (ii))
 

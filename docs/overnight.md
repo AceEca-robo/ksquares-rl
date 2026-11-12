@@ -1226,3 +1226,15 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - (g) done (no training): all 7 reproduced nets equal series 2 bit for bit. No candidate rule explains the forgotten nets (chains, chains of 2+, short chains, loops, player: all 44-59%); their sign agrees with the true rule well below 50 (s3 0.4%, s9 10%), i.e. it is the long-chain parity inverted, and the inversion depends on the long-chain count: s1 and s9 are right with 1 long chain (0-2% error), coin-flip with 2, wrong with 3+ (79-100%); s2, s4, s8 the opposite way round in part (2 long chains always wrong). Descriptive only.
 - Series 2' finished 2026-11-11 18:00, 37/37 runs, no failures (the restarted runs had no further stop). (a) 10x7 click 10/10 (hold 10x7 6/10, 5x5 kept to the end 2/10); (b) 8/10 clicks, prediction from the first loss wrong in 4 of 10, Fisher p 0.45, separation not confirmed; cC 0/5 (never left chance, 5x5 neither); cCh 5/5, read as "the CNN reads plane 14" (caveat in the protocol). Table rows: (a) >= 8 -> series 3, curriculum (a); C+h >= 3/5 -> series 3 for comparison, over a stop row. docs/graph_s2p.md.
 - Unclear: the soft switch fixes the 10x7 click but not 5x5 forgetting (8 of 10 lose 5x5); with the mix 5x5 is still trained for 1000 steps, so the forgetting happens after the mix.
+
+## 2026-11-12: series 3 protocol (two stages), series 2'' next
+
+- User (morning): series 3 by plan_part4.md with school (a); arms C, C+h, C+h14, Ga, Gc x 5 seeds;
+  primary bootstrap Gc - C+h, second Gc - C+h14; best point only after the switch to 10x7; write how
+  C's row is read; then series 2'' (forgetting of 5x5: a 5x5 share kept after the mix).
+- Divergence found before the launch: the event of school (a) (5x5 >= 95%) never fires on the judge's
+  positions (5x5 validation max 59% in (i)). Asked; user chose two stages: stage 1 = school (a) on
+  stage 0, stage 2 = the (i) training from those weights. Protocol in plan_part4.md, configs/graph_s3.yaml.
+- User (later): at every stage 2 validation also log stage 0 V-sign accuracy on 10x7 (diagnostic).
+- Smoke test (1000 + 1000 steps, seed 1, all arms, scratch dir): all stages run; stage 2 stop at 500 and
+  resume equals the uninterrupted run bit for bit.
