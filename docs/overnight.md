@@ -1243,3 +1243,10 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   primary hold 5x5 vs series 2' (a), paired sign test, p < 0.025 per variant. Smoke test (2500 steps,
   mix 250, seed 2, scratch dir) ran both variants. Queued in tmux behind series 3 (starts when series 3
   training ends; series 3 probes run first).
+- Series 3 paused (user, 10:52) via runs/graph_s3/STOP; all six running runs exited at checkpoints
+  (state in docs/graph_s3.md). Reason: the stage 2 diagnostic shows the chain count lost in stage 2 by
+  every net that had it. Finished runs and checkpoints kept; no probes; no conclusions from partial data.
+  STOP stays in place while the series is paused.
+- Series 2'' started at once (user), not queued behind series 3: tmux s2pp, log runs/graph_s2pp.log.
+- Series 3' drafted (not launched, not approved): stage 0 kept as an auxiliary share of stage 2 steps,
+  share from series 2'', gate: V-sign on 10x7 >= 90% at the best point (docs/plan_part4.md).

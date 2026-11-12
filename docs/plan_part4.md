@@ -276,6 +276,49 @@ share of 5x5 batches to the end stop the forgetting without costing the 10x7 cli
 | hold 5x5 above (a), 10x7 click <= 7 of 10 | the share holds 5x5 but gets in the way of transfer | report; trade-off |
 | hold 5x5 not above (a) | the share does not stop the forgetting (at these shares) | report; the forgetting is not a matter of data |
 
+## Series 3': stage 0 kept as an auxiliary task in stage 2 (DRAFT, not approved)
+
+Draft written 2026-11-12 at the user's request while series 2'' runs; nothing launched. Becomes the
+protocol only after the user approves it and the share is fixed from series 2''.
+
+Why: series 3 was paused (2026-11-12) because its diagnostic showed every net that came out of stage 1
+with the rule (C+h, C+h14, Gc) losing it within the first 500 steps of stage 2 (stage 0 V-sign
+accuracy on 10x7 100% -> ~50%). Stage 1 then adds nothing to the move choice.
+
+- Arms, seeds, stage 1: as series 3 (C, C+h, C+h14, Ga, Gc; seeds 1-5; school (a) on stage 0).
+  Stage 1 is deterministic and unchanged, so the stage 1 runs of series 3 (finished ones, and paused
+  ones resumed from their checkpoints) are reused with their weights, not rerun.
+- Stage 2: as series 3 (judge positions, 30000 steps, 5x5 to 5500 then 10x7, lr 5e-4 cosine, clip 1.0,
+  batch 128, Adam on all parameters), but a share s of the steps are stage 0 steps to the end: on those
+  steps the batch is 128 stage 0 train positions (series 2 data) and the loss is the stage 0 loss
+  (logistic on the sign of V); on the others the policy loss as before. Pattern as series 2'': a step
+  is a stage 0 step when floor(step * s) steps up. Stage 0 batches alternate 5x5 / 10x7 (to be confirmed by the user).
+  The total stays 30000 steps, so the policy gets (1 - s) x 30000 of them.
+- The share s: from series 2'', fixed before the launch by this rule: the smaller of 0.10 / 0.25 whose
+  primary test passed (hold 5x5 above (a), p < 0.025) with 10x7 click >= 8 of 10; if neither passed,
+  the user chooses before the launch.
+- Validation every 500 steps: judge validation of both sizes, stage 0 V-sign accuracy on 5x5 and 10x7.
+  Best point by 10x7 judge validation after the switch (steps > 5500), as series 3; V-sign plays no part
+  in the choice.
+- Gate (user): a run counts in a comparison only if its stage 0 V-sign accuracy on 10x7 is >= 90% at
+  its best point. A pair of arms is compared only if both arms have >= 3 of 5 runs passing; the
+  bootstrap then draws seeds from the passing runs of each arm. A pair not compared is reported
+  as "not comparable" with the counts.
+- Tests: as series 3 on the 10x7 probe: primary Gc - C+h (bootstrap over seeds and positions, 10000
+  resamples, one-sided 95% lower bound), second pre-registered Gc - C+h14, descriptive Gc - C, Ga - C,
+  Gc - Ga, C+h - C+h14, McNemar of the seed pairs. Probes once, after all training.
+- Expected before the runs: C and Ga did not learn the rule in stage 1 (C 0/3, Ga 0/2 so far in
+  series 3); if the stage 0 steps of stage 2 do not teach it, their pairs fail the gate.
+- Runs: 25 stage 2 runs (+ the stage 1 runs not finished in series 3).
+
+| result | reading | next |
+|---|---|---|
+| primary pair not comparable (Gc or C+h < 3 runs past the gate) | the share does not keep the chain count during stage 2 | stop; report |
+| Gc - C+h lower bound > 0 and Gc probe > 80% | graph adds something beyond chain planes, late | series 4 |
+| Gc - C+h lower bound > 0, probe <= 80% | a small gain, still weak | series 4, reported as weak |
+| Gc <= C+h, Gc - C+h14 bound > 0 | graph beats the chain count alone, not with the target plane | stop part 4; reported |
+| Gc <= C+h and Gc <= C+h14 | graph gives nothing beyond chain planes late, even keeping the count | stop part 4 |
+
 ## Series 4: middle game (the former (ii))
 
 Goal: does the graph generalise the middle game where the convolution did not.
