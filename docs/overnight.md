@@ -1238,3 +1238,8 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - User (later): at every stage 2 validation also log stage 0 V-sign accuracy on 10x7 (diagnostic).
 - Smoke test (1000 + 1000 steps, seed 1, all arms, scratch dir): all stages run; stage 2 stop at 500 and
   resume equals the uninterrupted run bit for bit.
+- Series 2'' protocol written and committed before its first run (plan_part4.md, configs/graph_s2pp.yaml):
+  Gc school (a), 5x5 share kept after the mix (k10 every 10th step, k25 every 4th), seeds 1-10 each;
+  primary hold 5x5 vs series 2' (a), paired sign test, p < 0.025 per variant. Smoke test (2500 steps,
+  mix 250, seed 2, scratch dir) ran both variants. Queued in tmux behind series 3 (starts when series 3
+  training ends; series 3 probes run first).

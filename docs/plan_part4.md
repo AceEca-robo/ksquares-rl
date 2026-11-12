@@ -250,6 +250,32 @@ it, the school and the graph add nothing late. C's stage 0 diagnostic is expecte
 | Gc <= C+h and Gc <= C+h14 | graph gives nothing beyond chain planes late | stop part 4 |
 | Gc <= C (descriptive bound includes 0 and Gc mean <= C mean) | representation is not the limit even late | stop part 4 |
 
+## Series 2'': forgetting of 5x5
+
+Protocol set by the user on 2026-11-12, committed before any run: configs/graph_s2pp.yaml,
+scripts/graph_s2pp.py (run loop of scripts/graph_s2.py, option keep_5x5, off in all earlier series).
+Runs after series 3 (queued behind it on the same machine).
+
+Goal: in series 2' (a) 5x5 was held in 2 of 10 runs once training moved to 10x7. Does keeping a
+share of 5x5 batches to the end stop the forgetting without costing the 10x7 click?
+
+- Gc, school (a) of series 2' unchanged (series 2 data, recipe B + V-sign, 20000 steps, validation
+  every 250, event 5x5 >= 95%, 1000 steps of alternating batches), but after the mix the 5x5 share
+  is not zero: k10 = 10% of the batches (every 10th step), k25 = 25% (every 4th step); the rest 10x7.
+  Seeds 1-10 in each: 20 runs, 6 at once, deterministic, limits lifted (user).
+- Metrics per run (definitions of series 2'): 10x7 click; hold 10x7; hold 5x5 (every validation
+  from the end of the mix >= 90%, "5x5 to the end >= 90%"); both (last validation >= 90% on both sizes).
+- Comparison with series 2' (a) on the same seeds (10x7 click 10/10, hold 10x7 6/10, hold 5x5 2/10,
+  both 2/10): per metric, paired exact one-sided sign test on the seeds where the two differ
+  (variant above (a)). Pre-registered primary: hold 5x5, each variant at p < 0.025 (two variants,
+  Bonferroni). The other metrics and the 10x7 click (variant below (a)) are descriptive.
+
+| result | reading | next |
+|---|---|---|
+| hold 5x5 above (a) (p < 0.025) and 10x7 click >= 8 of 10 | a kept 5x5 share stops the forgetting at no cost to transfer | the share becomes part of the school |
+| hold 5x5 above (a), 10x7 click <= 7 of 10 | the share holds 5x5 but gets in the way of transfer | report; trade-off |
+| hold 5x5 not above (a) | the share does not stop the forgetting (at these shares) | report; the forgetting is not a matter of data |
+
 ## Series 4: middle game (the former (ii))
 
 Goal: does the graph generalise the middle game where the convolution did not.

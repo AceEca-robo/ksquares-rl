@@ -114,9 +114,13 @@ def run_one(args):
     # RL series 2' options (all off in series 2): soft switch, fixed switch step, zeroed input planes,
     # first-loss prediction, final weights
     mix, fixed, zero = pc.get("mix_steps", 0), pc.get("switch_at"), ac.get("zero_planes", [])
+    keep = pc.get("keep_5x5", 0.0)
 
     def train_size(step):
         if switch is None or step > switch + mix:
+            # RL series 2'': after the mix a share of 5x5 batches is kept (5x5 when floor(step * share) steps up)
+            if keep and switch is not None and math.floor(step * keep) > math.floor((step - 1) * keep):
+                return "5x5"
             return size
         return "5x5" if step % 2 else "10x7"
 

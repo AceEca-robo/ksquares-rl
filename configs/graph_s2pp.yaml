@@ -1,0 +1,28 @@
+# Part 4, series 2'' of docs/plan_part4.md (scripts/graph_s2pp.py, run loop of scripts/graph_s2.py):
+# forgetting of 5x5. Protocol fixed before the first run (user, 2026-11-12); a change = a new series.
+data_seed: 4100                  # series 2 data (runs/graph_s2/data.npz, copied)
+device: cuda
+out: runs/graph_s2pp
+n_train: 20000
+n_val: 2000
+steps: 20000
+log_every: 250
+pass_acc: 95.0
+hold_acc: 90.0
+sat: 0.99
+jobs: 6
+save_weights: true
+limits: {gpu_memory_fraction: 1.0, min_available_gb: 8, cpu_threads: 2}   # lifted (user, 2026-11-12)
+
+recipe: {v_out: linear, loss: sign, readout_init: null, readout_norm: false, lr: 0.0005, batch: 128, clip: 1.0, cosine: true}
+
+arms:
+  Gc: {config: configs/graph_gc.yaml}
+
+# school (a) of series 2'; after the mix a share of the batches stays 5x5 to the end (deterministic pattern:
+# step is 5x5 when floor(step * share) steps up: every 10th step for 0.10, every 4th for 0.25)
+parts:
+  k10: {arms: [Gc], curriculum: true, mix_steps: 1000, keep_5x5: 0.10, seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+  k25: {arms: [Gc], curriculum: true, mix_steps: 1000, keep_5x5: 0.25, seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+
+reference: {out: runs/graph_s2p, part: a}   # series 2' (a), the same seeds, share 0

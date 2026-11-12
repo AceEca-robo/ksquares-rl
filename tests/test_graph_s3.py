@@ -18,3 +18,14 @@ def test_bootstrap():
     assert (d, lo) == bootstrap(a, b, 2000, 1, 0.95)
     d2, lo2 = bootstrap(b, b, 2000, 1, 0.95)
     assert d2 == 0 and lo2 < 0
+
+
+def test_keep_share_pattern_and_sign_test():
+    import math
+
+    from graph_s2pp import sign_test
+
+    for share, every in ((0.10, 10), (0.25, 4)):
+        hits = [s for s in range(1, 401) if math.floor(s * share) > math.floor((s - 1) * share)]
+        assert len(hits) == 400 // every and all(h % every == 0 for h in hits)
+    assert sign_test([1] * 5 + [0] * 5, [0] * 10) == (5, 0, 1 / 32)
