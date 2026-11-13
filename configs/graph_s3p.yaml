@@ -1,0 +1,62 @@
+# Part 4, series 3' of docs/plan_part4.md (scripts/graph_s3.py --config configs/graph_s3p.yaml):
+# series 3 with stage 0 kept as an auxiliary share of stage 2. Protocol approved by the user 2026-11-13,
+# fixed before the first run; a change = a new series.
+# Two stages per run (user's choice, 2026-11-12): stage 1 = the school (a) of series 2' on the stage 0
+# target (run loop of scripts/graph_s2.py, unchanged), stage 2 = the judge's positions from the stage 1 weights.
+data_seed: 4100                  # stage 0 data of series 2 (runs/graph_s2/data.npz, copied)
+device: cuda
+out: runs/graph_s3p
+report: docs/graph_s3p.md
+seed: 4100                       # parity_hand split / probe sets as (i); batches use the run seed
+parity_config: configs/parity_hand.yaml
+jobs: 3                          # day session (user, 2026-11-13): 3 runs at once, nice -n 10
+limits: {gpu_memory_fraction: 0.4, min_available_gb: 12, cpu_threads: 2}
+
+# ---- stage 1: identical to series 2' (a)
+n_train: 20000
+n_val: 2000
+steps: 20000
+log_every: 250
+pass_acc: 95.0
+hold_acc: 90.0
+sat: 0.99
+save_weights: true
+recipe: {v_out: linear, loss: sign, readout_init: null, readout_norm: false, lr: 0.0005, batch: 128, clip: 1.0, cosine: true}
+parts:
+  a: {arms: [C, Ch, Ch14, Ga, Gc], curriculum: true, mix_steps: 1000, seeds: [1, 2, 3, 4, 5]}
+# Gc s1-s5 stage 1 = series 2' a_Gc_s1..s5 (same config, deterministic): copied, not rerun.
+reuse_stage1: {from: runs/graph_s2p, arm: Gc}
+# finished stage 1 runs of series 3 are copied with their weights (series 3 had no stage 1 run in progress
+# at its pause, so no stage 1 checkpoints); the missing ones run here with the same config (deterministic).
+stage1_from: {out: runs/graph_s3, config: configs/graph_s3.yaml}
+
+arms:
+  C: {net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true}}
+  Ch: {net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true, planes: 17}}
+  Ch14: {net: {arch: dot2, blocks: 6, channels: 64, gpool_blocks: [2, 4], head_channels: 32, score_head: true, planes: 17},
+         zero_planes: [15]}      # C+h without plane 15 (the target): chain count plane 14 stays; zeroed in every stage
+  Ga: {config: configs/graph_ga.yaml}
+  Gc: {config: configs/graph_gc.yaml}
+
+# ---- stage 2: (i) data and loss, from the stage 1 final weights
+stage2:
+  steps: 40000                   # 30000 policy steps + 10000 stage 0 steps (user, 2026-11-13)
+  stage0_share: 0.25             # user's choice 2026-11-13 (no share passed the series 2'' primary); every 4th step
+                                 # is a stage 0 step: 128 stage 0 train positions, 10x7 only, V-sign logistic loss
+  batch: 128
+  lr: 0.0005                     # Adam, all parameters, cosine over stage 2, clip 1.0
+  clip: 1.0
+  switch_at: 5500                # in policy steps: judge 5x5 positions to here, then 10x7 only, as (i)
+  log_every: 500                 # parity validation of both sizes + stage 0 V-sign accuracy (diagnostic)
+  select_after_switch: true      # best point by 10x7 validation, only at policy steps > switch_at
+  gate_stage0_10x7: 90.0         # a run counts only if its stage 0 V-sign on 10x7 is >= this at its best point
+  gate_min_runs: 3               # a pair is compared only if both arms have >= 3 of 5 runs past the gate
+
+test:
+  primary: [Gc, Ch]              # bootstrap over seeds and positions, 10x7 probe
+  second: [Gc, Ch14]             # pre-registered second test
+  descriptive: [[Gc, C], [Ga, C], [Gc, Ga], [Ch, Ch14]]
+  resamples: 10000
+  boot_seed: 3
+  level: 0.95                    # one-sided lower bound
+  strong_probe: 80.0

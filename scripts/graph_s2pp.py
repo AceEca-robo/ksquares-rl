@@ -82,9 +82,11 @@ def cmd_report(cfg):
                  f"hold 5x5 p = {v[0]:.3g} -> {'passed' if v[0] < 0.025 else 'not passed'}; 10x7 click {v[1]}/10"))
     if all(v is not None and v[0] >= 0.025 for v in verdict.values()):
         L += ["", "Table row: hold 5x5 not above (a) at these shares (p < 0.025 not reached by either variant). "
-              "Descriptive: both variants hold 5x5 more often than (a) (8 and 7 vs 2 of 10) and end with both sizes "
-              ">= 90% far more often (9 and 10 vs 2; p 0.0078 / 0.0039, not corrected, not pre-registered); "
-              "hold 10x7 lower (4 and 3 vs 6). Series 3' share rule: neither share passed, so the user chooses."]
+              "Descriptive (not pre-registered): the 5x5 failures after the mix are brief: k10 s7, k25 s3, s5, s8 "
+              "each have a single validation below 90% (of 71-75 after the mix) and end at 100% on 5x5; k10 s5 is not "
+              "a hold failure but a run that never clicked (both sizes at chance from the switch on). At the end both "
+              "sizes >= 90% in 9/10 (k10) and 10/10 (k25) vs 2/10 in (a) (p 0.0078 / 0.0039, uncorrected); hold 10x7 "
+              "4 and 3 vs 6. Series 3' share rule: neither share passed; the user chose 0.25 (docs/plan_part4.md)."]
     L.append("")
     (ROOT / "docs/graph_s2pp.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))

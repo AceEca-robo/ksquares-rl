@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import multiprocessing as mp
 import shutil
 import time
@@ -101,6 +102,21 @@ def run_stage2(cfg, arm, seed):
     opt = torch.optim.Adam(net.parameters(), lr=sc["lr"])
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, sc["steps"])
     np_rng = np.random.default_rng(seed)
+    # RL series 3': a share of the stage 2 steps are stage 0 steps (10x7 only, V-sign loss) to the end;
+    # switch_at then counts policy steps. Off (share 0) in series 3.
+    share = sc.get("stage0_share", 0.0)
+    if share:
+        from agents.az_net import Codec
+
+        s0x = zeroed(s0["10x7"][0][:, :planes], zero)
+        s0y = (s0["10x7"][1] > 0).astype(np.float32)
+        c0 = Codec(*graph_s2.SIZES["10x7"], planes=planes)
+
+    def is_s0(step):
+        return bool(share) and math.floor(step * share) > math.floor((step - 1) * share)
+
+    def policy_steps(step):
+        return step - math.floor(step * share) if share else step
 
     def validate():
         net.eval()
@@ -116,18 +132,7 @@ def run_stage2(cfg, arm, seed):
         net.train()
         return val, s0acc
 
-    ckpt = out / f"{name}.ckpt"
-    start, st = load_checkpoint(ckpt, net, opt, sched, np_rng)
-    if st:
-        log, acc_loss, best = st["log"], st["acc_loss"], st["best"]
-        t0 = time.time() - st["seconds"]
-        print(f"{name}: resumed at step {start}", flush=True)
-    else:
-        v, s = validate()
-        log, acc_loss, best, t0 = [{"step": 0, "val": v, "stage0": s}], 0.0, None, time.time()
-    net.train()
-    for step in range(start + 1, sc["steps"] + 1):
-        b = "5x5" if step <= sc["switch_at"] else "10x7"
+    def policy_step(b):
         codec, X, M = par[b][0]
         idx = np_rng.integers(0, len(X), sc["batch"])
         x, m = parity_hand.augment(np_rng, codec, X[idx], M[idx], on=not graph)
@@ -141,14 +146,48 @@ def run_stage2(cfg, arm, seed):
         torch.nn.utils.clip_grad_norm_(net.parameters(), sc["clip"])
         opt.step()
         sched.step()
-        acc_loss += loss.item()
         lim.tick()
+        return loss.item()
+
+    ckpt = out / f"{name}.ckpt"
+    start, st = load_checkpoint(ckpt, net, opt, sched, np_rng)
+    if st:
+        log, acc_loss, best = st["log"], st["acc_loss"], st["best"]
+        acc_s0 = st.get("acc_s0", 0.0)
+        t0 = time.time() - st["seconds"]
+        print(f"{name}: resumed at step {start}", flush=True)
+    else:
+        v, s = validate()
+        log, acc_loss, best, t0 = [{"step": 0, "val": v, "stage0": s}], 0.0, None, time.time()
+        acc_s0 = 0.0
+    net.train()
+    for step in range(start + 1, sc["steps"] + 1):
+        b = "5x5" if policy_steps(step) <= sc["switch_at"] else "10x7"
+        if is_s0(step):
+            idx = np_rng.integers(0, len(s0x), sc["batch"])
+            xb = s0x[idx]
+            if not graph:
+                xb = graph_s2.augment(np_rng, c0, xb.reshape(len(xb), planes, -1))[0].reshape(-1, planes, c0.rows, c0.cols)
+            v0 = net(torch.from_numpy(np.ascontiguousarray(xb)).to(dev))[1]
+            loss = F.binary_cross_entropy_with_logits(v0, torch.from_numpy(s0y[idx]).to(dev))
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(net.parameters(), sc["clip"])
+            opt.step()
+            sched.step()
+            acc_s0 += loss.item()
+            lim.tick()
+            b = "stage0"
+        else:
+            acc_loss += policy_step(b)
         if step % sc["log_every"] == 0:
             v, s = validate()
-            log.append({"step": step, "train_on": b, "loss": acc_loss / sc["log_every"], "val": v, "stage0": s,
-                        "seconds": time.time() - t0})
-            acc_loss = 0.0
-            ok = step > sc["switch_at"] or not sc["select_after_switch"]
+            npol = max(1, sc["log_every"] - (math.floor(step * share) - math.floor((step - sc["log_every"]) * share)))
+            log.append({"step": step, "policy_step": policy_steps(step), "train_on": b, "loss": acc_loss / npol,
+                        "loss_stage0": acc_s0 / max(1, sc["log_every"] - npol) if share else None,
+                        "val": v, "stage0": s, "seconds": time.time() - t0})
+            acc_loss = acc_s0 = 0.0
+            ok = policy_steps(step) > sc["switch_at"] or not sc["select_after_switch"]
             if ok and (best is None or v["10x7"] > best["val"]):
                 best = {"val": v["10x7"], "step": step, "state": {k: t.detach().cpu().clone() for k, t in net.state_dict().items()}}
             if step % (10 * sc["log_every"]) == 0:
@@ -156,10 +195,17 @@ def run_stage2(cfg, arm, seed):
                       f"stage0 10x7 {s['10x7']:.1f} ({log[-1]['seconds']:.0f} s)", flush=True)
         if step % CKPT_EVERY == 0 and step < sc["steps"]:
             save_checkpoint(ckpt, step, net, opt, sched, np_rng,
-                            {"log": log, "acc_loss": acc_loss, "best": best, "seconds": time.time() - t0})
+                            {"log": log, "acc_loss": acc_loss, "acc_s0": acc_s0, "best": best, "seconds": time.time() - t0})
             if stop_requested(out) or step == cfg.get("_stop_at"):
                 print(f"{name}: stopped at checkpoint {step}", flush=True)
                 return None
+    return finish(cfg, name, path, ckpt, net, best, log, arm, seed, sc)
+
+
+def finish(cfg, name, path, ckpt, net, best, log, arm, seed, sc):
+    import torch
+
+    out = ROOT / cfg["out"]
     torch.save(best["state"], out / f"{name}.pt")
     torch.save(net.state_dict(), out / f"{name}_last.pt")
     res = {"arm": arm, "seed": seed, "stage2": sc, "log": log, "best_step": best["step"], "best_val_10x7": best["val"]}
@@ -292,7 +338,7 @@ def cmd_report(cfg):
         d2, lo2 = bounds[tuple(tc["second"])]
         L.append(f"Second test Gc - C+h14: {d2:+.1f}, lower bound {lo2:+.1f}: "
                  + ("positive." if lo2 > 0 else "not positive."))
-    (ROOT / "docs/graph_s3.md").write_text("\n".join(L) + "\n")
+    (ROOT / cfg.get("report", "docs/graph_s3.md")).write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
 
@@ -310,7 +356,23 @@ def main() -> None:
         cfg["steps"] = cfg["stage2"]["steps"] = a.steps
         cfg["stage2"]["switch_at"] = a.steps // 2
         cfg["reuse_stage1"] = None
+    if cfg.get("stage1_from") and not a.steps:
+        copy_stage1(cfg)
     {"run": cmd_run, "probe": cmd_probe, "report": cmd_report}[a.cmd](cfg)
+
+
+def copy_stage1(cfg):
+    """RL series 3': finished stage 1 runs of an earlier series (same stage 1 config) are copied, not rerun."""
+    src_dir, out = ROOT / cfg["stage1_from"]["out"], ROOT / cfg["out"]
+    src = load_config(ROOT / cfg["stage1_from"]["config"])
+    keys = ["recipe", "steps", "log_every", "pass_acc", "n_train", "n_val", "data_seed", "parts", "arms", "seed"]
+    assert all(src[k] == cfg[k] for k in keys), "stage 1 config differs from " + cfg["stage1_from"]["config"]
+    out.mkdir(parents=True, exist_ok=True)
+    for f in sorted(src_dir.glob("a_*.json")):
+        for ext in (".json", ".pt"):
+            d = out / f.with_suffix(ext).name
+            if not d.exists():
+                shutil.copy(f.with_suffix(ext), d)
 
 
 if __name__ == "__main__":

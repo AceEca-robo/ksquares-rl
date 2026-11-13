@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed).
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved 2026-11-13.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -276,10 +276,23 @@ share of 5x5 batches to the end stop the forgetting without costing the 10x7 cli
 | hold 5x5 above (a), 10x7 click <= 7 of 10 | the share holds 5x5 but gets in the way of transfer | report; trade-off |
 | hold 5x5 not above (a) | the share does not stop the forgetting (at these shares) | report; the forgetting is not a matter of data |
 
-## Series 3': stage 0 kept as an auxiliary task in stage 2 (DRAFT, not approved)
+## Series 3': stage 0 kept as an auxiliary task in stage 2
 
-Draft written 2026-11-12 at the user's request while series 2'' runs; nothing launched. Becomes the
-protocol only after the user approves it and the share is fixed from series 2''.
+Draft written 2026-11-12; approved by the user 2026-11-13 with the decisions below, committed before the
+first run: configs/graph_s3p.yaml, scripts/graph_s3.py (option stage2.stage0_share, off in series 3).
+
+Decisions of the user (2026-11-13), replacing the open points of the draft:
+- Share s = 0.25, chosen by the user, not by the rule: no share passed the series 2'' primary test
+  (k10 p 0.035, k25 p 0.0625). Reason: at 0.25 the 10x7 click was 10/10 and both sizes at the end 10/10;
+  at 0.10 one run (s5) never clicked.
+- Stage 0 batches in stage 2: 10x7 only, no alternation with 5x5.
+- Stage 2 lengthened so the policy still gets 30000 steps: 40000 steps in all, every 4th a stage 0 step.
+  The switch (judge 5x5 to 5500) and "best point after the switch" count policy steps; cosine runs over
+  the 40000 steps.
+- Run conditions (day session, user): 3 runs at once, GPU memory <= 40%, nice -n 10, free RAM >= 12 GB.
+  Stage 1 of series 3 had no run in progress at its pause (only stage 2 runs were), so the finished
+  stage 1 runs are copied and the 12 missing ones (C s4-5, C+h s3-5, C+h14 s3-5, Ga s3-5) run with the
+  same config; the series 3 stage 2 checkpoints are not used (stage 2 differs).
 
 Why: series 3 was paused (2026-11-12) because its diagnostic showed every net that came out of stage 1
 with the rule (C+h, C+h14, Gc) losing it within the first 500 steps of stage 2 (stage 0 V-sign
@@ -292,11 +305,9 @@ accuracy on 10x7 100% -> ~50%). Stage 1 then adds nothing to the move choice.
   batch 128, Adam on all parameters), but a share s of the steps are stage 0 steps to the end: on those
   steps the batch is 128 stage 0 train positions (series 2 data) and the loss is the stage 0 loss
   (logistic on the sign of V); on the others the policy loss as before. Pattern as series 2'': a step
-  is a stage 0 step when floor(step * s) steps up. Stage 0 batches alternate 5x5 / 10x7 (to be confirmed by the user).
-  The total stays 30000 steps, so the policy gets (1 - s) x 30000 of them.
-- The share s: from series 2'', fixed before the launch by this rule: the smaller of 0.10 / 0.25 whose
-  primary test passed (hold 5x5 above (a), p < 0.025) with 10x7 click >= 8 of 10; if neither passed,
-  the user chooses before the launch.
+  is a stage 0 step when floor(step * s) steps up. Stage 0 batches are 10x7 only (user).
+  The total is 40000 steps, so the policy gets 30000 of them (user).
+- The share s: the rule (smaller passing share of series 2'') gave none; the user chose 0.25 (above).
 - Validation every 500 steps: judge validation of both sizes, stage 0 V-sign accuracy on 5x5 and 10x7.
   Best point by 10x7 judge validation after the switch (steps > 5500), as series 3; V-sign plays no part
   in the choice.
