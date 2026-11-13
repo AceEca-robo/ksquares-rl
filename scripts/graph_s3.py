@@ -307,7 +307,7 @@ def cmd_report(cfg):
                      f"{bl['val']['5x5']:.1f} | {bl['val']['10x7']:.1f} | - | - | ")
             L[-1] += f"{r2['log'][0]['stage0']['10x7']:.1f} / {bl['stage0']['10x7']:.1f} / {r2['log'][-1]['stage0']['10x7']:.1f} |"
     L.append("")
-    if all(len(acc.get(a, [])) == len(seeds) for a in arms):
+    if all(len(acc.get(a, [])) == len(seeds) for a in arms) and "gate_stage0_10x7" not in cfg["stage2"]:   # 3': graph_s3p.py
         L += ["## Table 2. Arm means, 10x7 probe", "", "| arm | mean % | seeds |", "|---|---:|---|"]
         for a in arms:
             m = [100 * np.mean(x) for x in acc[a]]
