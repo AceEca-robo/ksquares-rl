@@ -1250,3 +1250,10 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Series 2'' started at once (user), not queued behind series 3: tmux s2pp, log runs/graph_s2pp.log.
 - Series 3' drafted (not launched, not approved): stage 0 kept as an auxiliary share of stage 2 steps,
   share from series 2'', gate: V-sign on 10x7 >= 90% at the best point (docs/plan_part4.md).
+
+## 2026-11-13 (day): series 2'' report; series 3' not launched
+
+- Day session limits (user, runs/task_2026-11-13.md): at most 3 runs at once, GPU memory <= 40%, nice -n 10, no start below 12 GB free RAM.
+- Series 2'' finished 2026-11-12 18:15, 20/20 runs. docs/graph_s2pp.md. Primary (hold 5x5 above 2' (a), p < 0.025): k10 8 vs 2 of 10, p 0.035; k25 7 vs 2, p 0.0625; neither passed. 10x7 click k10 9/10 (s5 never clicked), k25 10/10. Hold 10x7 4 and 3 vs 6. Both sizes at the end 9 and 10 vs 2 (descriptive). Table row: "hold 5x5 not above (a)".
+- Series 3': its share rule needs a passing share; none passed, so by the task it is not launched and the share waits for the user. Also still open in the draft: whether stage 0 batches alternate 5x5 / 10x7.
+- Unclear: k10 s7 and k25 s8 dropped 5x5 to ~50% after the mix yet ended at 100% on both; "hold 5x5" (every validation) is strict, so the primary undercounts recovery.

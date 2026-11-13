@@ -48,6 +48,7 @@ def cmd_report(cfg):
          f"validation from the end of the mix >= {cfg['hold_acc']}%; both: the last validation >= {cfg['hold_acc']}% on both sizes. "
          "Reference: series 2' (a), share 0, the same seeds.", ""]
     seeds = cfg["parts"]["k10"]["seeds"]
+    verdict = {}
     base = {r["seed"]: r for r in run_rows(rcfg, load(rcfg, ref["part"], "Gc", seeds), 1000)}
     for part, pc in cfg["parts"].items():
         rs = run_rows(cfg, load(cfg, part, "Gc", pc["seeds"]), pc["mix_steps"])
@@ -73,6 +74,18 @@ def cmd_report(cfg):
                 n10, n01, p = sign_test(a, bb)
                 L.append(f"| {k} | {sum(a)} | {sum(bb)} | {n10} / {n01} | {p:.3g} |")
         L.append("")
+        verdict[part] = (sign_test([bool(r["hold5"]) for r in rs], [bool(base[r["seed"]]["hold5"]) for r in rs])[2],
+                         sum(bool(r["click10"]) for r in rs)) if len(rs) == n else None
+    L += ["## Verdict (pre-registered primary: hold 5x5 above (a), p < 0.025 per variant; 10x7 click >= 8 of 10)", ""]
+    for part, v in verdict.items():
+        L.append(f"- {part}: " + ("incomplete" if v is None else
+                 f"hold 5x5 p = {v[0]:.3g} -> {'passed' if v[0] < 0.025 else 'not passed'}; 10x7 click {v[1]}/10"))
+    if all(v is not None and v[0] >= 0.025 for v in verdict.values()):
+        L += ["", "Table row: hold 5x5 not above (a) at these shares (p < 0.025 not reached by either variant). "
+              "Descriptive: both variants hold 5x5 more often than (a) (8 and 7 vs 2 of 10) and end with both sizes "
+              ">= 90% far more often (9 and 10 vs 2; p 0.0078 / 0.0039, not corrected, not pre-registered); "
+              "hold 10x7 lower (4 and 3 vs 6). Series 3' share rule: neither share passed, so the user chooses."]
+    L.append("")
     (ROOT / "docs/graph_s2pp.md").write_text("\n".join(L) + "\n")
     print("\n".join(L))
 
