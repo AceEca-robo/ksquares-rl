@@ -338,7 +338,10 @@ def cmd_report(cfg):
         d2, lo2 = bounds[tuple(tc["second"])]
         L.append(f"Second test Gc - C+h14: {d2:+.1f}, lower bound {lo2:+.1f}: "
                  + ("positive." if lo2 > 0 else "not positive."))
-    (ROOT / cfg.get("report", "docs/graph_s3.md")).write_text("\n".join(L) + "\n")
+    rep = ROOT / cfg.get("report", "docs/graph_s3.md")
+    keep = rep.read_text().split("\n## Data checks", 1) if rep.exists() else [""]
+    tail = "\n## Data checks" + keep[1] if len(keep) > 1 else ""   # series 3' checks section is kept
+    rep.write_text("\n".join(L) + "\n" + tail)
     print("\n".join(L))
 
 
