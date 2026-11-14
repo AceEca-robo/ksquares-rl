@@ -41,3 +41,25 @@ def test_series3p_stage0_share_steps():
     pol = lambda s: s - math.floor(s * share)  # noqa: E731
     assert pol(steps) == 30000
     assert max(s for s in range(1, steps + 1) if pol(s) <= 5500) == 7333
+
+
+def test_series5_snapshot_steps_and_verdict():
+    """Series 5: kept weights = steps 250, 500, 1000 + validations 7000-14000; nothing without the option."""
+    from _common import ROOT, load_config
+    from graph_s3 import snapshot_steps
+    from graph_s5 import verdict
+
+    cfg = load_config(ROOT / "configs/graph_s5.yaml")
+    ref = load_config(ROOT / "configs/graph_s3p.yaml")
+    steps = snapshot_steps(cfg["stage2"])
+    assert steps == {250, 500, 1000} | set(range(7000, 14001, 500)) and len(steps) == 18
+    assert snapshot_steps(ref["stage2"]) == set()
+    # training is series 3' unchanged: stage 1 keys and stage 2 without the snapshots option
+    for k in ("recipe", "steps", "log_every", "pass_acc", "n_train", "n_val", "data_seed", "seed", "parity_config"):
+        assert cfg[k] == ref[k], k
+    assert {k: v for k, v in cfg["stage2"].items() if k != "snapshots"} == ref["stage2"]
+    assert cfg["arms"]["Gc"] == ref["arms"]["Gc"] and cfg["parts"]["a"]["mix_steps"] == ref["parts"]["a"]["mix_steps"]
+    assert cfg["parts"]["a"]["seeds"] == list(range(6, 26)) and cfg["parts"]["a"]["arms"] == ["Gc"]
+    cr = cfg["criterion"]
+    assert "reproducible" in verdict(5, 20, 20, cr) and "chance" in verdict(1, 20, 20, cr) and "chance" in verdict(0, 20, 20, cr)
+    assert "user" in verdict(2, 20, 20, cr) and "user" in verdict(4, 20, 20, cr) and "no verdict" in verdict(7, 19, 20, cr)

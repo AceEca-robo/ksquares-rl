@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4.
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -329,6 +329,50 @@ accuracy on 10x7 100% -> ~50%). Stage 1 then adds nothing to the move choice.
 | Gc - C+h lower bound > 0, probe <= 80% | a small gain, still weak | series 4, reported as weak |
 | Gc <= C+h, Gc - C+h14 bound > 0 | graph beats the chain count alone, not with the target plane | stop part 4; reported |
 | Gc <= C+h and Gc <= C+h14 | graph gives nothing beyond chain planes late, even keeping the count | stop part 4 |
+
+## Series 5: how often does Gc make the move-choice jump
+
+Protocol by the user, 2026-11-14, committed before the first run: configs/graph_s5.yaml,
+scripts/graph_s3.py (option stage2.snapshots, off in series 3 and 3'), scripts/graph_s5.py (check, report).
+Series 3' is accepted with its verdict as it stands in the table (stop part 4); this series does not reopen it.
+
+One question: in series 3' one Gc run of five (s1) went from 61.6% to 81.8% on the 10x7 judge validation
+right after the switch and ended near 89-90%; the other four stayed at 62-66%. How often does that happen?
+
+- Runs: Gc only, seeds 6-25 (20 runs). Seeds 1-5 are series 3' and are not counted.
+- Stage 1 and stage 2: exactly series 3' (the same config values, share 0.25, 40000 stage 2 steps, switch at
+  policy step 5500 = total step 7333, validation every 500 steps, best point by 10x7 judge validation at
+  policy steps > 5500). No change. tests/test_graph_s3.py compares the two configs key by key.
+  Stage 1 of seeds 6-10 exists already as series 2' (a) (the same config, deterministic; series 3' took its
+  seeds 1-5 from there in the same way): copied with its weights, not rerun. Seeds 11-25 run stage 1 here.
+- Primary metric: the number of the 20 runs whose best 10x7 judge validation after the switch is >= 80%.
+  All 20 runs are in the denominator, whatever their stage 1 or their V sign did.
+- Reported next to it, not part of the criterion: whether the V sign is kept (stage 0 V-sign accuracy on
+  10x7 >= 90% at the best point, the gate of series 3'), as a 2x2 table with the primary.
+- Probes (5x5, 10x7): once, after all training; descriptive, never used for selection or for the verdict.
+- Kept in addition, for the analysis of the sign loss and of the moment of the jump (no effect on training:
+  the weights are written to disk, with no forward pass and no use of a random generator):
+  - weights at stage 2 steps 250, 500 and 1000, and the V pre-activations on the stage 0 validation
+    sets (2000 positions each of 5x5 and 10x7) computed from those weights after the run has ended;
+  - weights at every validation step from the switch to +5000 steps. Read as: total steps 7000-14000,
+    i.e. from the last validation before the switch (7000) to switch + 5000 policy steps (policy 10500 =
+    total 14000); this also covers +5000 total steps (12333). 15 files per run.
+- Run conditions (user, 2026-11-14, corrected before the launch: the machine is shared with the engine
+  work today): at most 3 runs at once, GPU memory <= 40%, nice -n 10, no start below 12 GB free RAM,
+  as the day session of series 3'. The slot count is stated in the report.
+- Check before the launch (scripts/graph_s5.py check): stage 2 of series 3' Gc s1 rerun with the new code
+  and this config to step 1500 gives the stored series 3' log exactly (validation, V-sign, losses), and the
+  kept step 500 / 1000 weights give the logged V-sign. Passed 2026-11-14.
+- Time: Gc stage 2 took 2.6-2.7 h per run at 3 slots in series 3'; stage 1 (20000 steps) is estimated at
+  1-1.5 h at 3 slots (15 runs; 5 are copied). 20 runs in 3 slots = 7 rounds, so about 24-28 h from a start at
+  about 12:30: expected end 2026-11-15, 12:30-16:30.
+  The estimate is refined from the pace of the first runs and noted in docs/overnight.md.
+
+| result (runs of 20 with best 10x7 validation >= 80% after the switch) | reading | next |
+|---|---|---|
+| >= 5 | the jump is reproducible | reported; the next step is the user's |
+| 2-4 | neither | described; the decision is the user's |
+| 0-1 | series 3' Gc s1 was chance | part 4 closed |
 
 ## Series 4: middle game (the former (ii))
 

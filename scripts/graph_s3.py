@@ -58,7 +58,7 @@ def prepare(cfg):
         keys = ["recipe", "steps", "log_every", "pass_acc", "n_train", "n_val", "data_seed"]
         assert all(src_cfg[k] == cfg[k] for k in keys), "series 2' stage 1 config differs"
         assert src_cfg["parts"]["a"]["mix_steps"] == cfg["parts"]["a"]["mix_steps"]
-        for s in cfg["parts"]["a"]["seeds"]:
+        for s in ru.get("seeds", cfg["parts"]["a"]["seeds"]):   # RL series 5: only the seeds series 2' has
             for ext in (".json", ".pt"):
                 src, dst = ROOT / ru["from"] / f"a_{ru['arm']}_s{s}{ext}", out / f"a_{ru['arm']}_s{s}{ext}"
                 if not dst.exists():
@@ -70,6 +70,55 @@ def zeroed(x, zero):
         x = x.copy()
         x[:, zero] = 0
     return x
+
+
+def snapshot_steps(sc):
+    """RL series 5: the stage 2 steps whose weights are kept (stage2.snapshots; none without it):
+    the listed steps and every validation step inside val_window (total steps, inclusive)."""
+    sn = sc.get("snapshots")
+    if not sn:
+        return set()
+    lo, hi = sn["val_window"]
+    return set(sn["steps"]) | {s for s in range(sc["log_every"], sc["steps"] + 1, sc["log_every"]) if lo <= s <= hi}
+
+
+def snapshot_path(out, name, step):
+    return out / "snap" / f"{name}_step{step:05d}.pt"
+
+
+def snapshot_hists(cfg, arm, seed):
+    """RL series 5: V pre-activations on the stage 0 validation sets from the kept weights of
+    stage2.snapshots.steps. Inference after the run has ended, so the training loop is not touched."""
+    import torch
+
+    out, sc, dev = ROOT / cfg["out"], cfg["stage2"], cfg["device"]
+    name = f"s2_{arm}_s{seed}"
+    path = out / f"{name}_vhist.json"
+    if path.exists() or not sc.get("snapshots"):
+        return
+    net, zero, _ = build_net(cfg, arm)
+    z = np.load(out / "data.npz")
+    s0 = splits(cfg, {k: z[k] for k in z.files})
+    edges = np.linspace(-10, 10, 21)
+    res = {}
+    for step in sc["snapshots"]["steps"]:
+        net.load_state_dict(torch.load(snapshot_path(out, name, step), map_location="cpu"))
+        net.to(dev).eval()
+        res[step] = {}
+        for k in ("5x5", "10x7"):
+            x, y = zeroed(s0[k][2][:, :net.planes], zero), s0[k][3]
+            pre = []
+            with torch.no_grad():
+                for i in range(0, len(x), 500):
+                    net(torch.from_numpy(x[i:i + 500]).to(dev))
+                    pre.append(net.v_pre.cpu().numpy())
+            pre = np.concatenate(pre).reshape(-1)
+            res[step][k] = {"acc": 100 * float(np.mean((pre > 0) == (y > 0))),
+                            "hist_pre": np.histogram(np.clip(pre, -10, 10), edges)[0].tolist(),
+                            "pre": [float(v) for v in pre], "positive": [int(v > 0) for v in y]}
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(res))
+    tmp.rename(path)
 
 
 def run_stage2(cfg, arm, seed):
@@ -149,6 +198,9 @@ def run_stage2(cfg, arm, seed):
         lim.tick()
         return loss.item()
 
+    snaps = snapshot_steps(sc)               # RL series 5 (empty in series 3 and 3')
+    if snaps:
+        (out / "snap").mkdir(exist_ok=True)
     ckpt = out / f"{name}.ckpt"
     start, st = load_checkpoint(ckpt, net, opt, sched, np_rng)
     if st:
@@ -193,6 +245,10 @@ def run_stage2(cfg, arm, seed):
             if step % (10 * sc["log_every"]) == 0:
                 print(f"{name}: step {step} val 5x5 {v['5x5']:.1f} 10x7 {v['10x7']:.1f} "
                       f"stage0 10x7 {s['10x7']:.1f} ({log[-1]['seconds']:.0f} s)", flush=True)
+        if step in snaps:                    # RL series 5: weights only; no forward pass, no RNG use
+            sp_ = snapshot_path(out, name, step)
+            torch.save(net.state_dict(), sp_.with_suffix(".tmp"))
+            sp_.with_suffix(".tmp").replace(sp_)
         if step % CKPT_EVERY == 0 and step < sc["steps"]:
             save_checkpoint(ckpt, step, net, opt, sched, np_rng,
                             {"log": log, "acc_loss": acc_loss, "acc_s0": acc_s0, "best": best, "seconds": time.time() - t0})
@@ -221,7 +277,10 @@ def run_job(args):
     cfg, arm, seed = args
     if graph_s2.run_one((cfg, "a", arm, seed)) is None:
         return None
-    return run_stage2(cfg, arm, seed)
+    name = run_stage2(cfg, arm, seed)
+    if name:
+        snapshot_hists(cfg, arm, seed)       # RL series 5; nothing without stage2.snapshots
+    return name
 
 
 def jobs_of(cfg):

@@ -1,0 +1,56 @@
+# Part 4, series 5 of docs/plan_part4.md (scripts/graph_s3.py --config configs/graph_s5.yaml, report scripts/graph_s5.py):
+# how often does Gc make the move-choice jump of series 3' Gc s1. Protocol by the user 2026-11-14, fixed
+# before the first run; a change = a new series.
+# Training is series 3' unchanged (configs/graph_s3p.yaml): same stage 1, same stage 2, share 0.25.
+# Differences, none of which touches the training computation: Gc only, seeds 6-25, and stage2.snapshots
+# (weights written to disk at the listed steps). Slots and limits are those of series 3' (3 runs, GPU 0.4, 12 GB).
+data_seed: 4100                  # stage 0 data of series 2 (runs/graph_s2/data.npz, copied)
+device: cuda
+out: runs/graph_s5
+report: docs/graph_s5.md
+seed: 4100                       # parity_hand split / probe sets as (i); batches use the run seed
+parity_config: configs/parity_hand.yaml
+jobs: 3                          # user 2026-11-14 (correction before the launch): half the machine, as the series 3'
+limits: {gpu_memory_fraction: 0.4, min_available_gb: 12, cpu_threads: 2}   # day session: 3 runs at once, nice -n 10
+
+# ---- stage 1: identical to series 2' (a) and series 3'
+n_train: 20000
+n_val: 2000
+steps: 20000
+log_every: 250
+pass_acc: 95.0
+hold_acc: 90.0
+sat: 0.99
+save_weights: true
+recipe: {v_out: linear, loss: sign, readout_init: null, readout_norm: false, lr: 0.0005, batch: 128, clip: 1.0, cosine: true}
+parts:
+  a: {arms: [Gc], curriculum: true, mix_steps: 1000,
+      seeds: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]}
+# Gc s6-s10 stage 1 = series 2' a_Gc_s6..s10 (same config, deterministic): copied, not rerun, as series 3'
+# did for s1-s5. Seeds 11-25 have no earlier stage 1 with this config and run here.
+reuse_stage1: {from: runs/graph_s2p, arm: Gc, seeds: [6, 7, 8, 9, 10]}
+
+arms:
+  Gc: {config: configs/graph_gc.yaml}
+
+# ---- stage 2: identical to series 3'
+stage2:
+  steps: 40000                   # 30000 policy steps + 10000 stage 0 steps
+  stage0_share: 0.25             # every 4th step is a stage 0 step: 128 stage 0 train positions, 10x7 only, V-sign loss
+  batch: 128
+  lr: 0.0005                     # Adam, all parameters, cosine over stage 2, clip 1.0
+  clip: 1.0
+  switch_at: 5500                # in policy steps (= total step 7333): judge 5x5 positions to here, then 10x7 only
+  log_every: 500                 # parity validation of both sizes + stage 0 V-sign accuracy
+  select_after_switch: true      # best point by 10x7 validation, only at policy steps > switch_at
+  gate_stage0_10x7: 90.0         # "V sign kept": stage 0 V-sign on 10x7 >= this at the best point
+  gate_min_runs: 3               # unused here (no pair of arms); kept so stage 2 reads as series 3'
+  snapshots:                     # series 5 only: weights kept in runs/graph_s5/snap/
+    steps: [250, 500, 1000]      # + V pre-activations on the stage 0 validation sets from these weights (after the run)
+    val_window: [7000, 14000]    # every validation step from the last one before the switch (7000; the switch is
+                                 # total step 7333) to switch + 5000 policy steps (policy 10500 = total 14000)
+
+criterion:
+  jump_val_10x7: 80.0            # a run "jumps" if its best 10x7 judge validation after the switch is >= this
+  reproducible_min: 5            # >= 5 of 20: the jump is reproducible
+  chance_max: 1                  # 0-1 of 20: s1 was chance, part 4 closed; 2-4: described, the user decides
