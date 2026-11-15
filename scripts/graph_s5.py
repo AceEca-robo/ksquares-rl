@@ -4,6 +4,8 @@
     python scripts/graph_s3.py run   --config configs/graph_s5.yaml  # stage 1 + stage 2 of series 3', Gc seeds 6-25
     python scripts/graph_s3.py probe --config configs/graph_s5.yaml  # once, after all training
     python scripts/graph_s5.py report                                # docs/graph_s5.md
+    python scripts/graph_s5.py stage1 --seed 8                       # user 2026-11-15: stage 1 of a copied seed retrained
+    python scripts/graph_s5.py stage1 --seed 8 --stage2              # ... and stage 2 from the fresh weights (only if they differ)
 
 Training is scripts/graph_s3.py unchanged; this file only checks and reports.
 """
@@ -12,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import multiprocessing as mp
 import shutil
 import time
 
@@ -56,6 +59,57 @@ def cmd_check(cfg, out, steps):
     print(f"check passed: {len(new)} log entries to step {steps} equal series 3' Gc s1 exactly; "
           f"V-sign from the kept weights equals the log at steps {[int(s) for s in vh if int(s) in by]}; "
           f"{sec:.0f} s for {steps} steps alone")
+
+
+S1CHECK = "runs/graph_s5_s1check"            # stage 1 retrain check (user, 2026-11-15); not the series directory
+
+
+def strip_seconds(x):
+    return {k: v for k, v in x.items() if k != "seconds"}
+
+
+def compare_stage1(ref_dir, new_dir, name):
+    """Two finished stage 1 runs of the same name: weights bit for bit, logs entry by entry (wall time aside)."""
+    import torch
+
+    a, b = (torch.load(d / f"{name}.pt", map_location="cpu") for d in (ref_dir, new_dir))
+    la, lb = (json.loads((d / f"{name}.json").read_text()) for d in (ref_dir, new_dir))
+    diff = [k for k in a if not torch.equal(a[k], b[k])]
+    first = next((x["step"] for x, y in zip(la["log"], lb["log"]) if strip_seconds(x) != strip_seconds(y)), None)
+    acc = lambda r: [[x["step"], x["val"]["5x5"]["acc"], x["val"]["10x7"]["acc"]] for x in r["log"]]  # noqa: E731
+    return {"name": name, "ref": str(ref_dir), "new": str(new_dir),
+            "file_bytes_equal": (ref_dir / f"{name}.pt").read_bytes() == (new_dir / f"{name}.pt").read_bytes(),
+            "weights_equal": a.keys() == b.keys() and not diff, "tensors": len(a), "tensors_differ": len(diff),
+            "max_abs_diff": max((float((a[k] - b[k]).abs().max()) for k in diff), default=0.0),
+            "log_equal": len(la["log"]) == len(lb["log"]) and first is None, "first_log_diff_step": first,
+            "summary_equal": all(la[k] == lb[k] for k in ("switch", "click5", "click10", "hold10", "last_5x5", "last_10x7")),
+            "val_ref": acc(la), "val_new": acc(lb), "switch": [la["switch"], lb["switch"]]}
+
+
+def cmd_stage1(cfg, seed, stage2):
+    """User 2026-11-15, before the verdict: stage 1 of a copied seed retrained with the current code and the
+    series 5 config in a directory of its own, then compared with the series 2' (a) copy the series used.
+    Same entry point as the series (graph_s2.run_one in a spawned pool worker). --stage2: stage 2 from the
+    fresh weights, for the case they differ."""
+    import torch
+
+    assert seed in cfg["reuse_stage1"]["seeds"], "not a copied seed"
+    src = ROOT / cfg["reuse_stage1"]["from"]
+    cfg = {**cfg, "out": S1CHECK, "reuse_stage1": None}
+    out = ROOT / S1CHECK
+    graph_s3.prepare(cfg)                    # data.npz only
+    name = f"a_Gc_s{seed}"
+    with mp.get_context("spawn").Pool(1, maxtasksperchild=1) as pool:
+        if pool.apply(graph_s3.graph_s2.run_one, ((cfg, "a", "Gc", seed),)) is None:
+            return print("stopped at a checkpoint")
+        res = compare_stage1(src, out, name)
+        res.update(torch=torch.__version__, cuda=torch.version.cuda, gpu=torch.cuda.get_device_name(0))
+        (out / f"compare_s{seed}.json").write_text(json.dumps(res))
+        print({k: v for k, v in res.items() if not k.startswith("val_")}, flush=True)
+        if stage2:
+            assert not res["weights_equal"], "weights are equal: stage 2 would repeat the series run"
+            if pool.apply(graph_s3.run_job, ((cfg, "Gc", seed),)) is None:
+                return print("stopped at a checkpoint")
 
 
 def fmt_hist(pre):
@@ -167,13 +221,17 @@ def cmd_report(cfg):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["check", "report"])
+    ap.add_argument("cmd", choices=["check", "report", "stage1"])
     ap.add_argument("--config", default="configs/graph_s5.yaml")
     ap.add_argument("--out", help="check: scratch directory")
     ap.add_argument("--steps", type=int, default=1500, help="check: stage 2 steps (a checkpoint step)")
+    ap.add_argument("--seed", type=int, default=8, help="stage1: a copied seed")
+    ap.add_argument("--stage2", action="store_true", help="stage1: also stage 2 from the fresh weights")
     a = ap.parse_args()
     cfg = load_config(ROOT / a.config)
-    if a.cmd == "check":
+    if a.cmd == "stage1":
+        cmd_stage1(cfg, a.seed, a.stage2)
+    elif a.cmd == "check":
         cmd_check(cfg, a.out, a.steps)
     else:
         cmd_report(cfg)
