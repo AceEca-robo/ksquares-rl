@@ -133,6 +133,67 @@ def verdict(n_jump, n_done, n_all, cr):
     return f"{cr['chance_max'] + 1}-{cr['reproducible_min'] - 1} of {n_all}: described; the decision is the user's"
 
 
+NOTES = "\n### Notes on the stage 1 check\n"
+
+
+def fisher_two_sided(a, b, c, d):
+    """Two-sided Fisher exact p of the table [[a, b], [c, d]] (sum of the tables no more likely than this one)."""
+    from math import comb
+
+    n1, n2, k = a + b, c + d, a + c
+    pr = lambda x: comb(n1, x) * comb(n2, k - x) / comb(n1 + n2, k)  # noqa: E731
+    return sum(pr(x) for x in range(max(0, k - n2), min(n1, k) + 1) if pr(x) <= pr(a) * (1 + 1e-9))
+
+
+def stage1_check_section(cfg, rows, copied):
+    """User 2026-11-15: jumps by the origin of stage 1 and the retrain of a copied seed. Not part of the verdict."""
+    thr = cfg["criterion"]["jump_val_10x7"]
+    L = ["## Check: stage 1 copied from series 2' (a) or trained here (user, 2026-11-15; not part of the verdict)", "",
+         "Seeds 6-10 use the stage 1 weights of series 2' (a) (same stage 1 config; copied, as series 3' did for seeds "
+         "1-5); seeds 11-25 trained stage 1 in this series.", "",
+         "| group | stage 1 | runs finished | best val 10x7 >= " + f"{thr:.0f}% | seeds |", "|---|---|---:|---:|---|"]
+    ref = ROOT / "runs/graph_s3p"
+    j3 = [s for s in range(1, 6) if (ref / f"s2_Gc_s{s}.json").exists()
+          and json.loads((ref / f"s2_Gc_s{s}.json").read_text())["best_val_10x7"] >= thr]
+    grp = {True: [s for s in rows if s in copied], False: [s for s in rows if s not in copied]}
+    jc, jf = ([s for s in grp[g] if rows[s][0]] for g in (True, False))
+    L += [f"| series 3' seeds 1-5 (not counted in series 5) | copy | 5 | {len(j3)} | {' '.join(map(str, j3))} |",
+          f"| series 5 seeds 6-10 | copy | {len(grp[True])} | {len(jc)} | {' '.join(map(str, jc))} |",
+          f"| series 5 seeds 11-25 | fresh | {len(grp[False])} | {len(jf)} | {' '.join(map(str, jf))} |", ""]
+    a, n1, c, n2 = len(jc) + len(j3), len(grp[True]) + 5, len(jf), len(grp[False])
+    if n2:
+        L += [f"Copy {a} of {n1}, fresh {c} of {n2}; Fisher exact, two-sided: p = {fisher_two_sided(a, n1 - a, c, n2 - c):.3f} "
+              "(descriptive: the split was not planned before the data).", ""]
+    for cp in sorted((ROOT / S1CHECK).glob("compare_s*.json")):
+        r = json.loads(cp.read_text())
+        s = int(r["name"].rsplit("s", 1)[1])
+        L += [f"Retrain of stage 1, seed {s} ({S1CHECK}; scripts/graph_s5.py stage1; current code, configs/graph_s5.yaml; "
+              f"torch {r['torch']}, CUDA {r['cuda']}, {r['gpu']}), against the copy in {r['ref']}:", "",
+              f"- weights: {'equal bit for bit' if r['weights_equal'] else 'differ'} ({r['tensors']} tensors, "
+              f"{r['tensors_differ']} differ, largest absolute difference {r['max_abs_diff']:.3g}); "
+              f".pt file bytes {'equal' if r['file_bytes_equal'] else 'differ'};",
+              f"- log ({len(r['val_new'])} entries: loss, gradient norms, lr, V-sign accuracy, saturation and V histograms "
+              "of both sizes at every 250 steps; wall time aside): "
+              + ("equal entry by entry;" if r["log_equal"] else f"first difference at step {r['first_log_diff_step']};"),
+              f"- switch step {r['switch'][0]} / {r['switch'][1]} (copy / retrain); click and hold summary "
+              f"{'equal' if r['summary_equal'] else 'differs'}.", ""]
+        if not r["log_equal"]:
+            d = [(x, y) for x, y in zip(r["val_ref"], r["val_new"]) if x != y]
+            L += [f"V-sign validation differs at {len(d)} of {len(r['val_new'])} logged steps; first rows that differ:", "",
+                  "| step | copy 5x5 | copy 10x7 | retrain 5x5 | retrain 10x7 |", "|---:|---:|---:|---:|---:|"]
+            L += [f"| {x[0]} | {x[1]:.1f} | {x[2]:.1f} | {y[1]:.1f} | {y[2]:.1f} |" for x, y in d[:12]] + [""]
+        p2 = ROOT / S1CHECK / f"s2_Gc_s{s}.json"
+        if p2.exists():
+            r2 = json.loads(p2.read_text())
+            bl = next(x for x in r2["log"] if x["step"] == r2["best_step"])
+            o = json.loads((ROOT / cfg["out"] / f"s2_Gc_s{s}.json").read_text())
+            L += [f"Stage 2 of seed {s} from the retrained weights: best 10x7 validation {r2['best_val_10x7']:.1f} at step "
+                  f"{r2['best_step']} (V-sign 10x7 there {bl['stage0']['10x7']:.1f}): "
+                  f"{'a jump' if r2['best_val_10x7'] >= thr else 'no jump'}; the series run from the copy: "
+                  f"{o['best_val_10x7']:.1f} at step {o['best_step']}.", ""]
+    return L
+
+
 def cmd_report(cfg):
     out, sc, cr = ROOT / cfg["out"], cfg["stage2"], cfg["criterion"]
     seeds = cfg["parts"]["a"]["seeds"]
@@ -145,10 +206,12 @@ def cmd_report(cfg):
          f"Slots: {cfg['jobs']} runs at once, GPU memory fraction {cfg['limits']['gpu_memory_fraction']}, nice -n 10, "
          f"no work below {cfg['limits']['min_available_gb']} GB free RAM (user, 2026-11-14). Steps below are total stage 2 steps.", "",
          "## Table 1. Runs", "",
-         f"| seed | s1 5x5 click | s1 10x7 click | s1 last 10x7 | best step | val 5x5 | best val 10x7 | >= {thr:.0f}% | "
+         f"| seed | stage 1 | s1 5x5 click | s1 10x7 click | s1 last 10x7 | best step | val 5x5 | best val 10x7 | >= {thr:.0f}% | "
          f"V-sign 10x7 at start / best / end | sign kept (>= {gate:.0f}% at best) | largest rise after the switch | "
          "probe 5x5 | probe 10x7 [95%] |",
-         "|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|---:|---:|"]
+         "|---:|---|---:|---:|---:|---:|---:|---:|---|---|---|---|---:|---:|"]
+    copied = set((cfg.get("reuse_stage1") or {}).get("seeds", []))
+    src1 = lambda s: "copy" if s in copied else "fresh"  # noqa: E731
     done, rows = [], {}
     for s in seeds:
         p1, p2 = out / f"a_Gc_s{s}.json", out / f"s2_Gc_s{s}.json"
@@ -156,7 +219,7 @@ def cmd_report(cfg):
             ck = out / f"s2_Gc_s{s}.ckpt"
             state = "stage 2 running" if ck.exists() else "stage 1 done" if p1.exists() else \
                 "stage 1 running" if (out / f"a_Gc_s{s}.ckpt").exists() else "not started"
-            L.append(f"| {s} | {state} ||||||||||||")
+            L.append(f"| {s} | {src1(s)} | {state} ||||||||||||")
             continue
         r1, r2 = json.loads(p1.read_text()), json.loads(p2.read_text())
         log = r2["log"]
@@ -170,7 +233,7 @@ def cmd_report(cfg):
         if pr:
             lo, hi = wilson(sum(pr["10x7"]), len(pr["10x7"]))
             pc = f"{100 * np.mean(pr['5x5']):.1f} | {100 * np.mean(pr['10x7']):.1f} [{lo:.0f}-{hi:.0f}]"
-        L.append(f"| {s} | {graph_s3.fmt(r1['click5'])} | {graph_s3.fmt(r1['click10'])} | {r1['last_10x7']:.1f} | {r2['best_step']} | "
+        L.append(f"| {s} | {src1(s)} | {graph_s3.fmt(r1['click5'])} | {graph_s3.fmt(r1['click10'])} | {r1['last_10x7']:.1f} | {r2['best_step']} | "
                  f"{bl['val']['5x5']:.1f} | {r2['best_val_10x7']:.1f} | {'yes' if jump else 'no'} | "
                  f"{log[0]['stage0']['10x7']:.1f} / {bl['stage0']['10x7']:.1f} / {log[-1]['stage0']['10x7']:.1f} | "
                  f"{'yes' if kept else 'no'} | {rb - ra:+.1f} at {rs} ({ra:.1f} -> {rb:.1f}) | {pc} |")
@@ -215,7 +278,11 @@ def cmd_report(cfg):
             bl = next(x for x in r["log"] if x["step"] == r["best_step"])
             L.append(f"| {s} | {r['best_step']} | {r['best_val_10x7']:.1f} | {bl['stage0']['10x7']:.1f} |")
         L.append("")
-    (ROOT / cfg["report"]).write_text("\n".join(L))
+    L += stage1_check_section(cfg, rows, copied)
+    rep = ROOT / cfg["report"]
+    keep = rep.read_text().split(NOTES, 1) if rep.exists() else [""]
+    L += [NOTES.strip("\n") + keep[1]] if len(keep) > 1 else []   # hand-written notes of the check are kept
+    rep.write_text("\n".join(L))
     print("\n".join(L))
 
 
