@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14.
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -373,6 +373,60 @@ right after the switch and ended near 89-90%; the other four stayed at 62-66%. H
 | >= 5 | the jump is reproducible | reported; the next step is the user's |
 | 2-4 | neither | described; the decision is the user's |
 | 0-1 | series 3' Gc s1 was chance | part 4 closed |
+
+## Series 6: what decides the jump, the stage 1 weights or the stage 2 seed
+
+Protocol by the user, 2026-11-16, committed before the first run: configs/graph_s6.yaml, scripts/graph_s6.py
+(check, run, probe, report), tests/test_graph_s6.py. Series 5 stands as reported (5 of 20, seeds 7 8 9 10 12).
+
+One question: is the jump decided by the stage 1 weights or by the stage 2 seed?
+
+- Stage 2 only, no stage 1 is trained. Stage 2 is the stage 2 of series 5 with no change: the training values of
+  configs/graph_s6.yaml equal configs/graph_s5.yaml key by key (tests/test_graph_s6.py), the training code is
+  scripts/graph_s3.py run_stage2, not edited. The kept weights (stage2.snapshots) are part of that config and stay.
+- Stage 1 weights: the finished series 5 files runs/graph_s5/a_Gc_s<seed>.pt of four seeds, copied (sha256 of
+  each file is written to runs/graph_s6/stage1_sha256.json): **8 and 9** (their series 5 run jumped: 92.0, 89.4)
+  and **6 and 11** (no jump: 63.4, 64.6). Seeds 6, 8, 9 are the copies of series 2' (a), seed 11 was trained in
+  series 5; s8 was retrained on 2026-11-15 and is equal to its copy bit for bit.
+- For each of the four: 5 new stage 2 seeds, **101-105**. 20 runs. The stage 2 seed is the one seed
+  run_stage2 takes: it seeds torch (CPU and GPU), numpy and python at the start of stage 2 and the batch
+  generator, so the batch order of the judge and stage 0 batches and anything else random in stage 2. It does not
+  touch the starting weights (loaded from the file), the data, the splits (seed 4100) or the validation sets.
+- Reproducibility control, not counted: stage 2 from the weights s8 with the stage 2 seed 8, i.e. the series 5
+  run s2_Gc_s8 again, in full. It must equal series 5 bit for bit: the log entry by entry (wall time aside), the
+  best point, the weights of the best point, of the last step and of the 18 kept steps, the V pre-activations.
+  If it does not, the report says so in its first line and no reading is given before the user has seen it.
+- Primary metric: a run jumps if its best 10x7 judge validation after the switch is >= 80% (as series 5).
+  Counted per group over the 10 runs of the group: A = weights 8 and 9, B = weights 6 and 11. The four series 5
+  runs of these weights and the control are not counted.
+- Reading, written before the runs:
+
+| result (jumps of 10 in A = weights 8, 9; of 10 in B = weights 6, 11) | reading | next |
+|---|---|---|
+| A >= 8 and B <= 2 | the stage 1 weights decide | look for what distinguishes these weights |
+| the counts are close: \|A - B\| < 3, i.e. at most 2 | the course of stage 2 decides | change the stage 2 procedure |
+| anything else | neither | described; the decision is the user's |
+
+  The two rows cannot both hold. The second row is applied as written also when both counts are low or both high
+  (0 and 0, 10 and 9); the report then says so in words next to the row.
+- Reported next to it, not part of the reading: V sign kept (>= 90% at the best point), the counts per stage 1
+  seed (5 runs each), the early V histograms as Table 2 of series 5.
+- Probes (5x5, 10x7): once, after all training; descriptive, never used for selection or for the reading.
+- Run conditions: 2 runs at once, GPU memory fraction 0.4 per run, nice -n 10, no start below 12 GB free RAM.
+  Series 5 ran 3 at once and measured 42% GPU memory, accepted by the user for that series; CLAUDE.md says 40%,
+  and 2 slots keep it (decision of mine; measured alone 49 s per 1000 steps on 5x5 against 125 s at 3 slots, so
+  the third slot adds little). The slot count is no part of the training computation (series 2' ran at 6
+  slots and the 3-slot retrain was bit-equal); the control tests this again.
+- Check before the launch (scripts/graph_s6.py check, scratch directory): the control to step 1500 gives the
+  stored series 5 log of s2_Gc_s8 exactly and the kept weights of steps 250, 500, 1000 bit for bit; the same
+  weights with the stage 2 seed 101 give the same step 0 validation and differ at every later entry.
+  Passed 2026-11-16.
+- Checkpoints every 500 steps and the stop command as usual: touch runs/graph_s6/STOP (the run directories
+  runs/graph_s6/w<seed> and runs/graph_s6/control see it through a link).
+- Order: the control first, then stage 2 seed by stage 2 seed over the four weights (101 for 8, 9, 6, 11, then
+  102, ...), so that a stopped series has the groups filled evenly.
+- Time: 21 stage 2 runs. Series 5 took 2.3 h per run at 3 slots; at 2 slots estimated 1.6-2.0 h per run, so
+  17-21 h from the start. Refined from the pace of the first runs in docs/overnight.md.
 
 ## Series 4: middle game (the former (ii))
 

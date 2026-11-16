@@ -1,0 +1,65 @@
+# Part 4, series 6 of docs/plan_part4.md (scripts/graph_s6.py): what decides the move-choice jump of series 5,
+# the stage 1 weights or the stage 2 seed. Protocol by the user 2026-11-16, fixed before the first run;
+# a change = a new series.
+# Stage 2 only. Everything below the series6 block is configs/graph_s5.yaml unchanged except out / report / jobs
+# (tests/test_graph_s6.py compares the two files key by key); the stage 1 keys stay because stage 2 reads
+# the recipe and the stage 0 split from them, no stage 1 is trained here.
+series6:
+  from: runs/graph_s5              # finished stage 1 weights a_Gc_s<seed>.pt of series 5, copied, not retrained
+  weights: {jump: [8, 9], no_jump: [6, 11]}   # stage 1 seeds; group = what their series 5 run did
+  stage2_seeds: [101, 102, 103, 104, 105]     # torch / numpy / python seed of stage 2: batch order and all else random there
+  control: {weights: 8, stage2_seed: 8}       # = series 5 s2_Gc_s8; must equal it bit for bit; not counted
+  decide_min: 8                    # jump group >= 8 of 10 and no-jump group <= 2 of 10: the stage 1 weights decide
+  decide_max: 2
+  close_below: 3                   # |difference of the two group counts| < 3 of 10: the course of stage 2 decides
+data_seed: 4100                  # stage 0 data of series 2 (runs/graph_s2/data.npz, copied)
+device: cuda
+out: runs/graph_s6
+report: docs/graph_s6.md
+seed: 4100                       # parity_hand split / probe sets as (i); batches use the run seed
+parity_config: configs/parity_hand.yaml
+jobs: 2                          # series 5 had 3 (42% GPU memory, accepted for that series only); 2 keeps the 40% limit of CLAUDE.md.
+                                 # The slot count does not change a run (deterministic; the control checks it once more)
+limits: {gpu_memory_fraction: 0.4, min_available_gb: 12, cpu_threads: 2}   # as series 5; nice -n 10
+
+# ---- stage 1: identical to series 2' (a) and series 3'
+n_train: 20000
+n_val: 2000
+steps: 20000
+log_every: 250
+pass_acc: 95.0
+hold_acc: 90.0
+sat: 0.99
+save_weights: true
+recipe: {v_out: linear, loss: sign, readout_init: null, readout_norm: false, lr: 0.0005, batch: 128, clip: 1.0, cosine: true}
+parts:
+  a: {arms: [Gc], curriculum: true, mix_steps: 1000,
+      seeds: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]}
+# Gc s6-s10 stage 1 = series 2' a_Gc_s6..s10 (same config, deterministic): copied, not rerun, as series 3'
+# did for s1-s5. Seeds 11-25 have no earlier stage 1 with this config and run here.
+reuse_stage1: {from: runs/graph_s2p, arm: Gc, seeds: [6, 7, 8, 9, 10]}
+
+arms:
+  Gc: {config: configs/graph_gc.yaml}
+
+# ---- stage 2: identical to series 3'
+stage2:
+  steps: 40000                   # 30000 policy steps + 10000 stage 0 steps
+  stage0_share: 0.25             # every 4th step is a stage 0 step: 128 stage 0 train positions, 10x7 only, V-sign loss
+  batch: 128
+  lr: 0.0005                     # Adam, all parameters, cosine over stage 2, clip 1.0
+  clip: 1.0
+  switch_at: 5500                # in policy steps (= total step 7333): judge 5x5 positions to here, then 10x7 only
+  log_every: 500                 # parity validation of both sizes + stage 0 V-sign accuracy
+  select_after_switch: true      # best point by 10x7 validation, only at policy steps > switch_at
+  gate_stage0_10x7: 90.0         # "V sign kept": stage 0 V-sign on 10x7 >= this at the best point
+  gate_min_runs: 3               # unused here (no pair of arms); kept so stage 2 reads as series 3'
+  snapshots:                     # series 5 only: weights kept in runs/graph_s5/snap/
+    steps: [250, 500, 1000]      # + V pre-activations on the stage 0 validation sets from these weights (after the run)
+    val_window: [7000, 14000]    # every validation step from the last one before the switch (7000; the switch is
+                                 # total step 7333) to switch + 5000 policy steps (policy 10500 = total 14000)
+
+criterion:
+  jump_val_10x7: 80.0            # a run "jumps" if its best 10x7 judge validation after the switch is >= this
+  reproducible_min: 5            # >= 5 of 20: the jump is reproducible
+  chance_max: 1                  # 0-1 of 20: s1 was chance, part 4 closed; 2-4: described, the user decides
