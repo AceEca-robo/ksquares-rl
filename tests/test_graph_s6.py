@@ -16,7 +16,7 @@ def test_config_is_series5():
     cfg, ref = cfgs()
     assert set(cfg) - set(ref) == {"series6"} and set(ref) <= set(cfg)
     for k in ref:
-        if k not in ("out", "report", "jobs"):       # jobs: slots at once, not a training value
+        if k not in ("out", "report", "jobs", "limits"):   # slots at once and machine limits, not training values
             assert cfg[k] == ref[k], k
     assert cfg["out"] == "runs/graph_s6" and cfg["series6"]["from"] == ref["out"]
 

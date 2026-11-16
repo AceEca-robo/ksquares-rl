@@ -31,6 +31,10 @@ from graph_s5 import fmt_hist, rise, strip_seconds
 from parity_probe import wilson
 
 ARM = "Gc"
+SLOTS = ("2 runs at once, GPU memory fraction 0.4 per run, nice -n 10 from the start (2026-11-16 10:17) to the stop at "
+         "checkpoints at 21:19 (14 runs finished, w9 / 104 and w6 / 104 at step 13500); from the restart 6 runs at once, "
+         "no GPU memory limit, no nice (user, 2026-11-16 21:15; protocol and seeds unchanged). The table marks the runs "
+         "that ran wholly or partly at 6 slots.")
 
 
 def groups(cfg):
@@ -192,12 +196,12 @@ def cmd_report(cfg):
          f"judge validation after the switch). Stage 1 weights: the finished series 5 weights of seeds "
          f"{', '.join(str(w) for _, w in gs)} ({s6['from']}/a_Gc_s<seed>.pt, copied). Stage 2 seeds "
          f"{seeds[0]}-{seeds[-1]}: the seed of torch, numpy and python in stage 2 (batch order and everything else random "
-         f"there). Slots: {cfg['jobs']} runs at once, GPU memory fraction {cfg['limits']['gpu_memory_fraction']} per run, "
-         f"nice -n 10. Steps below are total stage 2 steps.", "",
+         f"there). Slots: {SLOTS} Steps below are total stage 2 steps.", "",
          "## Table 1. Runs", "",
-         f"| stage 1 weights | series 5 run of these weights | stage 2 seed | best step | val 5x5 | best val 10x7 | >= {thr:.0f}% | "
+         f"| stage 1 weights | series 5 run of these weights | stage 2 seed | slots | best step | val 5x5 | best val 10x7 | >= {thr:.0f}% | "
          f"V-sign 10x7 at start / best / end | sign kept (>= {gate:.0f}% at best) | largest rise after the switch | "
-         "probe 5x5 | probe 10x7 [95%] |", "|---:|---|---:|---:|---:|---:|---|---|---|---|---:|---:|"]
+         "probe 5x5 | probe 10x7 [95%] |", "|---:|---|---:|---|---:|---:|---:|---|---|---|---|---:|---:|"]
+    two = (out / "done_at_2_slots.txt").read_text().split() if (out / "done_at_2_slots.txt").exists() else None
     res, orig = {}, {}
     for g, w in gs:
         o = json.loads((src / f"s2_{ARM}_s{w}.json").read_text())
@@ -205,11 +209,16 @@ def cmd_report(cfg):
         d = out / f"w{w}"
         probe = json.loads((d / "probe.json").read_text()) if (d / "probe.json").exists() else {}
         for t in seeds:
-            head = f"| s{w} | {'jump' if g == 'jump' else 'no jump'} ({o['best_val_10x7']:.1f}) | {t} | "
+            slots = "2" if two is None or f"w{w}:{t}" in two else "2, then 6 from step 13500" if (w, t) in ((9, 104), (6, 104)) else "6"
+            head = f"| s{w} | {'jump' if g == 'jump' else 'no jump'} ({o['best_val_10x7']:.1f}) | {t} | {slots} | "
             p = d / f"s2_{ARM}_s{t}.json"
             if not p.exists():
                 ck = d / f"s2_{ARM}_s{t}.ckpt"
-                L.append(head + ("running or stopped at a checkpoint" if ck.exists() else "not started") + " ||||||||||")
+                st = "not started"
+                if ck.exists():
+                    import torch
+                    st = f"at checkpoint {torch.load(ck, map_location='cpu', weights_only=False)['step']}"
+                L.append(head + st + " |||||||||")
                 continue
             r = json.loads(p.read_text())
             log = r["log"]

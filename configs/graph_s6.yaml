@@ -1,7 +1,7 @@
 # Part 4, series 6 of docs/plan_part4.md (scripts/graph_s6.py): what decides the move-choice jump of series 5,
 # the stage 1 weights or the stage 2 seed. Protocol by the user 2026-11-16, fixed before the first run;
 # a change = a new series.
-# Stage 2 only. Everything below the series6 block is configs/graph_s5.yaml unchanged except out / report / jobs
+# Stage 2 only. Everything below the series6 block is configs/graph_s5.yaml unchanged except out / report / jobs / limits
 # (tests/test_graph_s6.py compares the two files key by key); the stage 1 keys stay because stage 2 reads
 # the recipe and the stage 0 split from them, no stage 1 is trained here.
 series6:
@@ -18,9 +18,9 @@ out: runs/graph_s6
 report: docs/graph_s6.md
 seed: 4100                       # parity_hand split / probe sets as (i); batches use the run seed
 parity_config: configs/parity_hand.yaml
-jobs: 2                          # series 5 had 3 (42% GPU memory, accepted for that series only); 2 keeps the 40% limit of CLAUDE.md.
-                                 # The slot count does not change a run (deterministic; the control checks it once more)
-limits: {gpu_memory_fraction: 0.4, min_available_gb: 12, cpu_threads: 2}   # as series 5; nice -n 10
+jobs: 6                          # user 2026-11-16 21:15: 6 slots from the restart at the checkpoints (2 until then; series 5 had 3).
+                                 # The slot count and the limits do not change a run (deterministic; the control checks it)
+limits: {gpu_memory_fraction: 1.0, min_available_gb: 8, cpu_threads: 2}   # user 2026-11-16 21:15: limits lifted, no nice (0.4 / 12 until then); as series 2' at 6 slots
 
 # ---- stage 1: identical to series 2' (a) and series 3'
 n_train: 20000
