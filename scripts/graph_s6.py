@@ -33,8 +33,10 @@ from parity_probe import wilson
 ARM = "Gc"
 SLOTS = ("2 runs at once, GPU memory fraction 0.4 per run, nice -n 10 from the start (2026-11-16 10:17) to the stop at "
          "checkpoints at 21:19 (14 runs finished, w9 / 104 and w6 / 104 at step 13500); from the restart 6 runs at once, "
-         "no GPU memory limit, no nice (user, 2026-11-16 21:15; protocol and seeds unchanged). The table marks the runs "
-         "that ran wholly or partly at 6 slots.")
+         "no GPU memory limit, no nice (user, 2026-11-16 21:15; protocol and seeds unchanged) to the stop at 22:33 (six runs "
+         "at checkpoints: w9 / 104 and w6 / 104 at 23500, w11 / 104, w8 / 105, w9 / 105, w6 / 105 at 13000); from the restart "
+         "2026-11-17 04:35 2 runs at once, 0.4, nice -n 10 again (the standing limit; 6 slots gave the same total throughput). "
+         "The table gives the slots of each run.")
 
 
 def groups(cfg):
@@ -209,7 +211,8 @@ def cmd_report(cfg):
         d = out / f"w{w}"
         probe = json.loads((d / "probe.json").read_text()) if (d / "probe.json").exists() else {}
         for t in seeds:
-            slots = "2" if two is None or f"w{w}:{t}" in two else "2, then 6 from step 13500" if (w, t) in ((9, 104), (6, 104)) else "6"
+            slots = ("2" if two is None or f"w{w}:{t}" in two else "2, 6 from 13500, 2 from 23500" if (w, t) in ((9, 104), (6, 104))
+                     else "2" if (w, t) == (11, 105) else "6 to 13000, then 2")
             head = f"| s{w} | {'jump' if g == 'jump' else 'no jump'} ({o['best_val_10x7']:.1f}) | {t} | {slots} | "
             p = d / f"s2_{ARM}_s{t}.json"
             if not p.exists():

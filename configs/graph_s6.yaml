@@ -18,9 +18,10 @@ out: runs/graph_s6
 report: docs/graph_s6.md
 seed: 4100                       # parity_hand split / probe sets as (i); batches use the run seed
 parity_config: configs/parity_hand.yaml
-jobs: 6                          # user 2026-11-16 21:15: 6 slots from the restart at the checkpoints (2 until then; series 5 had 3).
+jobs: 2                          # 2 slots 2026-11-16 10:17-21:19; 6 slots 21:20-22:33 (user, limits lifted for that night);
+                                 # 2 again from the restart 2026-11-17 04:35 (standing 40% limit; 6 slots gave no more throughput).
                                  # The slot count and the limits do not change a run (deterministic; the control checks it)
-limits: {gpu_memory_fraction: 1.0, min_available_gb: 8, cpu_threads: 2}   # user 2026-11-16 21:15: limits lifted, no nice (0.4 / 12 until then); as series 2' at 6 slots
+limits: {gpu_memory_fraction: 0.4, min_available_gb: 12, cpu_threads: 2}   # nice -n 10 (1.0 / 8, no nice at 6 slots)
 
 # ---- stage 1: identical to series 2' (a) and series 3'
 n_train: 20000
