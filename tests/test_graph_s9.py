@@ -33,7 +33,9 @@ def test_config_is_az5b():
     assert {k: v for k, v in g["eval"].items() if k != "opponents"} == {k: v for k, v in a["eval"].items()
                                                                        if k != "opponents"}
     assert set(g["eval"]["opponents"]) - set(a["eval"]["opponents"]) == {"easy"}
-    assert g["stop"] == {"max_rejects": 6} and g["update_best"] is False
+    assert g["stop"] == {"max_rejects": 6, "min_rounds": 117, "plateau_window": 20, "plateau_gain": 20,
+                         "max_rounds": 250, "elo_opponents": ["random", "greedy", "medium", "hard", "strong"]}
+    assert g["update_best"] is False
 
 
 def small_gc():
@@ -149,3 +151,20 @@ def test_resume_and_worker_count(tmp_path, monkeypatch):
     one = az_train.Run(tiny_cfg(tmp_path, "one_worker", 1), 2)
     one.loop()
     same(state_of(tmp_path / "one_worker"), ref)
+
+
+def test_plateau_rule():
+    from az_train import plateau_rule
+    sc = {"min_rounds": 117, "plateau_window": 20, "plateau_gain": 20}
+    acc = list(range(1, 131, 2))
+    flat = {g: min(g, 100) * 10.0 for g in acc}           # best grows to 990 by round 99, then flat
+    assert plateau_rule(116, [g for g in acc if g <= 116], {g: e for g, e in flat.items() if g <= 116}, sc) is None
+    assert plateau_rule(120, [g for g in acc if g <= 120], {g: e for g, e in flat.items() if g <= 120}, sc)
+    # round 117 with a gain of 21 since round 97 (best 970 at 97 -> 991 at 117): no stop
+    e = dict(flat)
+    e[117] = 991.0
+    assert plateau_rule(117, [g for g in acc if g <= 117], {g: v for g, v in e.items() if g <= 117}, sc) is None
+    # the last accepted gen not evaluated yet: judged at the round before it
+    pend = {g: v for g, v in flat.items() if g <= 119}
+    assert plateau_rule(122, [g for g in acc if g <= 122], pend, sc).startswith("plateau at round 120")
+    assert plateau_rule(118, [g for g in acc if g <= 118], {g: v for g, v in flat.items() if g <= 115}, sc) is None

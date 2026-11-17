@@ -1338,3 +1338,12 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Decisions of mine (in the protocol): Dot = az5 + az5b, round = generation; Dot's milestones from the stored data are round 11 for both (user quotes 17 and 8), both reported; Elo against Dot on the common opponents (no easy); best g5 = highest MCTS Elo; matches with the first 4 lines at temperature 1 (gating's value) for variety; equal time = sims matched on single-game search time; probes / update_best off so the app's net is untouched.
 - Launch 13:38 in tmux g5 (runs/g5.sh, log runs/g5.log), 6 workers, no limits. Round 1: self-play 21.7 min (18.3k evals/s, compile included), train 63 s, gating 97-3 accepted; round 2: 23.5 min self-play with the evaluator alongside, gating 85-15 accepted. Evaluation of gen 1 took ~10 min, then probe and report ran (after_eval): gen 1 MCTS Elo 1180. GPU memory 1.2 GB of 8.
 - Daily summary scheduled in this session (13:47); it ends with the session.
+
+### 2026-11-17 20:25 — series 9: stop-rule amendment (user), during round 16
+
+- User amendment written before any plateau: stop when >= 117 rounds (as Dot) and the best MCTS Elo (common
+  opponents) grew by <= 20 over the last 20 rounds; 6 rejects in a row as the fallback; hard cap 250 rounds (then
+  stop and tell the user). Reason: Dot's longest reject streak in 117 rounds was 5 (az5 max 2, az5b max 5).
+- State at the amendment: 15 rounds done (10 accepted, 5 rejected, longest streak 3), best MCTS Elo 1816 (gen 15).
+- Implemented in az_train (plateau_rule, judged at the last fully evaluated round), tested; configs/g5.yaml stop;
+  plan_part4.md. Applied by a safe stop after the self-play of round 16 (20:25:54) and an exact resume (20:26:52).

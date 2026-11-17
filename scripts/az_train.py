@@ -38,7 +38,9 @@ rejected generations in a row (within the current curriculum phase; with
 ``rejects_from_gen`` only generations from that one on count), after
 ``max_hours`` of wall clock since the run started, or when an accepted generation's evaluation
 (scripts/az_eval.py) reaches MCTS ladder Elo >= ``elo`` and a win share
->= ``hard`` against hard.
+>= ``hard`` against hard. Series 9 amendment: ``max_rounds`` (hard cap), and with ``min_rounds`` a plateau stop
+(Run.plateau / plateau_rule: at least min_rounds rounds and the best MCTS Elo on ``elo_opponents`` grew by at most
+``plateau_gain`` over the last ``plateau_window`` rounds).
 
 Replay buffers can start from another run's (``init_buffers_from``: its
 run_dir); ``eval_during: false`` skips the background evaluation.
@@ -279,6 +281,23 @@ def split(n: int, k: int) -> list[int]:
     return [n // k + (i < n % k) for i in range(k)]
 
 
+def plateau_rule(rounds: int, accepted: list[int], elos: dict, sc) -> str | None:
+    """rounds done, accepted gens in order, {gen: MCTS Elo} of the evaluated ones (a prefix of accepted)."""
+    pending = [g for g in accepted if g not in elos]
+    r = (pending[0] - 1) if pending else rounds
+    if r < sc["min_rounds"]:
+        return None
+    w = sc.get("plateau_window", 20)
+
+    def best(upto):
+        return max([e for g, e in elos.items() if g <= upto], default=float("-inf"))
+
+    gain = best(r) - best(r - w)
+    if gain <= sc.get("plateau_gain", 20):
+        return f"plateau at round {r}: best MCTS Elo {best(r):.0f}, +{gain:.0f} over the last {w} rounds"
+    return None
+
+
 class Run:
     def __init__(self, cfg_path: str, generations: int | None):
         self.cfg_path = cfg_path
@@ -381,6 +400,12 @@ class Run:
         k = sc.get("max_rejects")
         if k and len(hist_ph) >= k and not any(h["accepted"] for h in hist_ph[-k:]):
             return f"{k} rejected generations in a row"
+        if sc.get("max_rounds") and len(hist) >= sc["max_rounds"]:
+            return f"hard cap: {sc['max_rounds']} rounds"
+        if sc.get("min_rounds"):
+            why = self.plateau(sc)
+            if why:
+                return why
         if sc.get("elo") is None:
             return None
         from az_eval import anchors_for, fit_one
@@ -395,6 +420,24 @@ class Run:
                 if elo >= sc["elo"] and share >= sc.get("hard", 0.0):
                     return f"gen {h['gen']}: MCTS Elo {elo:.0f}, {100 * share:.0f}% vs hard"
         return None
+
+    def plateau(self, sc) -> str | None:
+        """Series 9 amendment: R = the last round up to which every accepted generation is evaluated; stop when
+        R >= min_rounds and the best MCTS ladder Elo (on ``elo_opponents``) up to R exceeds the best up to
+        R - plateau_window by at most plateau_gain."""
+        from az_eval import anchors_for, fit_one
+        anchors, opps = anchors_for(self.cfg), sc.get("elo_opponents")
+        elos = {}
+        for h in self.state["history"]:
+            p = self.run / "eval" / f"gen_{h['gen']:04d}.json"
+            if not h["accepted"]:
+                continue
+            if not p.exists():
+                break
+            e = json.loads(p.read_text())["mcts"]
+            elos[h["gen"]] = fit_one({o: r for o, r in e.items() if opps is None or o in opps}, anchors)
+        return plateau_rule(len(self.state["history"]), [h["gen"] for h in self.state["history"]
+                                                          if h["accepted"]], elos, sc)
 
     def save(self) -> None:
         save_atomic({"net": self.net.state_dict(), "opt": self.opt.state_dict()}, self.run / "trainer.pt")

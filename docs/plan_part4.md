@@ -517,7 +517,8 @@ Goal: a finished graph network that plays (no deadline).
    about 22M evaluations, + 1100 steps + 100 gating games) is therefore about 20-25 min at 6 workers and about
    35-40 min at 2 workers; well under 2 h. The amendment removes the 2 h gate anyway (run at any round time).
 3. **Run g5**: Gc from scratch, configs/az5b.yaml unchanged except the net and the plumbing above. Gating 55 of 100.
-   Stop: **6 rejected generations in a row only** (amendment: no 48 h limit, no Elo stop). Changes against az5b,
+   Stop: **6 rejected generations in a row only** (amendment: no 48 h limit, no Elo stop); replaced during round 16
+   by the plateau rule below (second amendment). Changes against az5b,
    each in configs/g5.yaml and checked key by key by test_config_is_az5b: net (Gc, compile), no init_from,
    run_dir, selfplay.workers (6 today, user) and selfplay.tasks, phase_seeds, stop, eval.opponents (+ easy),
    probes: false (the az5 probe maps), update_best: false (runs/best, the app's net, is not touched), after_eval
@@ -552,6 +553,18 @@ Goal: a finished graph network that plays (no deadline).
 6. **App** (amendment): the best g5 goes into the app as a 5x5 net whatever its strength (net list, thoughts
    panel, net-vs-net mode g5 against Dot), with an honest caption of its ladder strength; screenshot; a GitHub
    release with the weights.
+- **Amendment to the stop rule** (user, 2026-11-17 20:25, written during round 16, before any plateau was in sight;
+  rounds 1-15 done, best MCTS Elo 1816): the "6 rejects in a row" rule never fired in Dot's 117 rounds (longest
+  streak 5), so the run stops normally when both hold: (1) at least 117 rounds done (as many as Dot, so that the
+  comparison at equal rounds is complete); (2) the best MCTS ladder Elo (common opponents, the best-g5 definition)
+  grew by at most 20 over the last 20 rounds. Then the protocol goes on (matches, bridge, app, release). 6 rejects
+  in a row stays as a fallback. Hard cap: 250 rounds; if reached, stop and write to the user. Best g5 is still the
+  generation with the highest MCTS Elo. Implementation (configs/g5.yaml stop: min_rounds 117, plateau_window 20,
+  plateau_gain 20, max_rounds 250, elo_opponents; az_train Run.plateau / plateau_rule, tested by
+  test_plateau_rule): the evaluation runs behind training, so the rule is judged at R = the last round up to which
+  every accepted generation is evaluated (usually the current round or the one before it): R >= 117 and
+  best Elo up to R - best Elo up to R-20 <= 20. The trainer checks it before each round, so the round in progress
+  when it fires is not started. The amendment took effect by a safe stop and an exact resume.
 - Load: today (user) 6 self-play workers, or 8 if measured faster with memory to spare; no GPU memory limit, no
   nice. When the user says "2 workers, 40%": stop at the next phase (runs/g5/STOP), set workers 2 and
   gpu_memory_fraction per process so that the sum stays <= 40%, nice -n 10, resume (exact by phase_seeds). Every

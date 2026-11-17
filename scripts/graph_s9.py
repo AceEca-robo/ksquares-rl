@@ -168,6 +168,18 @@ def cmd_report(cfg):
          + (f", stopped by the rule: {stop}" if stop else ", running") + ". Training hours: "
          + fmt(G[-1]["hours"] if G else None, "{:.1f}") + " (to the last evaluated generation).", "",
          "Workers and limits: " + "; ".join(s9.get("slots", [])) + ".", ""]
+    sc = cfg.get("stop") or {}
+    if sc.get("min_rounds") and G:
+        w = sc.get("plateau_window", 20)
+        r = G[-1]["round"] if not [h for h in hist if h["accepted"] and h["gen"] > G[-1]["gen"]] else \
+            min(h["gen"] for h in hist if h["accepted"] and h["gen"] > G[-1]["gen"]) - 1
+        best = max(x["mcts_elo"] for x in G if x["round"] <= r)
+        before = max((x["mcts_elo"] for x in G if x["round"] <= r - w), default=None)
+        L += [f"Stop rule (amendment, 2026-11-17, round 16): at least {sc['min_rounds']} rounds and the best MCTS Elo "
+              f"up by <= {sc.get('plateau_gain', 20)} over the last {w} rounds; 6 rejects in a row as the fallback; "
+              f"hard cap {sc.get('max_rounds')} rounds. Now: judged at round {r} of {sc['min_rounds']}, best MCTS Elo "
+              f"{best:.0f}, " + (f"+{best - before:.0f} over the last {w} rounds." if before is not None
+                                 else f"fewer than {w} rounds of history."), ""]
     if sp_:
         L += [f"Pace: self-play {np.mean([e['seconds'] for e in sp_[-5:]]) / 60:.0f} min per round, "
               f"{np.mean([e['sims_per_s'] for e in sp_[-5:]]):.0f} evals/s (last 5 rounds).", ""]

@@ -51,7 +51,11 @@ gating:
   tasks: 2
   threshold: 0.55
 
-stop: {max_rejects: 6}   # series 9 (user, 2026-11-17): plateau only, 6 rejected generations in a row
+# series 9 (user, 2026-11-17): 6 rejected generations in a row. Amendment (user, 2026-11-17 20:25, during round 16):
+# stop when >= 117 rounds (as Dot) and the best MCTS Elo (common opponents) grew by <= 20 over the last 20 rounds;
+# 6 rejects in a row stays as the fallback; hard cap 250 rounds (then stop and tell the user).
+stop: {max_rejects: 6, min_rounds: 117, plateau_window: 20, plateau_gain: 20, max_rounds: 250,
+       elo_opponents: [random, greedy, medium, hard, strong]}
 
 eval:
   games: 100             # per opponent and mode, first mover alternating
