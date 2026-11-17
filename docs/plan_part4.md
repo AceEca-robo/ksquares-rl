@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16.
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) protocol 2026-11-17.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -427,6 +427,60 @@ One question: is the jump decided by the stage 1 weights or by the stage 2 seed?
   102, ...), so that a stopped series has the groups filled evenly.
 - Time: 21 stage 2 runs. Series 5 took 2.3 h per run at 3 slots; at 2 slots estimated 1.6-2.0 h per run, so
   17-21 h from the start. Refined from the pace of the first runs in docs/overnight.md.
+
+## Series 7: does the jump carry over to the middle game (evaluation only)
+
+Protocol by the user, 2026-11-17, committed before the run: configs/graph_s7.yaml, scripts/graph_s7.py (overlap,
+eval, report), tests/test_graph_s7.py. No training: finished nets only, read on fixed labelled sets.
+
+One question: do the Gc nets that jumped on the late 10x7 judge positions also choose better moves in the middle game?
+
+- Nets (best point weights, the .pt the probes used; none is selected by anything in this series):
+  - **Gc with a jump**: all 9 jump runs of series 6: weights s8 with stage 2 seeds 101-105, s9 with 104 and 105,
+    s6 with 103 and 104 (runs/graph_s6/w<W>/s2_Gc_s<T>.pt).
+  - **Gc without a jump**: 5 of the 11 no-jump runs of series 6, one or two per weights, fixed here as the lowest
+    stage 2 seeds: s9 / 101, s9 / 102, s6 / 101, s6 / 102, s11 / 101 (decision of mine: the user asked for "one or
+    two of each weights"; lowest seeds, so no choice by result).
+  - **C+h** s1-s5 of series 3' (runs/graph_s3p/s2_Ch_s<seed>.pt; all five passed the V-sign gate there).
+  - **Dot-2 without thinking** (the hand: policy argmax over legal lines), dot2c gen 16, recomputed here on the same
+    positions with the code of scripts/mid_judge_eval.py nets (parity_hand.evaluator); not taken from old reports.
+    The report also says whether the recomputed moves equal the moves stored in runs/mid_judge/nets_mid.json.
+  - Gc and C+h move: argmax of the policy over legal lines (graph_hand.correct_rate, as the judge validation and
+    the probes of series 3'-6).
+- Sets (labels of part 3 (c), runs/mid_judge, configs/mid_judge.yaml; not relabelled):
+  1. **mid**: the 1925 solved positions at 10-15 safe lines (labels_mid.jsonl). Metric: share of correct moves
+     (a move that keeps the best result) on the **decisive** positions (not every move has the same result: 721).
+     All 1925 reported alongside.
+  2. **chart**: the solved positions of labels_chart.jsonl at 0-18 safe lines, the same per safe-line buckets as
+     docs/who_knows.png (a point is drawn where a bucket has >= 10 decisive positions). Descriptive.
+- Overlap check, before the reading and written in the report: the mid and chart positions against every position
+  the nets were trained or selected on: the judge's 10x7 train, validation and probe (data/parity_hand via
+  configs/parity_hand.yaml, the split of series 3'-6) and the stage 0 10x7 train and validation (data.npz of
+  series 2, copied into series 3', 5 and 6; sha256 compared). Key: drawn lines only and the full 17-plane encoding,
+  minimum over the 4 grid symmetries (as scripts/graph_s3p_checks.py). 5x5 positions cannot coincide with 10x7
+  ones. Dot-2 is not in this check: these positions come from its own self-play games (MCTS-200), so they are
+  its own distribution; that is a property of the comparison, said in the report.
+  If any position is shared, the report says so and gives the reading on the set without the shared positions
+  as well (the reading itself is taken on the full set as fixed here).
+- Primary, written before the run: **D = mean accuracy of the 9 jump nets on the decisive mid positions minus the
+  accuracy of Dot-2 without thinking on the same positions.** Bootstrap over positions and nets: 10000 resamples,
+  positions with replacement (the same draw for the nets and for Dot-2), the 9 nets with replacement, seed fixed in
+  the config; two-sided 95% percentile interval.
+
+| result | reading |
+|---|---|
+| D > 0 and the interval's lower end > 0 | the jump carries over to the middle game |
+| the interval contains 0 | no transfer to the middle game |
+| the interval's upper end < 0 | no transfer; Gc with a jump is below Dot-2 without thinking (said in words) |
+
+- Alongside, the same difference and interval, not part of the reading: Gc without a jump (5 nets) - Dot-2,
+  C+h (5 nets) - Dot-2. Reference only (user): MCTS-200 96.0%, intuition 90.7%; docs/mid_judge.md gives 95.6% and
+  91.0% on the 721 decisive positions; the report shows both from the stored moves of runs/mid_judge/nets_mid.json
+  on exactly these positions (MCTS and intuition are not rerun).
+- Report: docs/graph_s7.md: table of nets, the primary with its row, the two other differences, mid by safe lines,
+  chart by safe lines, and the map "who knows what" with a new line for Gc with a jump (mean of the 9 nets):
+  docs/who_knows_s7.png (docs/who_knows.png stays as part 3 made it).
+- Load: inference only, one process (the user allowed 2 slots), GPU memory fraction 0.4, nice -n 10. A few minutes.
 
 ## Series 4: middle game (the former (ii))
 

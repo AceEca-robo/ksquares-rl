@@ -1,0 +1,34 @@
+# Part 4, series 7 of docs/plan_part4.md (scripts/graph_s7.py): does the jump carry over to the middle game.
+# Evaluation only, no training. Protocol by the user 2026-11-17, fixed before the run; a change = a new series.
+device: cuda
+out: runs/graph_s7
+report: docs/graph_s7.md
+chart_png: docs/who_knows_s7.png
+limits: {gpu_memory_fraction: 0.4}   # one process, nice -n 10 (user: 2 slots, 40%)
+
+mid_judge: configs/mid_judge.yaml    # labelled sets runs/mid_judge/labels_{mid,chart}.jsonl, stored Dot-2 moves nets_*.json
+sets:
+  mid: {safe: [10, 15]}              # primary: decisive positions
+  chart: {safe: [0, 18], min_bucket: 10}   # descriptive; a bucket is drawn with >= 10 decisive positions
+
+groups:                              # best point weights (the .pt the probes read)
+  gc_jump:                           # all 9 jump runs of series 6 (weights / stage 2 seed)
+    config: configs/graph_s6.yaml
+    arm: Gc
+    runs: [[8, 101], [8, 102], [8, 103], [8, 104], [8, 105], [9, 104], [9, 105], [6, 103], [6, 104]]
+  gc_nojump:                         # 5 of the 11 no-jump runs, one or two per weights, lowest stage 2 seeds
+    config: configs/graph_s6.yaml
+    arm: Gc
+    runs: [[9, 101], [9, 102], [6, 101], [6, 102], [11, 101]]
+  ch:                                # C+h s1-s5 of series 3'
+    config: configs/graph_s3p.yaml
+    arm: Ch
+    seeds: [1, 2, 3, 4, 5]
+
+dot2: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}   # without thinking: policy argmax, recomputed
+
+overlap:                             # training / selection positions of the nets
+  configs: [configs/graph_s6.yaml, configs/graph_s3p.yaml]   # judge split (parity_config, seed) and stage 0 data.npz
+
+bootstrap: {resamples: 10000, seed: 7, level: 0.95}   # positions and nets with replacement, two-sided percentile interval
+reference: {mcts200: 96.0, intuition: 90.7}           # as the user gave them (docs/mid_judge.md: 95.6 / 91.0)
