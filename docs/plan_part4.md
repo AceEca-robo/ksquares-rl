@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) protocol 2026-11-17.
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) done 2026-11-17 (docs/graph_s7.md: no transfer). Series 9 (Gc plays 5x5, run g5) protocol 2026-11-17.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -481,6 +481,84 @@ One question: do the Gc nets that jumped on the late 10x7 judge positions also c
   chart by safe lines, and the map "who knows what" with a new line for Gc with a jump (mean of the 9 nets):
   docs/who_knows_s7.png (docs/who_knows.png stays as part 3 made it).
 - Load: inference only, one process (the user allowed 2 slots), GPU memory fraction 0.4, nice -n 10. A few minutes.
+
+## Series 9: the graph net plays 5x5 (AlphaZero run g5)
+
+Protocol by the user, 2026-11-17, with the user's amendment of the same day (before the run), committed before the
+run: configs/g5.yaml, scripts/graph_s9.py, tests/test_graph_s9.py; the AlphaZero code (scripts/az_train.py,
+scripts/az_eval.py, agents/az_net.py) extended as below. Series 8 does not exist (the user's numbering).
+
+Goal: a finished graph network that plays (no deadline).
+
+1. **Gc in az_train and MCTS.** Gc (agents/graph_net.py, configs/graph_gc.yaml: 8 layers, width 50, pool 16,
+   segments; 0.50M parameters) already returns (policy over lines, V, score) like AZNet, so the Evaluator
+   (batched), the Python and C trees, self-play, gating and the ladder take it unchanged. Additions:
+   - `net.compile: true`: the Evaluator runs the graph net through torch.compile in fp32 on CUDA instead of eager
+     fp16 autocast. Same net, same weights; measured on a batch of 192 5x5 positions 4.9 ms against 10.9 ms (eager
+     fp16) and 11.4 ms (eager fp32); compiled outputs equal eager fp32 to 1.5e-7 (eager fp16 differs from fp32 by
+     5e-4). Tested (test_compiled_evaluator_equals_eager_fp32). Batching was already there (192 games per task).
+   - Seeds independent of the worker count (user): `selfplay.tasks: 24` splits the 2500 games into 24 tasks
+     whatever the number of workers, each with its seed from the self-play generator, and the buffer gets the
+     results in task order; `phase_seeds: true` gives every phase its own generator [seed, gen, phase], so a run
+     resumed after any phase continues exactly. Tested on CPU (test_resume_and_worker_count: a run stopped after
+     two phases and resumed, and a run with 1 worker instead of 2, end with the same weights, buffer and gating
+     results bit for bit). On the GPU runs are not bit-reproducible anyway (atomic adds), but the worker count
+     does not enter the games' seeds.
+   - Python and C trees give the same search on Gc (test_c_tree_matches_python_on_gc, 1 and 8 leaves per tree).
+   - 8 symmetries: `train.symmetries` as az5b (a random one of the 8 per sample; the graph is equivariant by
+     construction, so it changes nothing for Gc but stays as in az5b). Checkpoint every phase (state, trainer,
+     buffer, best, gen_XXXX.pt) and the stop command (touch runs/g5/STOP) as az5b.
+   - Optional `limits.gpu_memory_fraction` per process (self-play workers, trainer, evaluator), for the user's
+     "2 workers, 40%".
+2. **Measured before the run** (2026-11-17, machine otherwise idle; 5x5, MCTS sims [100, 300], 192 games per
+   worker; random-init nets, about 8.9k evaluations per game): AZNet (Dot's net) 1 worker 30.7k evals/s; Gc eager
+   1 worker 9.1k, 2 workers 12.4k; Gc compiled 6 workers 19.0k evals/s (compilation about 4 min once per worker
+   process); 8 workers 19.5k (+2.6%, within noise), so 6 workers stay and leave room for the evaluator. Training 1100 steps: Gc 64 s, AZNet 43 s. A round (2500 games,
+   about 22M evaluations, + 1100 steps + 100 gating games) is therefore about 20-25 min at 6 workers and about
+   35-40 min at 2 workers; well under 2 h. The amendment removes the 2 h gate anyway (run at any round time).
+3. **Run g5**: Gc from scratch, configs/az5b.yaml unchanged except the net and the plumbing above. Gating 55 of 100.
+   Stop: **6 rejected generations in a row only** (amendment: no 48 h limit, no Elo stop). Changes against az5b,
+   each in configs/g5.yaml and checked key by key by test_config_is_az5b: net (Gc, compile), no init_from,
+   run_dir, selfplay.workers (6 today, user) and selfplay.tasks, phase_seeds, stop, eval.opponents (+ easy),
+   probes: false (the az5 probe maps), update_best: false (runs/best, the app's net, is not touched), after_eval
+   (probe + report), limits, bridge_eval, series9. Note: az5b was a continuation of az5 (lr 0.01 = half of az5's,
+   score head, sims [100, 300]); g5 starts from scratch with these values, as the user asked ("az5b unchanged
+   except the net").
+4. **Evaluation of every accepted generation** (scripts/az_eval.py in the background, as az5b): 100 games per
+   opponent with MCTS 200 and without thinking (policy argmax) against random, greedy, easy, medium, hard, strong
+   (node budget 23000 as az5b); parity probe 5x5 on the 1000 positions of docs/parity_probe_positions.json
+   (policy argmax, V sign = V child balanced, MCTS 200), as docs/parity_curves.md (scripts/graph_s9.py probe).
+5. **Comparison, fixed now** (descriptive; no pass / fail row was given):
+   - Dot = az5 (rounds 1-31) then az5b (rounds 32-119); round = generation (accepted or not), as in az_train.
+     Dot's values come from its stored evaluations (runs/az5/eval, runs/az5b/eval) and parity curves
+     (runs/parity_probe/curves.json).
+   - By rounds: the first round whose accepted generation has Hard >= 90% with MCTS 200; the first round with V sign
+     on the probe >= 75%. The user quotes Dot 17 and 8; the stored data give round 11 for both (az5 gen 11: MCTS vs
+     hard 91%, V child 76.3%). Both are reported.
+   - By time: hours of training = summed self-play + train + gate seconds of the generations (scripts/elo_vs_time.py's
+     definition; evaluations run alongside and are not counted). Elo of the last accepted, evaluated generation
+     within 12, 24, 48 h, and the best Elo so far, against Dot at the same hours. Dot trained 28.4 h in total
+     (az5 11.4 h + az5b 17.0 h), so at 48 h Dot's value is its final one (said in the table). Elo here on the
+     opponents of both ladders (random, greedy, medium, hard, strong: Dot's ladder had no easy); the g5 ladder table
+     (docs/g5_ladder.md) also has the Elo with easy.
+   - Best g5 = the accepted generation with the highest MCTS Elo (common opponents); a tie goes to the later one.
+   - Matches, best g5 against Dot gen 54 (runs/az5b/gen_0054.pt), 200 games each, first mover alternating, the
+     first 4 lines at temperature 1 (gating's temp_moves; otherwise two nets without thinking would play two games),
+     then the best move: (a) MCTS 200 both; (b) without thinking both (amendment); (c) equal time per move: Dot 200
+     sims, g5 the sims that take the same mean time per move in single-game search (leaves_per_tree 8, as the app)
+     on 200 probe positions, measured on the idle machine (one correction step).
+   - 20 games over the bridge against the real KSquares Hard (amendment; scripts/az_vs_hard.py, MCTS 200, seed 11,
+     as Dot's 18/20).
+6. **App** (amendment): the best g5 goes into the app as a 5x5 net whatever its strength (net list, thoughts
+   panel, net-vs-net mode g5 against Dot), with an honest caption of its ladder strength; screenshot; a GitHub
+   release with the weights.
+- Load: today (user) 6 self-play workers, or 8 if measured faster with memory to spare; no GPU memory limit, no
+  nice. When the user says "2 workers, 40%": stop at the next phase (runs/g5/STOP), set workers 2 and
+  gpu_memory_fraction per process so that the sum stays <= 40%, nice -n 10, resume (exact by phase_seeds). Every
+  change goes into series9.slots of configs/g5.yaml and the report.
+- Report: docs/graph_s9.md (rebuilt after every evaluation: rounds table, curves next to Dot in
+  docs/graph_s9.png, the comparisons as they become available); a daily summary to the user with the curve by
+  rounds next to Dot's.
 
 ## Series 4: middle game (the former (ii))
 

@@ -385,8 +385,10 @@ def make_net(cfg: dict):
     if n.get("arch") == "graph":
         from agents.graph_net import GraphNet
 
-        return GraphNet(n["layers"], n["width"], n.get("pool", 16), n.get("segments", True),
-                        n.get("v_out", "tanh"), n.get("readout_norm", False), n.get("readout_init"))
+        net = GraphNet(n["layers"], n["width"], n.get("pool", 16), n.get("segments", True),
+                       n.get("v_out", "tanh"), n.get("readout_norm", False), n.get("readout_init"))
+        net.compile_eval = bool(n.get("compile", False))   # Evaluator: torch.compile in fp32 on CUDA (series 9)
+        return net
     if n.get("arch") == "dot2":
         gp = n.get("gpool_blocks", (2, 4))
         return AZNet2(n["blocks"], n["channels"], n.get("score_head", True), gp if gp == "all" else tuple(gp),
@@ -401,9 +403,15 @@ class Evaluator:
     Boards of several sizes are split into one network call per size; the
     priors then come back as a list of arrays (one per board)."""
 
-    def __init__(self, net, device: str):
+    def __init__(self, net, device: str, compile: bool | None = None):
+        """compile (default: the net's ``compile_eval``, set by make_net from ``net.compile``): on CUDA run
+        the net through torch.compile in fp32 instead of eager fp16 autocast (graph net, series 9: about
+        2x faster, outputs equal to eager fp32 to ~1e-7)."""
         self.net = net.to(device).eval()
         self.device = device
+        on = getattr(net, "compile_eval", False) if compile is None else compile
+        self.compiled = bool(on) and device.startswith("cuda")
+        self.fwd = torch.compile(self.net, dynamic=True) if self.compiled else self.net
         self.codecs = {}
         # the one-size nets' codec (launcher, probes); Dot-2: codec_for(w, h)
         self.codec = Codec(net.w, net.h) if hasattr(net, "w") else None
@@ -421,12 +429,25 @@ class Evaluator:
         g = boards[0].geo
         c = self.codec_for(g.w, g.h)
         x = torch.from_numpy(c.encode_boards(boards)).to(self.device)
-        with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=self.device.startswith("cuda")):
-            logits, v, _ = self.net(x)
+        if self.compiled and hasattr(self.net, "topo"):
+            self.net.topo(c.rows, c.cols)                  # index tables built eagerly, outside the compiled graph
+        with torch.autocast(device_type="cuda", dtype=torch.float16,
+                            enabled=self.device.startswith("cuda") and not self.compiled):
+            logits, v, _ = self.fwd(x)
         logits = logits.float()
         legal = x[:, 1].flatten(1)[:, self.net.line_cells(c.rows, c.cols)] > 0
         logits = logits.masked_fill(~legal, -1e9)
         return torch.softmax(logits, 1).cpu().numpy(), v.float().cpu().numpy()
+
+    @torch.no_grad()
+    def _eager_fp32(self, boards):
+        """Reference for the compiled path (tests): the net itself, eager, fp32, one size."""
+        g = boards[0].geo
+        c = self.codec_for(g.w, g.h)
+        x = torch.from_numpy(c.encode_boards(boards)).to(self.device)
+        logits, v, _ = self.net(x)
+        legal = x[:, 1].flatten(1)[:, self.net.line_cells(c.rows, c.cols)] > 0
+        return torch.softmax(logits.float().masked_fill(~legal, -1e9), 1).cpu().numpy(), v.float().cpu().numpy()
 
     def __call__(self, boards):
         sizes = {(b.geo.w, b.geo.h) for b in boards}

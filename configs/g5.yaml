@@ -1,0 +1,82 @@
+# Part 4, series 9 of docs/plan_part4.md: the graph net (Gc) plays 5x5 by AlphaZero from scratch (run g5).
+# configs/az5b.yaml unchanged except: the net (Gc of part 4, configs/graph_gc.yaml), no init_from (from scratch),
+# and the run plumbing marked "series 9" below (worker count, seeds independent of it, evaluation extras).
+# tests/test_graph_s9.py compares this file with az5b key by key.
+seed: 2611
+board: [5, 5]
+run_dir: runs/g5
+device: cuda
+
+net:                     # series 9: Gc (agents/graph_net.py), 0.50M parameters; az5b: AZNet 6x64 + score head
+  arch: graph
+  layers: 8
+  width: 50
+  pool: 16
+  segments: true
+  compile: true          # series 9: inference through torch.compile in fp32 (same net, ~2x faster; tested)
+
+mcts:
+  c_puct: 1.5
+  fpu_reduction: 0.2     # unvisited child Q = parent net value - this
+  dirichlet_alpha: 0.3   # root noise in self-play only
+  dirichlet_eps: 0.25
+  virtual_loss: 1.0
+  leaves_per_tree: 8     # for single-game search (az agent); self-play uses 1
+
+selfplay:
+  workers: 6             # series 9: user 2026-11-17 (machine free, limits lifted); 2 when the user works on the engine
+  tasks: 24              # series 9: games split into 24 tasks whatever the worker count (seeds per task)
+  games_per_worker: 192  # concurrent games per task (a task has ~104)
+  games_per_gen: 2500
+  sims: [100, 300]       # drawn uniformly per game and move
+  temp_moves: 10         # temperature 1 for the first 10 lines, then 0
+phase_seeds: true        # series 9: each phase its own generator [seed, gen, phase]: resume exact, workers irrelevant
+
+buffer_size: 500000      # positions (the last ones)
+
+train:
+  batch_size: 512
+  steps_per_gen: 1100
+  lr: 0.01
+  momentum: 0.9
+  weight_decay: 0.0001   # L2
+  score_weight: 0.25     # weight of the score-difference MSE
+  symmetries: true       # random one of the 8 board symmetries per sample
+  min_buffer: 20000      # do not train before this many positions
+
+gating:
+  games: 100
+  sims: 200
+  temp_moves: 4
+  tasks: 2
+  threshold: 0.55
+
+stop: {max_rejects: 6}   # series 9 (user, 2026-11-17): plateau only, 6 rejected generations in a row
+
+eval:
+  games: 100             # per opponent and mode, first mover alternating
+  sims: 200
+  opponents: [random, greedy, easy, medium, hard, strong]  # series 9: + easy (user); Elo vs Dot also without easy
+  processes: 8
+  params:
+    strong:
+      node_budget: 23000 # as az5b
+probes: false            # series 9: the az5 probe maps are not made for this run
+update_best: false       # series 9: runs/best (the app's net) is not touched
+after_eval: [[scripts/graph_s9.py, probe], [scripts/graph_s9.py, report]]
+limits: {}               # series 9: no GPU memory cap today (user); "2 workers, 40%" -> gpu_memory_fraction per process
+bridge_eval:             # scripts/az_vs_hard.py: vs the real game's Hard (as Dot, 18/20)
+  games: 20
+  sims: 200
+  seed: 11
+
+series9:                 # scripts/graph_s9.py (probe, report, match); docs/graph_s9.md
+  dot: {configs: [configs/az5.yaml, configs/az5b.yaml], match: runs/az5b/gen_0054.pt}  # Dot = az5 then az5b
+  parity: configs/parity_probe.yaml   # the 1000 5x5 parity positions; Dot's curve: runs/parity_probe/curves.json
+  hard_share: 0.90       # "Hard >= 90% with thinking"
+  v_sign: 75.0           # "V sign on the probe >= 75%" (V child, balanced)
+  hours: [12, 24, 48]
+  match: {games: 200, sims: 200, seed: 9}
+  equal_time: {positions: 200, seed: 9}   # single-game search, leaves_per_tree 8, as the app
+  slots:                 # workers and limits over the run (report)
+    - "from the start 2026-11-17: 6 self-play workers, no GPU memory limit, no nice (user: machine free today; 8 workers measured 19.5k vs 19.0k evals/s at 6, not worth it)"

@@ -43,6 +43,12 @@ rejected generations in a row (within the current curriculum phase; with
 Replay buffers can start from another run's (``init_buffers_from``: its
 run_dir); ``eval_during: false`` skips the background evaluation.
 
+Seeds (series 9): every phase draws from its own generator [seed, gen, phase] (self-play 1, train 2,
+gate 3), so a run resumed after any phase continues as it would have; with ``selfplay.tasks`` the
+self-play games are split into that many tasks whatever the worker count, and the results are added
+to the buffer in task order, so the worker count changes neither the games' seeds nor the buffer.
+Without ``selfplay.tasks`` there is one task per worker (the old split).
+
 Safe stop: create ``run_dir/STOP``; the loop saves and exits after the
 current phase (a STOP file found at start-up is removed) and also stops the evaluator (scripts/az_eval.py), which it
 starts in the background whenever an accepted net has no evaluation yet.
@@ -73,8 +79,16 @@ from agents.az_play import board_mix
 _W = {}
 
 
+def gpu_limit(cfg) -> None:
+    """``limits.gpu_memory_fraction`` (optional): this process's share of the GPU memory (allocator cap)."""
+    f = (cfg.get("limits") or {}).get("gpu_memory_fraction")
+    if f and str(cfg["device"]).startswith("cuda") and torch.cuda.is_available():
+        torch.cuda.set_per_process_memory_fraction(float(f))
+
+
 def _winit(cfg):
     torch.set_num_threads(1)
+    gpu_limit(cfg)
     _W["cfg"] = cfg
     _W["nets"] = {}
 
@@ -282,6 +296,7 @@ class Run:
                     self.sizes.append(wh)
         torch.manual_seed(cfg["seed"])
         torch.backends.cudnn.benchmark = True
+        gpu_limit(cfg)
         self.net = make_net(cfg).to(cfg["device"])
         self.codecs = [Codec(w, h, net_planes(self.net)) for w, h in self.sizes]
         tc = cfg["train"]
@@ -320,6 +335,11 @@ class Run:
             save_atomic(self.net.state_dict(), self.run / "best.pt")
             self.save()
         self.rng = np.random.default_rng([cfg["seed"], self.state["gen"], 1])
+
+    def phase_rng(self, gen: int, k: int) -> None:
+        """Self-play 1, train 2, gate 3: each phase its own generator, so a resume after any phase is exact."""
+        if self.cfg.get("phase_seeds"):
+            self.rng = np.random.default_rng([self.cfg["seed"], gen, k])
 
     def buf_paths(self) -> list[Path]:
         if len(self.sizes) == 1:
@@ -420,6 +440,7 @@ class Run:
                     break
                 gen = self.state["gen"] + 1
                 if self.state["phase"] == "selfplay":
+                    self.phase_rng(gen, 1)
                     self.selfplay(pool, gen)
                     self.state["phase"] = "train"
                     self.save_buffers()
@@ -427,11 +448,13 @@ class Run:
                     if self.stop_requested():
                         break
                 if self.state["phase"] == "train":
+                    self.phase_rng(gen, 2)
                     self.train(gen)
                     self.state["phase"] = "gate"
                     self.save()
                     if self.stop_requested():
                         break
+                self.phase_rng(gen, 3)
                 self.gate(pool, gen)
                 self.state["gen"] = gen
                 self.state["phase"] = "selfplay"
@@ -453,12 +476,13 @@ class Run:
         phase_start(self.run, gen, "selfplay", sp["games_per_gen"])
         tasks = []
         for (wh, _), n_size in zip(self.mix, self.split_by_mix(sp["games_per_gen"])):
-            for n in split(n_size, sp["workers"]):
+            for n in split(n_size, sp.get("tasks", sp["workers"])):
                 if n:
                     tasks.append((best, n, int(self.rng.integers(2**31)), str(self.run), gen, len(tasks), wh))
         stats = []
         index = {wh: i for i, (wh, _) in enumerate(self.mix)}
-        for wh, samples, st in pool.imap_unordered(_selfplay_task, tasks):
+        it = pool.imap(_selfplay_task, tasks) if sp.get("tasks") else pool.imap_unordered(_selfplay_task, tasks)
+        for wh, samples, st in it:
             self.bufs[index[tuple(wh)]].add(samples)
             stats.append(st)
         dt = time.time() - t0

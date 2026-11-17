@@ -22,6 +22,8 @@ eval JSONs: no docs/, no probes, no runs/best update.
 ``probes: false`` / ``update_best: false`` skip the probe snapshots / the
 update of runs/best (Dot-2 runs: the app's net stays Dot).
 
+``after_eval``: a list of [script.py, args...] run after each evaluation (series 9).
+
 ``--report`` only rebuilds the table and plot.
 """
 
@@ -259,6 +261,8 @@ def main() -> None:
     from agents.az_net import Evaluator, make_net
 
     torch.set_num_threads(2)
+    from az_train import gpu_limit
+    gpu_limit(cfg)
     run = ROOT / cfg["run_dir"]
     (run / "eval").mkdir(exist_ok=True)
     ec = cfg["eval"]
@@ -296,6 +300,9 @@ def main() -> None:
             if cfg.get("update_best", True):
                 subprocess.run([sys.executable, str(ROOT / "scripts/update_best.py")])
             # Elo against hours of training next to other runs (scripts/elo_vs_time.py)
+            # extra per-generation steps of a series (series 9: parity probe + report), run after each eval
+            for cmd in cfg.get("after_eval") or []:
+                subprocess.run([sys.executable, *[str(ROOT / c) if c.endswith(".py") else c for c in cmd]])
             if cfg.get("compare_plot"):
                 cp = cfg["compare_plot"]
                 subprocess.run([sys.executable, str(ROOT / "scripts/elo_vs_time.py"),
