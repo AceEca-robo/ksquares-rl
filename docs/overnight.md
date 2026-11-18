@@ -1356,3 +1356,10 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Milestones: hard >= 90 % with MCTS at round 6 (Dot 11), V sign >= 75 % at round 10 (Dot 11).
 - By hours: 12 h g5 1966 / 1673 vs Dot 1870 / 1614; 24 h not reached yet (23.9 h at gen 56).
 - Stop rule: judged at round 56 of 117, best +32 over the last 20 rounds; earliest stop round 117 (~25 h more).
+
+### 2026-11-18 15:55 — series 9: second amendment (user), during round 61
+
+- Final matches for three g5 picks (best MCTS Elo, best Elo without thinking, last accepted) vs Dot gen 54 in the
+  three modes. Gens 45-60 re-evaluated with 300 games per cell in the background (tmux g5re, runs/g5/recheck.log)
+  to tell the MCTS drop at gens 58/60 (1999, 1954 vs 2096 at gen 56; 100-games 95 % interval about +-60) from noise.
+  Picks use the 300-games Elo where it exists; the stop rule stays on the 100-games evaluations.

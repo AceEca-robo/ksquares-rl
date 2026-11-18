@@ -565,6 +565,18 @@ Goal: a finished graph network that plays (no deadline).
   every accepted generation is evaluated (usually the current round or the one before it): R >= 117 and
   best Elo up to R - best Elo up to R-20 <= 20. The trainer checks it before each round, so the round in progress
   when it fires is not started. The amendment took effect by a safe stop and an exact resume.
+- **Second amendment** (user, 2026-11-18 15:55, written during round 61; rounds 1-60 done, best MCTS Elo 2127 at
+  gen 45, gens 58 and 60 lower with MCTS: 1999, 1954, while raw Elo kept rising to 1861):
+  - Final matches: besides the best generation by MCTS Elo, also the best by Elo without thinking and the last
+    accepted generation; each plays Dot gen 54 in the same three modes (MCTS 200 both, without thinking both, equal
+    time per move), 200 games each. A generation that is several picks plays once (labels joined). The equal-time
+    sims are calibrated once (all picks are the same net). Best g5 for the app is still the highest MCTS Elo.
+  - Gens 45-60 (accepted ones) are evaluated again on the same ladder with 300 games per cell instead of 100 (raw and
+    MCTS 200, all six opponents, fresh seeds [seed, gen, 7, 300]), in the background next to the training, to tell
+    the drop with MCTS from noise (`scripts/graph_s9.py recheck`, runs/g5/eval300, a report table with 95 %
+    parametric bootstrap intervals). Decided here: for picking the match generations (and the app's best g5) a
+    generation's Elo is its 300-games value where it exists, else the 100-games one; the stop rule keeps the
+    100-games evaluations of the running evaluator (rule fixed in the first amendment).
 - Load: today (user) 6 self-play workers, or 8 if measured faster with memory to spare; no GPU memory limit, no
   nice. When the user says "2 workers, 40%": stop at the next phase (runs/g5/STOP), set workers 2 and
   gpu_memory_fraction per process so that the sum stays <= 40%, nice -n 10, resume (exact by phase_seeds). Every

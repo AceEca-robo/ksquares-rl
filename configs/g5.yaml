@@ -80,6 +80,8 @@ series9:                 # scripts/graph_s9.py (probe, report, match); docs/grap
   hard_share: 0.90       # "Hard >= 90% with thinking"
   v_sign: 75.0           # "V sign on the probe >= 75%" (V child, balanced)
   hours: [12, 24, 48]
+  # second amendment (user, 2026-11-18, round 61): gens 45-60 again, 300 games per cell, in the background
+  recheck: {gens: [45, 60], games: 300, processes: 6}
   match: {games: 200, sims: 200, seed: 9}
   equal_time: {positions: 200, seed: 9}   # single-game search, leaves_per_tree 8, as the app
   slots:                 # workers and limits over the run (report)
