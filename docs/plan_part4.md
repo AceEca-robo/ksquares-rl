@@ -577,6 +577,18 @@ Goal: a finished graph network that plays (no deadline).
     parametric bootstrap intervals). Decided here: for picking the match generations (and the app's best g5) a
     generation's Elo is its 300-games value where it exists, else the 100-games one; the stop rule keeps the
     100-games evaluations of the running evaluator (rule fixed in the first amendment).
+- **Third amendment** (user, 2026-11-18 20:10, during round 70): diagnosis of the MCTS drop (the 300-games
+  re-evaluation showed it is real: MCTS Elo 2072-2122 at gens 45-51, 1961-2036 at gens 54-60, raw flat at ~1850).
+  Description only; the series' verdict does not change. Gens 45, 49, 54, 60 and the last accepted one (when the
+  diagnosis reaches it): (1) entropy of the raw policy and its mass on the top move on 1000 self-play positions,
+  the same for every generation; (2) MCTS 50 / 200 / 800 against strong, 200 games each: does strength grow with
+  the number of simulations at the late generations as at gen 49; (3) V sign accuracy on the parity probe (stored)
+  and on 1000 middle-game self-play positions. Decided here: positions drawn once (seed 13) from the replay buffer
+  after round 70 (games of the nets of rounds ~67-70), middle game = 20-40 of 60 lines drawn; the V sign truth on
+  self-play positions is the game's result for the mover (not an exact value; the probe has exact labels). Run in
+  the background under nice with 3 opponent processes; the load is set so that a self-play round slows by at most
+  20 % (baseline 1350-1420 s; the 300-games re-evaluation with 6 processes cost about 20 %). A separate section of
+  docs/graph_s9.md (`scripts/graph_s9.py diag`, runs/g5/diag).
 - Load: today (user) 6 self-play workers, or 8 if measured faster with memory to spare; no GPU memory limit, no
   nice. When the user says "2 workers, 40%": stop at the next phase (runs/g5/STOP), set workers 2 and
   gpu_memory_fraction per process so that the sum stays <= 40%, nice -n 10, resume (exact by phase_seeds). Every

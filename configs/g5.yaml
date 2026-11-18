@@ -82,6 +82,10 @@ series9:                 # scripts/graph_s9.py (probe, report, match); docs/grap
   hours: [12, 24, 48]
   # second amendment (user, 2026-11-18, round 61): gens 45-60 again, 300 games per cell, in the background
   recheck: {gens: [45, 60], games: 300, processes: 6}
+  # third amendment (user, 2026-11-18, round 70): diagnosis of the MCTS drop, description only, in the background
+  # (round slowdown <= 20 %): gens 45, 49, 54, 60 + the last accepted one when the run reaches it
+  diag: {gens: [45, 49, 54, 60], positions: 1000, mid_lines: [20, 40], seed: 13, strong_games: 200,
+         sims: [50, 200, 800], processes: 3}
   match: {games: 200, sims: 200, seed: 9}
   equal_time: {positions: 200, seed: 9}   # single-game search, leaves_per_tree 8, as the app
   slots:                 # workers and limits over the run (report)

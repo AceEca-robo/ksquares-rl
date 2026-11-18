@@ -4,6 +4,7 @@
     python scripts/graph_s9.py report       # docs/graph_s9.md, docs/graph_s9.png: g5 by round and by hours next to Dot
     python scripts/graph_s9.py match        # 3 g5 picks vs Dot gen 54: MCTS 200 both, raw both, equal time per move
     python scripts/graph_s9.py recheck      # gens 45-60 again on the ladder, 300 games per cell (runs/g5/eval300)
+    python scripts/graph_s9.py diag         # diagnosis of the MCTS drop (runs/g5/diag): policy, MCTS sims vs strong, V
     python scripts/graph_s9.py bench --workers 6 --games 192   # self-play evals/s with N parallel workers
 
 Training is scripts/az_train.py, the ladder scripts/az_eval.py (it calls probe and report after each evaluation).
@@ -191,7 +192,7 @@ def fmt(x, f="{:.0f}"):
     return "—" if x is None else f.format(x)
 
 
-def cmd_report(cfg):
+def cmd_report(cfg, quiet=False):
     s9 = cfg["series9"]
     anchors = anchors_for(cfg)
     dot_cfg = load_config(ROOT / s9["dot"]["configs"][0])
@@ -271,6 +272,34 @@ def cmd_report(cfg):
                          f"{old[r['gen']]['raw_elo']:.0f} | {100 * win_share(e['mcts']['hard']):.0f} / "
                          f"{100 * win_share(e['mcts']['strong']):.0f} |")
         L.append("")
+    dc = s9.get("diag")
+    dd = run / "diag"
+    DG = [json.loads(q.read_text()) for q in sorted(dd.glob("gen_*.json"))] if dc and dd.exists() else []
+    if DG:
+        pz = np.load(dd / "positions.npz")
+        byg = {r["gen"]: r for r in with_recheck(cfg, G, anchors, opps)}
+        L += ["## Diagnosis of the MCTS drop (description only)", "",
+              "Third amendment (user, 2026-11-18, round 70); the series' verdict does not change. Positions: "
+              f"{dc['positions']} random self-play positions and {dc['positions']} middle-game ones "
+              f"({dc['mid_lines'][0]}-{dc['mid_lines'][1]} of 60 lines drawn), drawn once from the replay buffer "
+              f"after round {int(pz['buffer_rounds'])} (games of the last ~4 rounds' nets), the same for every generation. "
+              "Policy: mean entropy (nats, over legal lines) and mean probability of the top move of the raw policy; "
+              f"for reference the entropy of the stored self-play search targets is {DG[0]['policy']['search_entropy']:.2f}. "
+              f"Strong: MCTS 50 / 200 / 800 (no noise, temperature 0), {dc['strong_games']} games each, first mover "
+              "alternating, score %. V sign: sign of V equals the game's result for the mover (the result of a "
+              "self-play game, not an exact value), middle-game and all positions; probe = V child balanced on the "
+              "1000 parity positions (exact labels).", "",
+              "| round | Elo MCTS / raw | policy entropy | top-move mass | strong MCTS 50 | 200 | 800 | "
+              "V sign mid | V sign all | V sign probe |", "|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+        for x in DG:
+            r = byg.get(x["gen"], {})
+            sg = [x["strong"].get(str(k)) for k in dc["sims"]]
+            L.append(f"| {x['gen']}{' (last)' if x.get('last') else ''} | "
+                     f"{fmt(r.get('mcts_elo'))} / {fmt(r.get('raw_elo'))} | {x['policy']['entropy']:.2f} | "
+                     f"{x['policy']['top_mass']:.2f} | "
+                     + " | ".join("…" if q is None else f"{100 * win_share(q):.0f}" for q in sg)
+                     + f" | {x['v_mid']:.1f} | {x['v_all']:.1f} | {fmt(r.get('v_child'), '{:.1f}')} |")
+        L.append("")
     m = run / "match.json"
     if m.exists():
         mj = json.loads(m.read_text())
@@ -315,7 +344,8 @@ def cmd_report(cfg):
     if concl.exists():
         L += [concl.read_text().rstrip(), ""]
     (ROOT / "docs/graph_s9.md").write_text("\n".join(L))
-    print("\n".join(L[:30]))
+    if not quiet:
+        print("\n".join(L[:30]))
 
 
 def plot(G, D, s9):
@@ -520,6 +550,107 @@ def cmd_recheck(cfg):
             cmd_report(cfg)
 
 
+# --- diagnosis of the MCTS drop -----------------------------------------------------
+
+def diag_positions(cfg):
+    """1000 random self-play positions and 1000 middle-game ones (drawn lines in dc.mid_lines), drawn once from the
+    replay buffer with seed dc.seed and kept in runs/g5/diag/positions.npz (the same for every generation)."""
+    dc = cfg["series9"]["diag"]
+    p = ROOT / cfg["run_dir"] / "diag" / "positions.npz"
+    if not p.exists():
+        b = np.load(ROOT / cfg["run_dir"] / "buffer.npz")
+        n = int(b["n"])
+        rng = np.random.default_rng(dc["seed"])
+        drawn = b["lines"][:n].sum(1)
+        lo, hi = dc["mid_lines"]
+        idx_all = rng.choice(n, dc["positions"], replace=False)
+        idx_mid = rng.choice(np.flatnonzero((drawn >= lo) & (drawn <= hi)), dc["positions"], replace=False)
+        keys = ("lines", "sides", "owner", "diff", "first", "pi", "z")
+        p.parent.mkdir(exist_ok=True)
+        np.savez(p, **{f"all_{k}": b[k][idx_all] for k in keys}, **{f"mid_{k}": b[k][idx_mid] for k in keys},
+                 buffer_rounds=json.loads((ROOT / cfg["run_dir"] / "state.json").read_text())["gen"])
+    return np.load(p)
+
+
+def boards_from(d, pre, w, h):
+    """sim Boards from buffer arrays (owner relative to the mover, first = 1 if the mover is player 0)."""
+    from sim.board import NO_OWNER, Board
+    out = []
+    for i in range(len(d[f"{pre}_z"])):
+        b = Board(w, h)
+        b.player = 0 if d[f"{pre}_first"][i] else 1
+        b.lines[:] = bytes(d[f"{pre}_lines"][i])
+        b.sides[:] = bytes(d[f"{pre}_sides"][i])
+        rel = d[f"{pre}_owner"][i]
+        b.owner = [NO_OWNER if r == 0 else b.player if r > 0 else b.player ^ 1 for r in rel]
+        b.score = [sum(1 for o in b.owner if o == k) for k in (0, 1)]
+        b.n_drawn = int(d[f"{pre}_lines"][i].sum())
+        assert b.score[b.player] - b.score[b.player ^ 1] == int(d[f"{pre}_diff"][i])
+        out.append(b)
+    return out
+
+
+def policy_stats(pri):
+    pri = np.asarray(pri, dtype=np.float64)
+    q = np.where(pri > 0, pri, 1.0)
+    ent = -(pri * np.log(q)).sum(1)
+    return {"entropy": float(ent.mean()), "top_mass": float(pri.max(1).mean())}
+
+
+def cmd_diag(cfg):
+    """Third amendment (description only): for gens dc.gens and the last accepted one, (1) policy entropy and the
+    mass on the top move on 1000 self-play positions; (2) MCTS 50 / 200 / 800 vs strong, 200 games each; (3) V sign
+    vs the game result on 1000 middle-game self-play positions (the probe's V sign is in parity.json).
+    Alongside the training: dc.processes opponent processes, run under nice. Resumable per generation and part."""
+    import torch
+
+    import az_eval
+    from agents.az_net import Evaluator, make_net
+
+    torch.set_num_threads(2)
+    dc = cfg["series9"]["diag"]
+    run = ROOT / cfg["run_dir"]
+    w, h = cfg["board"]
+    d = diag_positions(cfg)
+    B_all, B_mid = boards_from(d, "all", w, h), boards_from(d, "mid", w, h)
+    z_mid = d["mid_z"].astype(int)
+    st = json.loads((run / "state.json").read_text())
+    last = max(x["gen"] for x in st["history"] if x["accepted"])
+    gens = list(dc["gens"]) + ([last] if last not in dc["gens"] else [])
+    ctx = get_context("spawn")
+    with ctx.Pool(dc["processes"], initializer=az_eval._oinit,
+                  initargs=(cfg["eval"].get("params") or {}, cfg["seed"] + 500)) as pool:
+        for gen in gens:
+            p = run / "diag" / f"gen_{gen:04d}.json"
+            res = json.loads(p.read_text()) if p.exists() else {"gen": gen, "last": gen == last, "strong": {}}
+            net = make_net(cfg)
+            net.load_state_dict(torch.load(run / f"gen_{gen:04d}.pt", map_location="cpu"))
+            ev = Evaluator(net, cfg["device"])
+            if "policy" not in res:
+                pri, _ = ev(B_all)
+                res["policy"] = policy_stats(pri)
+                pri_s = np.asarray([x for x in d["all_pi"]], dtype=np.float64)   # the self-play search targets
+                res["policy"]["search_entropy"] = policy_stats(pri_s / pri_s.sum(1, keepdims=True))["entropy"]
+                _, v = ev(B_mid)
+                res["v_mid"] = float(100 * np.mean(np.sign(v) == z_mid))
+                _, v = ev(B_all)
+                res["v_all"] = float(100 * np.mean(np.sign(v) == d["all_z"].astype(int)))
+            for sims in dc["sims"]:
+                if str(sims) in res["strong"]:
+                    continue
+                c = dict(cfg, eval=dict(cfg["eval"], games=dc["strong_games"], sims=sims))
+                t0 = time.time()
+                r = az_eval.play(ev, "mcts", ["strong"], c, pool, np.random.default_rng([cfg["seed"], gen, 11, sims]))
+                res["strong"][str(sims)] = r["strong"]
+                print(f"[{time.strftime('%H:%M:%S')}] gen {gen} MCTS {sims} vs strong: {r['strong']} "
+                      f"({time.time() - t0:.0f} s)", flush=True)
+                p.with_suffix(".tmp").write_text(json.dumps(res, indent=1))
+                os.replace(p.with_suffix(".tmp"), p)
+            p.with_suffix(".tmp").write_text(json.dumps(res, indent=1))
+            os.replace(p.with_suffix(".tmp"), p)
+            cmd_report(cfg, quiet=True)
+
+
 # --- bench ------------------------------------------------------------------------
 
 def _bench_one(args):
@@ -551,7 +682,7 @@ def cmd_bench(cfg, workers, games):
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["probe", "report", "match", "recheck", "bench"])
+    ap.add_argument("cmd", choices=["probe", "report", "match", "recheck", "diag", "bench"])
     ap.add_argument("--config", default=CFG)
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--games", type=int, default=192)
@@ -560,7 +691,7 @@ def main() -> None:
     if a.cmd == "bench":
         cmd_bench(cfg, a.workers, a.games)
     else:
-        {"probe": cmd_probe, "report": cmd_report, "match": cmd_match, "recheck": cmd_recheck}[a.cmd](cfg)
+        {"probe": cmd_probe, "report": cmd_report, "match": cmd_match, "recheck": cmd_recheck, "diag": cmd_diag}[a.cmd](cfg)
 
 
 if __name__ == "__main__":
