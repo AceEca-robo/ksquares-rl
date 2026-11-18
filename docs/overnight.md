@@ -1347,3 +1347,12 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - State at the amendment: 15 rounds done (10 accepted, 5 rejected, longest streak 3), best MCTS Elo 1816 (gen 15).
 - Implemented in az_train (plateau_rule, judged at the last fully evaluated round), tested; configs/g5.yaml stop;
   plan_part4.md. Applied by a safe stop after the self-play of round 16 (20:25:54) and an exact resume (20:26:52).
+
+### 2026-11-18 14:17 — series 9: daily summary (g5)
+
+- Running without errors (tmux g5, resumed 2026-11-17 20:26). 57 rounds done, 36 accepted; longest reject streak 3.
+- Best MCTS Elo 2127 (gen 45); gen 56: MCTS 2096 / raw 1856 (common opponents), hard 98 / 95 %, strong 85 / 54 %,
+  V sign 86.6 %, MCTS on the probe 92.5 %. Raw Elo above Dot's best ever (1724) since about round 45.
+- Milestones: hard >= 90 % with MCTS at round 6 (Dot 11), V sign >= 75 % at round 10 (Dot 11).
+- By hours: 12 h g5 1966 / 1673 vs Dot 1870 / 1614; 24 h not reached yet (23.9 h at gen 56).
+- Stop rule: judged at round 56 of 117, best +32 over the last 20 rounds; earliest stop round 117 (~25 h more).
