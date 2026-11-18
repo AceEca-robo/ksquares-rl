@@ -1363,3 +1363,11 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   three modes. Gens 45-60 re-evaluated with 300 games per cell in the background (tmux g5re, runs/g5/recheck.log)
   to tell the MCTS drop at gens 58/60 (1999, 1954 vs 2096 at gen 56; 100-games 95 % interval about +-60) from noise.
   Picks use the 300-games Elo where it exists; the stop rule stays on the 100-games evaluations.
+
+### 2026-11-18 20:10 — series 9: 300-games re-evaluation of gens 45-60 done
+
+- The MCTS drop is real, not noise: MCTS Elo (300 games) 2072-2122 for gens 45-51, 1961-2036 for gens 54-60
+  (gen 49 2122 [2078, 2176] vs gen 60 1961 [1930, 1997]); MCTS vs strong 79-85 % -> 69-77 %. Raw Elo rose to about
+  1850 by gen 50 and stayed there. The search adds less: MCTS - raw 346 at gen 45, 108 at gen 60.
+- Gen 56's 100-games 2096 was lucky (300 games: 1995). With the 300-games values the best MCTS generation is 49.
+- Self-play slowed from 23 to 28 min per round while the re-evaluation ran (16:00-19:35); training continued.
