@@ -31,6 +31,7 @@ PRONOUNCE = {
     "Easy": "Изи",
     "Medium": "Ми\u0301диум",
     "Hard": "Хард",
+    "Dot-G": "Дот Джи",            # part 4: the graph net (before "Dot")
     "Dot": "Дот",                  # the network's name in the video
     "DeepMind": "Дип-Майнд",
     "install.sh": "инстол точка эс-эйч",

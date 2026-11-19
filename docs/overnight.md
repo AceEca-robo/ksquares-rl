@@ -1414,3 +1414,22 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Series 11 (10x7: is dot2c gen 16 the strongest?) protocol committed (5d5bc84) and running.
 - Series 11 done (18:13): dot2c gen 16 vs dot2c 14 / 10 / 9 and dot2s 25 / 39, MCTS 200, 200 games: challengers 21.3 /
   17.5 / 26.0 / 12.5 / 3.7 %, all intervals below 50 % -> gen 16 stays the app's 10x7 net.
+
+### 2026-11-19 19:00-20:30 — part 4 video (RU): claims check, script, voice, cut
+
+- Step 0 by the "Before publishing" rule: docs/video_claims_part4.md, every claim and number of the user's text with
+  its source and the recomputed value. Eight places were stronger than the data (scene 4 "наугад", "забывает",
+  "лечится"; scene 5 "шесть раз" (series 6 has five runs per weights), "в основном", "все считают без ошибок" (only
+  10x7); scene 7 "в точности на тех же условиях" (Dot's rounds 1-31 were az5 settings); scene 8 "никакого спада";
+  scene 9 / 10 "силы равны", "учится быстрее"). The user accepted every fix and added the scene 6 lines on the part 3
+  promise; revision 2 of the check has every row "checked" or "observation".
+- Script docs/video_script_part4_ru.md; voice edge-tts (Dot-G -> "Дот Джи" in video_voice.PRONOUNCE), 518.5 s.
+  Materials from the run files (video/p4_data.py): p4_cards.py (stills), p4_clips.py (window / graph, click curves),
+  app recording g5 gen 114 vs az5b gen 84 (scripts/launcher.py --mode self, 200 sims, CPU; g5 won 16:9).
+  Storyboard by video/p4_storyboard.py (cuts on sentence starts). Cut 9:05, 131 subtitles; 0 of 103
+  sentence-opening subtitles more than 0.3 s from an audio onset. One process at a time, nice -n 10, no GPU.
+- Copied to ~/YouTube/ksquares-rl/: ksquares_rl_part4_ru.mp4 / .srt, description_part4_ru.txt, thumbnail_part4_{ru,en}.png.
+- Unclear: the part 3 map calls 10-15 safe lines "endgame" (its middle zone is 20-40), while series 7 and the voice
+  call the 10-15 test set "middle of the game"; the map card marks the 10-15 band with a caption. Dot's rounds: the
+  ladder chart counts az5 + az5b rounds (Dot ends at 114), the voice says "Dot, 84 rounds" (az5b gen 84, part 1
+  naming).

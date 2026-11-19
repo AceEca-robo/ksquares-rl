@@ -22,5 +22,6 @@ video/**/*.srt
 video/check/
 video/p2/
 video/p3/
+video/p4/
 agents/_mcts_tree*
 agents/_mid_judge*.so

@@ -1,0 +1,135 @@
+# Russian cut of the part 4 video (docs/video_script_part4_ru.md). Written by video/p4_storyboard.py:
+# cuts on the sentence starts of video/p4/voice_ru_<N>.mp3. Materials: video/p4_cards.py, p4_clips.py,
+# p4/app_g5_vs_dot.mp4 (scripts/launcher.py --mode self, g5 gen 114 vs az5b gen 84, 200 sims, CPU).
+
+size:
+- 1920
+- 1080
+fps: 25
+crf: 18
+voice_at: 0.5
+min_tail: 0.7
+fade: 0.4
+caption_at: top
+title:
+  seconds: 3
+  image: p4/card_title.png
+end:
+  seconds: 6
+  lines:
+  - github.com/AceEca-robo/ksquares-rl
+  - ''
+  - KSquares 21.12.3 © Matt Williams et al., GPL-2+
+scenes:
+- n: 1
+  title: Другие глаза
+  voice: p4/voice_ru_1.mp3
+  fragments:
+  - file: p4/window_graph.mp4
+    seconds: 26.52
+  - file: p4/card_title.png
+    seconds: 12.64
+- n: 2
+  title: Как видит Dot-G
+  voice: p4/voice_ru_2.mp3
+  fragments:
+  - file: p4/card_sees.png
+    seconds: 27.12
+- n: 3
+  title: 'Первый урок: считать'
+  voice: p4/voice_ru_3.mp3
+  fragments:
+  - file: p4/card_three.png
+    seconds: 14.22
+  - file: p4/click.mp4
+    seconds: 43.69
+- n: 4
+  title: Школа
+  voice: p4/voice_ru_4.mp3
+  fragments:
+  - file: p4/card_school_table1.png
+    seconds: 14.89
+  - file: p4/card_school.png
+    seconds: 18.15
+  - file: p4/card_school_table2.png
+    seconds: 4.85
+  - file: p4/card_school_table.png
+    seconds: 21.99
+- n: 5
+  title: От счёта к ходу
+  voice: p4/voice_ru_5.mp3
+  fragments:
+  - file: p4/card_cloud0.png
+    seconds: 19.71
+  - file: p4/card_cloud.png
+    seconds: 13.25
+  - file: p4/card_four.png
+    seconds: 35.49
+- n: 6
+  title: Середина партии
+  voice: p4/voice_ru_6.mp3
+  fragments:
+  - file: p4/card_cloud.png
+    seconds: 9.58
+  - file: p3/card_blowouts.png
+    seconds: 6.54
+  - file: p4/card_map_g.png
+    seconds: 7.81
+  - file: p4/card_mid_bars.png
+    seconds: 20.17
+  - file: p4/card_promise.png
+    seconds: 14.48
+- n: 7
+  title: Тогда пусть играет
+  voice: p4/voice_ru_7.mp3
+  fragments:
+  - file: p4/card_rounds0.png
+    seconds: 24.45
+  - file: p4/card_rounds.png
+    seconds: 8.92
+  - file: p4/card_bridge.png
+    seconds: 7.28
+- n: 8
+  title: Сломанная линейка
+  voice: p4/voice_ru_8.mp3
+  fragments:
+  - file: p4/card_peak.png
+    seconds: 21.61
+  - file: p4/card_matches1.png
+    seconds: 7.87
+  - file: p4/card_matches.png
+    seconds: 17.55
+  - file: p4/card_round_robin.png
+    seconds: 14.51
+- n: 9
+  title: Матч
+  voice: p4/voice_ru_9.mp3
+  fragments:
+  - file: p4/app_captioned.mp4
+    seconds: 12.75
+    speed: 2.5
+  - file: p4/card_final_match1.png
+    seconds: 7.66
+  - file: p4/card_final_match2.png
+    seconds: 5.25
+  - file: p4/card_cost.png
+    seconds: 24.66
+  - file: p4/card_final_match.png
+    seconds: 9.58
+- n: 10
+  title: Итог
+  voice: p4/voice_ru_10.mp3
+  fragments:
+  - file: p4/card_summary1.png
+    seconds: 17.35
+  - file: p4/card_summary2.png
+    seconds: 8.3
+  - file: p4/card_summary3.png
+    seconds: 10.64
+  - file: p4/card_summary.png
+    seconds: 7.55
+  - file: p4/app_captioned.mp4
+    seconds: 6.33
+    from: 20
+  - file: p4/card_end.png
+    seconds: 12.15
