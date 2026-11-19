@@ -1391,3 +1391,13 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Bridge, gen 49 vs the real Hard: 20 / 20 (first run's JSON path was wrong; rerun gave the same 20 games).
 - App: g5 gen 49 as release network (v0.4) with a caption, in play / vs KSquares / net vs net; all g5 gens in net vs
   net; app evaluator without torch.compile. Screenshot docs/app_g5_vs_dot.png.
+
+### 2026-11-19 16:45-17:20 — g5 gen 114 in the app; series 10 (matches only)
+
+- App and release v0.4: g5 gen 114 added as a separate network (user): caption "lower on the ladder, stronger against
+  Dot"; screenshot docs/app_g5_114_vs_dot.png.
+- Series 10 (protocol committed before the run, 8da978a): Dot gen 84 (last) beats gen 54 68 % [61, 74] (MCTS 200),
+  64.5 % raw; Dot gen 52 (best raw) loses 42 %. Reading: part 1's "Dot did not grow after round 54" is a measurement
+  error (marked in results.md); the comparison is item 3: g5 114 vs Dot 84 62.5 % (MCTS 200), 73.5 % (raw), 47.5 %
+  (equal time). g5 114 vs g5 49: 93 % / 66.5 %. Round robin: the nets are transitive (114 > 84 > 54 > 49); Hard and
+  Strong cannot separate them (Strong 16-21 % against all). Took 25 min.

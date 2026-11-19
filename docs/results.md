@@ -208,6 +208,11 @@ Table `docs/az5b_ladder.md`, curves `docs/az5b_ladder.png`.
 | az5b 78 | 94 | 88 | 80 | 40 | 1688 | 100 | 100 | 98 | 83 | 2086 |
 | az5b 84 | 97 | 93 | 73 | 38 | 1684 | 100 | 99 | 97 | 75 | 2005 |
 
+**Measurement error (series 10, 2026-11-19, docs/graph_s10.md):** "the ladder best" above does not mean the
+strongest Dot. Head to head, az5b gen 84 (the last accepted, MCTS Elo 2005 here) beats gen 54 68 % [61, 74] with
+MCTS 200 both (200 games); the ladder's top is decided by the strong column alone (about +-8 points per cell), so
+"Dot did not grow after round 54" was an artefact of the ladder.
+
 Real game over the bridge: az5 gen 29 + MCTS 200 vs KSquares Hard 18/20.
 Video `docs/az5_vs_hard.mp4` (az5b gen 54, the ladder best, + MCTS 200 vs the
 game's Hard, 18–7, seed 11; re-recorded 2026-10-26 on a private Xvfb).

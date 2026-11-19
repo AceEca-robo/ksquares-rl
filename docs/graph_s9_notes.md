@@ -22,3 +22,6 @@
   v0.4), offered in "play" and "vs KSquares", every accepted g5 generation in "network vs itself"; the menu shows
   its ladder caption, the bridge and the head-to-head result. Screenshot: docs/app_g5_vs_dot.png (g5 gen 49 against
   az5b gen 54, thoughts panel of g5). The app runs the graph net eagerly (no torch.compile wait at start).
+- Series 10 (docs/graph_s10.md): Dot gen 54 was not the strongest Dot either; gen 84 beats it 68 %. The graph vs
+  convolution comparison is therefore counted against Dot gen 84: g5 gen 114 scores 62.5 % with MCTS 200 both,
+  73.5 % without thinking, 47.5 % at equal time per move.
