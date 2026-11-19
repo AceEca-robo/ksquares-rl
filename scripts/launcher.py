@@ -25,7 +25,7 @@ configs/app.yaml (without the pin, the last accepted generation;
 scripts/update_best.py keeps the link current); in a fresh clone, without
 runs/, the menu offers to download the release networks (best.download,
 best_sizes.*.download and release_generations in configs/app.yaml: az5b gen
-54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2, g5 gen 49 from v0.4). "network vs itself" can pick any accepted generation
+54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2, g5 gens 49 and 114 from v0.4). "network vs itself" can pick any accepted generation
 of az5 and az5b on disk. Esc goes back to the menu
 from any mode (the game, its Xvfb and the worker are closed), Esc in the
 menu quits. English, Russian or Ukrainian (launcher/i18n.py), switched in

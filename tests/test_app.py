@@ -43,7 +43,7 @@ def test_download_best(tmp_path, monkeypatch):
     dl = cfg["best"]["download"]
     monkeypatch.setattr(core, "ROOT", str(tmp_path / "clone"))
     n = len(core.missing_downloads(cfg))
-    assert n == 4   # az5b, dot2c (10x7 best), dot2s gen 39, g5 gen 49 (series 9)
+    assert n == 5   # az5b, dot2c (10x7 best), dot2s gen 39, g5 gens 49 and 114 (series 9)
     seen = []
     core.download_best(cfg, lambda done, total: seen.append(done))
     assert core.missing_downloads(cfg) == []
@@ -418,8 +418,10 @@ def test_check_10x7_has_no_size_refusal():
 def test_g5_release_network():
     """Series 9: g5 gen 49 is a release network with a caption in every language, offered in "play"."""
     cfg = core.app_config()
-    g = next(x for x in cfg["release_generations"] if x["download"]["run"] == "g5")
-    assert g["play"] and set(g["note"]) == set(i18n.LANGS) and g["download"]["gen"] == 49
+    gs = [x for x in cfg["release_generations"] if x["download"]["run"] == "g5"]
+    assert [x["download"]["gen"] for x in gs] == [49, 114]
+    assert all(x["play"] and set(x["note"]) == set(i18n.LANGS) for x in gs)
+    g = gs[0]
     assert "configs/g5.yaml" in cfg["generations"]
     for x in core.generations(cfg):
         if x["run"] == "g5" and x["gen"] == 49:

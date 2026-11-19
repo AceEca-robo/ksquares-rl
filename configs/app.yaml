@@ -44,6 +44,20 @@ release_generations:              # more release networks, fetched with the best
       size: 2112095
       run: g5
       gen: 49
+  - config: configs/g5.yaml       # series 9: the run's last accepted generation (user, 2026-11-19)
+    dir: runs/release
+    file: g5_gen_0114.pt
+    play: true
+    note:
+      en: "graph net, last gen; lower on the ladder (MCTS Elo 2059), stronger against Dot: 68% (MCTS 200), 61.5% at equal time"
+      ru: "графовая сеть, последнее поколение; на лестнице ниже (Elo с MCTS 2059), против Dot сильнее: 68% (MCTS 200), 61.5% при равном времени"
+      uk: "графова мережа, останнє покоління; на драбині нижче (Elo з MCTS 2059), проти Dot сильніша: 68% (MCTS 200), 61.5% за рівного часу"
+    download:
+      url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.4/g5_gen_0114.pt
+      sha256: 7c97a9b767ffa197a2bdee17285397419f9e649eebfd1e211c0b0a19b3ab51ef
+      size: 2112095
+      run: g5
+      gen: 114
 generations:                      # pickable in "network vs itself" (the menu shows those of the board size)
   - configs/az5.yaml
   - configs/az5b.yaml
