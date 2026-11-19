@@ -620,6 +620,18 @@ beat it). Question: was Dot gen 54 the best Dot, or did the ladder err there too
   ladder), MCTS 200 for the nets, 100 games per pair: a table, to show that strength here is not one line.
 - Seeds [10, item, mode]; scripts/graph_s10.py, configs/graph_s10.yaml, tests/test_graph_s10.py; docs/graph_s10.md.
 
+## Series 11: is dot2c gen 16 the strongest 10x7 Dot? (matches only)
+
+User, 2026-11-19, after series 10 (the ladder picked a weaker Dot on 5x5). dot2c gen 16, the app's 10x7 network, was
+picked by the 10x7 ladder. Matches, 200 games each, MCTS 200 both, first mover alternating, the first 4 lines at
+temperature 1: gen 16 against dot2c's accepted neighbours 14, 10, 9 (16 is dot2c's last accepted generation, so
+all neighbours are earlier) and against dot2s gen 25 (dot2s best by the ladder) and dot2s gen 39 (dot2s last
+accepted, the app's release network); "the best dot2s" is ambiguous after series 10, so both are played.
+Reading, fixed now: a challenger whose score against gen 16 has its 95 % Wilson interval above 50 % is stronger;
+of several, the highest score. If one is stronger, it replaces gen 16 as the app's 10x7 network and README notes
+it; otherwise gen 16 stays. scripts/graph_s11.py, configs/graph_s11.yaml, tests/test_graph_s11.py;
+docs/graph_s11.md.
+
 ## Series 4: middle game (the former (ii))
 
 Goal: does the graph generalise the middle game where the convolution did not.

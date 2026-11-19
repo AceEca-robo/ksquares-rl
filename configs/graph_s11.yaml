@@ -1,0 +1,16 @@
+# Series 11 (docs/plan_part4.md): is dot2c gen 16 (the app's 10x7 net, picked by the ladder) the strongest 10x7 Dot?
+# scripts/graph_s11.py; docs/graph_s11.md. Matches only.
+base: configs/dot2c.yaml     # board 10x7, mcts, device
+run_dir: runs/graph_s11
+seed: 11
+games: 200                   # per match, first mover alternating
+temp_moves: 4                # the first 4 lines at temperature 1, then the best move
+sims: 200                    # MCTS 200 both
+nets:
+  dot2c_16: [configs/dot2c.yaml, runs/dot2c/gen_0016.pt]   # the app's 10x7 net (ladder MCTS Elo 1755)
+  dot2c_14: [configs/dot2c.yaml, runs/dot2c/gen_0014.pt]   # accepted neighbours (16 is dot2c's last accepted)
+  dot2c_10: [configs/dot2c.yaml, runs/dot2c/gen_0010.pt]
+  dot2c_9: [configs/dot2c.yaml, runs/dot2c/gen_0009.pt]
+  dot2s_25: [configs/dot2s.yaml, runs/dot2s/gen_0025.pt]   # dot2s best by the ladder
+  dot2s_39: [configs/dot2s.yaml, runs/dot2s/gen_0039.pt]   # dot2s last accepted, the app's release net (12-8 vs Hard)
+matches: [dot2c_14, dot2c_10, dot2c_9, dot2s_25, dot2s_39]   # each against dot2c_16
