@@ -28,6 +28,36 @@ What is in here:
 
 ## Results
 
+### Correction (2026-11-19): gen 54 was not the strongest Dot
+
+**What was said.** Part 1 called az5b gen 54 "the released one" because it had the highest ladder Elo (MCTS 2164).
+It said that after it "the strength stops growing" (this README, "Train your own Dot"). The part 1 video said: "she
+learned to beat her earlier versions, not to play better ... the app got not the last Dot but the strongest one"
+(docs/video_script_ru.md, scene 7).
+
+**What series 10 showed** (docs/graph_s10.md, runs/graph_s10/results.json; 200 games per match, first mover
+alternating, the first 4 lines at temperature 1, protocol committed before the run). az5b gen 84, the last accepted
+Dot, beats gen 54:
+
+| match | gen 84 wins | gen 54 wins | gen 84 score | 95 % interval |
+|---|---:|---:|---:|---|
+| MCTS 200 both | 136 | 64 | 68.0 % | 61.2-74.1 |
+| without search both | 129 | 71 | 64.5 % | 57.7-70.8 |
+
+A separate round robin with 100 games per pair gave gen 84 75 % against gen 54. The best Dot by Elo without search
+(gen 52) loses to gen 54 (42 %).
+
+**Why the ladder got it wrong.** All late generations beat Hard 96-100 % and medium nearly always, so the top of the
+ladder is decided by one column, strong. That column has 100 games per cell, about +-7 points (about +-60 Elo
+at the top; the series 9 re-evaluation with 300 games showed the same scatter). Gen 54 had 89 % against strong and
+gen 84 75 %. Head to head the order is the reverse. Strong scores 16-21 % against every late net and does not
+separate them. The ladder measures strength against scripted agents, and once a net beats them all it no longer
+ranks nets against each other.
+
+**What changed.** Since 2026-11-19 the app's default Dot is gen 84 ("the strongest Dot by matches"). Gen 54 stays in
+the list as "from the part 1 video". Rule from now on (CLAUDE.md): the best generation is chosen by matches between
+candidates; the ladder is used only for early rounds.
+
 The ladder on 5x5 (`docs/results.md`): win % of the network, 100 games per
 cell, first mover alternating; raw = the policy's argmax, no search;
 MCTS = 200 simulations. Elo is Bradley-Terry against fixed anchors
@@ -38,6 +68,7 @@ MCTS = 200 simulations. Elo is Bradley-Terry against fixed anchors
 | az5 gen 29 (first run) | 63 | 24 | 1517 | 93 | 49 | 1829 |
 | az5b gen 1 | 72 | 28 | 1614 | 98 | 51 | 1870 |
 | **az5b gen 54 (the released one)** | 83 | 34 | 1680 | 99 | **89** | **2164** |
+| az5b gen 84 (last accepted; **the strongest by matches**, the app's default since 2026-11-19) | 73 | 38 | 1684 | 97 | 75 | 2005 |
 
 ![ladder per generation](docs/az5b_ladder.png)
 
@@ -149,11 +180,13 @@ only: its heads are tied to the board size.
 |---|---|---|
 | ![menu](docs/app_menu.png) | ![play](docs/app_play.png) | ![self](docs/app_self.png) |
 
-The network is `runs/best/best.pt` (az5b gen 54, pinned in
+The network is `runs/best/best.pt` (az5b gen 84, the strongest Dot by matches, pinned in
 `configs/app.yaml`). `runs/` is not in git: in a fresh clone the app offers
-to download the release networks (6.4 MB together, each checked by sha256):
-az5b gen 54 from the
-[v0.1 release](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.1),
+to download the release networks (each checked by sha256; an older download of gen 54 as best.pt is replaced):
+az5b gen 84 and the graph nets g5 gens 49 and 114 from the
+[v0.4 release](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.4),
+az5b gen 54 ("from the part 1 video") from
+[v0.1](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.1),
 dot2c gen 16 (`runs/best10x7`, 10x7) and dot2s gen 39 (`runs/release`) from
 [v0.2](https://github.com/AceEca-robo/ksquares-rl/releases/tag/v0.2).
 
@@ -283,9 +316,9 @@ project's own runs (az5 from scratch, then az5b; `docs/az5_ladder.md`,
 `docs/az5b_ladder.md`): after ~10 rounds Dot with search beats the
 built-in opponent ~80% of the games; overnight (~40 rounds) over 90% and
 about even with the judge (the exact solver `strong`); in a day and a
-half she reaches the level of the released network (gen 54: the
-built-in opponent 99%, the judge ~85%), after which the strength stops
-growing. Your rounds do not count toward those numbers exactly (az5 had
+half she reaches the level of gen 54 (the
+built-in opponent 99%, the judge ~85%), after which the ladder stops
+growing (her strength does not: see the correction under Results). Your rounds do not count toward those numbers exactly (az5 had
 twice the learning rate and the rounds are random): treat them as an
 estimate.
 

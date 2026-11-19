@@ -43,7 +43,7 @@ def test_download_best(tmp_path, monkeypatch):
     dl = cfg["best"]["download"]
     monkeypatch.setattr(core, "ROOT", str(tmp_path / "clone"))
     n = len(core.missing_downloads(cfg))
-    assert n == 5   # az5b, dot2c (10x7 best), dot2s gen 39, g5 gens 49 and 114 (series 9)
+    assert n == 6   # az5b gen 84, dot2c (10x7 best), az5b gen 54, dot2s gen 39, g5 gens 49 and 114
     seen = []
     core.download_best(cfg, lambda done, total: seen.append(done))
     assert core.missing_downloads(cfg) == []
@@ -426,3 +426,23 @@ def test_g5_release_network():
     for x in core.generations(cfg):
         if x["run"] == "g5" and x["gen"] == 49:
             assert x["play"] and x["note"] == g["note"]
+
+
+def test_default_dot_and_old_download(tmp_path, monkeypatch):
+    """Series 10: the default Dot is az5b gen 84 with a caption; gen 54 stays as a release network; a clone that
+    downloaded the old best.pt (gen 54) fetches the new one, a checkout's link is kept."""
+    cfg = core.app_config()
+    assert cfg["best"]["gen"] == 84 and cfg["best"]["download"]["gen"] == 84 and set(cfg["best"]["note"]) == set(i18n.LANGS)
+    g54 = [g for g in cfg["release_generations"] if g["download"]["run"] == "az5b"]
+    assert [g["download"]["gen"] for g in g54] == [54] and g54[0]["play"] and set(g54[0]["note"]) == set(i18n.LANGS)
+    monkeypatch.setattr(core, "ROOT", str(tmp_path))
+    d = tmp_path / cfg["best"]["dir"]
+    d.mkdir(parents=True)
+    (d / "best.pt").write_bytes(b"x")
+    it = core.release_items(cfg)[0]
+    (d / "best.json").write_text(core.json.dumps({"run": "az5b", "gen": 54, "checkpoint": "https://x/best.pt"}))
+    assert it in core.missing_downloads(cfg)
+    (d / "best.json").write_text(core.json.dumps({"run": "az5b", "gen": 54, "checkpoint": "../az5b/gen_0054.pt"}))
+    assert it not in core.missing_downloads(cfg)
+    (d / "best.json").write_text(core.json.dumps({"run": "az5b", "gen": 84, "checkpoint": "https://x/y.pt"}))
+    assert it not in core.missing_downloads(cfg)

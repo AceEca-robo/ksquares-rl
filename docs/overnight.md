@@ -1401,3 +1401,14 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   error (marked in results.md); the comparison is item 3: g5 114 vs Dot 84 62.5 % (MCTS 200), 73.5 % (raw), 47.5 %
   (equal time). g5 114 vs g5 49: 93 % / 66.5 %. Round robin: the nets are transitive (114 > 84 > 54 > 49); Hard and
   Strong cannot separate them (Strong 16-21 % against all). Took 25 min.
+
+### 2026-11-19 17:20-18:00 — after series 10: default Dot gen 84, Correction, rules, series 11 launched
+
+- App: the default Dot is az5b gen 84 ("the strongest Dot by matches", v0.4 asset az5b_gen_0084.pt); gen 54 stays as a
+  release network "from the part 1 video" (v0.1 best.pt). A clone that downloaded the old best.pt (best.json with
+  an https checkpoint and another gen) fetches the new one; a checkout's link is kept. Captions of g5 49 / 114 now
+  name the Dot they were measured against.
+- README and results.md: "Correction" at the top of part 1's results (what was said, series 10's numbers, why the
+  ladder erred); part 1's table kept, gen 84's row added.
+- CLAUDE.md: best generation by matches between candidates; "Before publishing" checklist (user). Plan: same rule.
+- Series 11 (10x7: is dot2c gen 16 the strongest?) protocol committed (5d5bc84) and running.

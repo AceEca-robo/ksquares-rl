@@ -150,7 +150,22 @@ def release_items(cfg):
 
 def missing_downloads(cfg):
     """The release items not on disk (a fresh clone: all of them)."""
-    return [it for it in release_items(cfg) if not os.path.isfile(os.path.join(ROOT, it["dir"], it["file"]))]
+    return [it for it in release_items(cfg) if not os.path.isfile(os.path.join(ROOT, it["dir"], it["file"]))
+            or _other_download(it)]
+
+
+def _other_download(it):
+    """A downloaded network described as another run / generation than the release's (an older release's best.pt,
+    e.g. gen 54 before series 10): fetched again. Networks without a description (linked in a checkout) are kept."""
+    meta = os.path.join(ROOT, it["dir"], os.path.splitext(it["file"])[0] + ".json")
+    try:
+        with open(meta) as f:
+            info = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if not str(info.get("checkpoint", "")).startswith("http"):
+        return False   # a link to a run on disk (scripts/update_best.py), not a download
+    return (info.get("run"), info.get("gen")) != (it["download"]["run"], it["download"]["gen"])
 
 
 def download_best(cfg, progress, cancelled=lambda: False):
@@ -224,6 +239,12 @@ def generations(cfg):
             extra.append({"run": g["download"]["run"], "gen": g["download"]["gen"], "config": g["config"], "path": p,
                           "note": g.get("note"), "play": bool(g.get("play"))})
     # release networks with a caption ("note", per language) or offered in "play" / "vs KSquares" ("play")
+    bsec = [cfg["best"]] + list((cfg.get("best_sizes") or {}).values())
+    for bc in bsec:
+        dl = bc.get("download") or {}
+        for o in out + extra:
+            if o is not None and bc.get("note") and o["run"] == dl.get("run") and o["gen"] == dl.get("gen"):
+                o["note"] = bc["note"]
     for g in cfg.get("release_generations") or []:
         for o in out + extra:
             if o is not None and o["run"] == g["download"]["run"] and o["gen"] == g["download"]["gen"]:

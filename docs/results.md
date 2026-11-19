@@ -1,5 +1,36 @@
 # Results
 
+## Correction (2026-11-19): gen 54 was not the strongest Dot
+
+**What was said.** Part 1 called az5b gen 54 "the released one" because it had the highest ladder Elo (MCTS 2164).
+It said that after it "the strength stops growing" (README, "Train your own Dot"). The part 1 video said: "she
+learned to beat her earlier versions, not to play better ... the app got not the last Dot but the strongest one"
+(docs/video_script_ru.md, scene 7).
+
+**What series 10 showed** (docs/graph_s10.md, runs/graph_s10/results.json; 200 games per match, first mover
+alternating, the first 4 lines at temperature 1, protocol committed before the run). az5b gen 84, the last accepted
+Dot, beats gen 54:
+
+| match | gen 84 wins | gen 54 wins | gen 84 score | 95 % interval |
+|---|---:|---:|---:|---|
+| MCTS 200 both | 136 | 64 | 68.0 % | 61.2-74.1 |
+| without search both | 129 | 71 | 64.5 % | 57.7-70.8 |
+
+A separate round robin with 100 games per pair gave gen 84 75 % against gen 54. The best Dot by Elo without search
+(gen 52) loses to gen 54 (42 %).
+
+**Why the ladder got it wrong.** All late generations beat Hard 96-100 % and medium nearly always, so the top of the
+ladder is decided by one column, strong. That column has 100 games per cell, about +-7 points (about +-60 Elo
+at the top; the series 9 re-evaluation with 300 games showed the same scatter). Gen 54 had 89 % against strong and
+gen 84 75 %. Head to head the order is the reverse. Strong scores 16-21 % against every late net and does not
+separate them. The ladder measures strength against scripted agents, and once a net beats them all it no longer
+ranks nets against each other.
+
+**What changed.** Since 2026-11-19 the app's default Dot is gen 84 ("the strongest Dot by matches"). Gen 54 stays in
+the list as "from the part 1 video". Rule from now on (CLAUDE.md): the best generation is chosen by matches between
+candidates; the ladder is used only for early rounds.
+
+
 ## Simulator speed
 
 `scripts/bench_sim.py` (`configs/bench_sim.yaml`), self-play, pure Python

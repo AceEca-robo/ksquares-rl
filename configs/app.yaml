@@ -1,14 +1,19 @@
 # The desktop app (scripts/launcher.py, launcher/).
 best:
   run_config: configs/az5b.yaml   # runs/best/best.pt -> its last accepted generation...
-  gen: 54                         # ...unless pinned: az5b gen 54, the ladder best (MCTS Elo 2164)
+  gen: 84                         # ...unless pinned: az5b gen 84, the strongest Dot by matches (series 10:
+                                  # beats gen 54, the ladder's best, 68 %); gen 54 stays in release_generations
   dir: runs/best
-  download:                       # what the app fetches when runs/best/best.pt is missing (a fresh clone)
-    url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.1/best.pt
-    sha256: fbf37b1d3848db8401d8557f33d60f54faaf44ee1cec6bebd767ed68f44e304b
+  note:                           # shown under the menu (series 10)
+    en: "the strongest Dot by matches (beats gen 54 68 %, series 10)"
+    ru: "сильнейшая Dot по матчам (обыгрывает gen 54: 68 %, серия 10)"
+    uk: "найсильніша Dot за матчами (перемагає gen 54: 68 %, серія 10)"
+  download:                       # what the app fetches when runs/best/best.pt is missing (a fresh clone) or
+    url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.4/az5b_gen_0084.pt
+    sha256: d2fc37f6d5890c87df43f63f4e2a045a585b610b07ef3d6dfe2969c5079e9ff5
     size: 2207519
-    run: az5b                     # what it is: az5b gen 54
-    gen: 54
+    run: az5b                     # what it is: az5b gen 84 (an older download of another gen is replaced)
+    gen: 84
 best_sizes:                       # the best network per other board size ("WxH"), as best (no download)
   10x7:
     run_config: configs/dot2c.yaml  # Dot-2, curriculum 5x5 -> 7x7 -> 10x7
@@ -30,14 +35,28 @@ release_generations:              # more release networks, fetched with the best
       size: 2083639
       run: dot2s
       gen: 39
+  - config: configs/az5b.yaml     # Dot gen 54: the ladder's best, the network of the part 1 video
+    dir: runs/release
+    file: az5b_gen_0054.pt
+    play: true
+    note:
+      en: "from the part 1 video (the ladder's best; gen 84 beats it 68 %)"
+      ru: "из ролика части 1 (лучшая по лестнице; gen 84 обыгрывает её: 68 %)"
+      uk: "з ролика частини 1 (найкраща за драбиною; gen 84 перемагає її: 68 %)"
+    download:
+      url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.1/best.pt
+      sha256: fbf37b1d3848db8401d8557f33d60f54faaf44ee1cec6bebd767ed68f44e304b
+      size: 2207519
+      run: az5b
+      gen: 54
   - config: configs/g5.yaml       # series 9: the graph net Gc trained on 5x5 by AlphaZero, its best generation
     dir: runs/release
     file: g5_gen_0049.pt
     play: true                    # also offered in "play" and "vs KSquares"
     note:                         # shown under the menu when picked (docs/graph_s9.md)
-      en: "graph net (series 9); ladder MCTS Elo 2122 (Dot 2164), no search 1830 (Dot 1724); real Hard 20/20; vs Dot 40% (MCTS 200)"
-      ru: "графовая сеть (серия 9); лестница: Elo с MCTS 2122 (Dot 2164), без поиска 1830 (Dot 1724); Hard 20/20; против Dot 40% (MCTS 200)"
-      uk: "графова мережа (серія 9); драбина: Elo з MCTS 2122 (Dot 2164), без пошуку 1830 (Dot 1724); Hard 20/20; проти Dot 40% (MCTS 200)"
+      en: "graph net (series 9); ladder MCTS Elo 2122 (Dot 2164), no search 1830 (Dot 1724); real Hard 20/20; vs Dot gen 54 40% (MCTS 200)"
+      ru: "графовая сеть (серия 9); лестница: Elo с MCTS 2122 (Dot 2164), без поиска 1830 (Dot 1724); Hard 20/20; против Dot gen 54 40% (MCTS 200)"
+      uk: "графова мережа (серія 9); драбина: Elo з MCTS 2122 (Dot 2164), без пошуку 1830 (Dot 1724); Hard 20/20; проти Dot gen 54 40% (MCTS 200)"
     download:
       url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.4/g5_gen_0049.pt
       sha256: e071d19d8cc6515a9b751e0e0bdb51a52cf276d9de94ab162f99e004a0f217c6
@@ -49,9 +68,9 @@ release_generations:              # more release networks, fetched with the best
     file: g5_gen_0114.pt
     play: true
     note:
-      en: "graph net, last gen; lower on the ladder (MCTS Elo 2059), stronger against Dot: 68% (MCTS 200), 61.5% at equal time"
-      ru: "графовая сеть, последнее поколение; на лестнице ниже (Elo с MCTS 2059), против Dot сильнее: 68% (MCTS 200), 61.5% при равном времени"
-      uk: "графова мережа, останнє покоління; на драбині нижче (Elo з MCTS 2059), проти Dot сильніша: 68% (MCTS 200), 61.5% за рівного часу"
+      en: "graph net, last gen; lower on the ladder (MCTS Elo 2059), stronger against Dot: vs gen 84 62.5% (MCTS 200), 47.5% at equal time"
+      ru: "графовая сеть, последнее поколение; на лестнице ниже (Elo с MCTS 2059), против Dot сильнее: с gen 84 62.5% (MCTS 200), 47.5% при равном времени"
+      uk: "графова мережа, останнє покоління; на драбині нижче (Elo з MCTS 2059), проти Dot сильніша: з gen 84 62.5% (MCTS 200), 47.5% за рівного часу"
     download:
       url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.4/g5_gen_0114.pt
       sha256: 7c97a9b767ffa197a2bdee17285397419f9e649eebfd1e211c0b0a19b3ab51ef

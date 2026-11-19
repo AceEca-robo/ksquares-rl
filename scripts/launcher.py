@@ -20,12 +20,12 @@ board with the side the long chain rule favours, and whether the network's
 move keeps the win (exact solving in the chain fight). Below, V move by
 move. Search: none (the policy's argmax) or 50 / 200 / 800 simulations.
 
-The network is runs/best/best.pt: az5b gen 54, pinned by best.gen in
+The network is runs/best/best.pt: az5b gen 84 (series 10), pinned by best.gen in
 configs/app.yaml (without the pin, the last accepted generation;
 scripts/update_best.py keeps the link current); in a fresh clone, without
 runs/, the menu offers to download the release networks (best.download,
 best_sizes.*.download and release_generations in configs/app.yaml: az5b gen
-54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2, g5 gens 49 and 114 from v0.4). "network vs itself" can pick any accepted generation
+84 (the default Dot since series 10) and g5 gens 49 and 114 from v0.4, az5b gen 54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2). "network vs itself" can pick any accepted generation
 of az5 and az5b on disk. Esc goes back to the menu
 from any mode (the game, its Xvfb and the worker are closed), Esc in the
 menu quits. English, Russian or Ukrainian (launcher/i18n.py), switched in
@@ -347,6 +347,10 @@ class App:
         picked = [s["gen_play"]] if s["mode"] in ("ksquares", "play") else \
             [s["gen_a"], s["gen_b"]] if s["mode"] == "self" else []
         notes = []
+        if s["mode"] in ("ksquares", "play") and s["gen_play"] is None and self.best:
+            bn = core.best_section(self.cfg, self.board_size()).get("note")
+            if bn:
+                notes.append((f"{self.best['run']} gen {self.best['gen']}", bn.get(s["lang"]) or bn["en"]))
         for g in self.gens:
             if g["label"] in picked and g.get("note") and g["label"] not in [n[0] for n in notes]:
                 notes.append((g["label"], g["note"].get(s["lang"]) or g["note"]["en"]))

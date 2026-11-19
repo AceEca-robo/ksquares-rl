@@ -14,3 +14,25 @@ Goal: train an RL agent to play Dots and Boxes in KSquares 21.12.3 (KDE, Matt Wi
 - GPU limits: memory at most 40%; GPU load is not limited.
 - Commits use AceEca-robo@users.noreply.github.com (set in the project's git config).
 - Language: answer the user in Russian; code, documentation and commit messages in English.
+- Choosing the best generation (user, 2026-11-19, after series 10): pick the best generation by matches between
+  candidates, not by the ladder. Candidates = the top 3-4 generations by ladder Elo plus the last accepted one; a round
+  robin between them (MCTS 200, first mover alternating, opening temperature, games per pair fixed in the protocol)
+  picks the best. The ladder (Bradley-Terry Elo against scripted agents) is only for the early rounds, while the net
+  does not yet beat Strong; once nets beat every scripted agent, the ladder cannot rank them (part 1: gen 54 picked by
+  the ladder, gen 84 beats it 68 %; series 9: g5 gen 49 by the ladder, gen 114 beats it 93 %).
+
+## Before publishing (user, 2026-11-19; a rule for every future project)
+
+A video, a release or a conclusion in the README goes out only after every claim in it has passed these checks:
+1. Every number in the script and the README points to a data file and was recomputed from the saved weights or
+   logs, not copied from a summary.
+2. "The best network" was chosen by matches between candidates, not by the ladder.
+3. A conclusion like "stopped growing", "cannot", "stronger" is backed by a direct comparison whose interval
+   excludes a draw, on a number of games written down beforehand.
+4. For every main conclusion, a check that could refute it is named and was run. Without such a check the
+   conclusion is marked as an observation, not a result.
+5. Training, selection and evaluation data do not overlap, and this was checked.
+6. Before a script, list the claims with a status "checked / observation / not checked"; only the first two go into
+   the video, observations with a spoken caveat.
+The lesson behind this rule: part 1 picked gen 54 by the ladder, and "Dot did not grow after round 54" went into
+the video and the README; series 10 showed gen 84 beats gen 54 68 % [61, 74].

@@ -8,6 +8,11 @@ Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
 
+- Best generation (user, 2026-11-19, after series 10): chosen by matches between candidates (the top 3-4 by ladder
+  Elo plus the last accepted one, a round robin with games per pair fixed in the protocol), not by the ladder. The
+  ladder only for early rounds, while the net does not beat Strong. Before anything is published, the checks of
+  CLAUDE.md "Before publishing" apply.
+
 - The protocol of a series (configs, seeds, steps, metrics, criterion) is fixed
   in this file and committed before the first run. It does not change during
   the series. Any change, including "one more seed" or "more steps", is a new
