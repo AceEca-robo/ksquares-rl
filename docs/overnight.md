@@ -1371,3 +1371,12 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   1850 by gen 50 and stayed there. The search adds less: MCTS - raw 346 at gen 45, 108 at gen 60.
 - Gen 56's 100-games 2096 was lucky (300 games: 1995). With the 300-games values the best MCTS generation is 49.
 - Self-play slowed from 23 to 28 min per round while the re-evaluation ran (16:00-19:35); training continued.
+
+### 2026-11-19 14:17 — series 9: daily summary (g5)
+
+- Running without errors. 111 rounds done, 65 accepted; no stop yet (judged at round 109 of 117, best MCTS Elo
+  2127 from gen 45's 100-games evaluation, +0 over the last 20 rounds -> expected to stop at round 117, ~17:00).
+- Since round 60 MCTS Elo 1930-2090 (100 games), raw 1700-1850; gen 109: 2077 / 1825, hard 97 / 90 %, strong 84 / 51 %,
+  V sign 89.1 %, MCTS on the probe 95.6 %.
+- Diagnosis of the MCTS drop done 2026-11-18 23:09 (section in graph_s9.md): policy entropy 2.09 -> 1.90, gain from
+  MCTS 50 to 800 vs strong smaller at gens 54/60, V sign better at later gens; rounds slowed by 9-13 % meanwhile.
