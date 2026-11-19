@@ -597,6 +597,29 @@ Goal: a finished graph network that plays (no deadline).
   docs/graph_s9.png, the comparisons as they become available); a daily summary to the user with the curve by
   rounds next to Dot's.
 
+## Series 10: was Dot gen 54 the best Dot? (matches only)
+
+User, 2026-11-19, after series 9 (where the ladder's best g5, gen 49, lost to Dot gen 54 while the late gens 112 / 114
+beat it). Question: was Dot gen 54 the best Dot, or did the ladder err there too. No training.
+- Matches, 200 games each, first mover alternating, the first 4 lines at temperature 1 (nets), then the best move;
+  modes MCTS 200 both, without thinking both, equal time per move:
+  1. Dot's last accepted generation (az5b gen 84, round 114) against Dot gen 54.
+  2. The Dot with the best Elo without thinking (az5b gen 52, round 82: 1724 on the common opponents) against gen 54.
+  3. g5 gen 114 against the strongest Dot of items 1-2.
+  4. g5 gen 114 against g5 gen 49, for completeness.
+- Decided here: equal time differs only between g5 and Dot (g5 58 sims = Dot 200, the series 9 calibration on this
+  machine); between two nets of one architecture (items 1, 2, 4) it is MCTS 200 both and is not played again. The
+  "strongest Dot by items 1-2" = a candidate whose MCTS-200 score against gen 54 has its 95 % Wilson interval above
+  50 % (of two, the higher score); none -> gen 54 (then item 3 replays series 9's match with a new seed). "Beats"
+  below means the MCTS 200 mode (the ladder's and the app's mode); the other modes are described.
+- Reading, fixed now: if the late Dot (item 1) beats gen 54 (interval above 50 %), the graph vs convolution
+  comparison is counted by item 3 and part 1's "Dot did not grow after round 54" is marked a measurement error. If
+  not, the comparison stays as in series 9 (if only the best-raw Dot of item 2 beats gen 54, item 3 is played against
+  it and reported, but part 1's note stands).
+- Descriptive, separate section: round robin of 6 players (g5 49, g5 114, Dot 54, Dot 84; Hard and Strong as on the
+  ladder), MCTS 200 for the nets, 100 games per pair: a table, to show that strength here is not one line.
+- Seeds [10, item, mode]; scripts/graph_s10.py, configs/graph_s10.yaml, tests/test_graph_s10.py; docs/graph_s10.md.
+
 ## Series 4: middle game (the former (ii))
 
 Goal: does the graph generalise the middle game where the convolution did not.

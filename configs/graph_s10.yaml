@@ -1,0 +1,24 @@
+# Series 10 (docs/plan_part4.md): matches only, no training. Was Dot gen 54 the best Dot, or did the ladder err
+# there too? scripts/graph_s10.py; docs/graph_s10.md.
+base: configs/g5.yaml        # board, mcts, device, eval.params (strong node_budget 23000)
+run_dir: runs/graph_s10
+seed: 10
+games: 200                   # per match, first mover alternating
+temp_moves: 4                # the first 4 lines at temperature 1 (nets), then the best move
+sims: 200
+equal_time_sims: 58          # g5 sims at Dot's 200-sims time per move (series 9 calibration, runs/g5/match.json)
+processes: 8                 # opponent processes (Hard, Strong) in the round robin
+nets:                        # name -> [config, checkpoint]
+  dot54: [configs/az5b.yaml, runs/az5b/gen_0054.pt]     # the ladder's best Dot (MCTS Elo 2164), the app's net
+  dot_last: [configs/az5b.yaml, runs/az5b/gen_0084.pt]  # az5b's last accepted generation (round 114)
+  dot_raw: [configs/az5b.yaml, runs/az5b/gen_0052.pt]   # the best Dot by Elo without thinking (1724, round 82)
+  g5_114: [configs/g5.yaml, runs/g5/gen_0114.pt]
+  g5_49: [configs/g5.yaml, runs/g5/gen_0049.pt]
+matches:                     # item: [a, b, modes]; "strongest" = the strongest Dot by items 1-2 (rule in the plan)
+  "1": [dot_last, dot54, [mcts, raw]]
+  "2": [dot_raw, dot54, [mcts, raw]]
+  "3": [g5_114, strongest, [mcts, raw, equal_time]]
+  "4": [g5_114, g5_49, [mcts, raw]]
+round_robin:                 # descriptive: MCTS 200 for the nets, 100 games per pair
+  games: 100
+  players: [g5_49, g5_114, dot54, dot_last, hard, strong]
