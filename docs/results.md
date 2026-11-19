@@ -439,6 +439,9 @@ excluded). Accepted: 3 5 6 7 9 11 13 14 15 17 18 20 22 25 31 36 39.
 | dot2s last accepted | 39 | 14.8 | 1413 | 1406 | 12-8 (60%) |
 | dot2c (curriculum) | 16 | 5.9 | 1755 | 1457 | 19-0-1 |
 
+(Checked by matches, series 11, 2026-11-19, docs/graph_s11.md: dot2c gen 16 beats dot2c gens 14 / 10 / 9 and dot2s
+gens 25 / 39 with MCTS 200, challengers 3.7-26 %, every 95 % interval below 50 %; the ladder's 10x7 pick stands.)
+
 Anchors: medium 1237, hard 1420, strong4 1462. Plot: docs/dot2c_vs_dot2s.png.
 
 ## 10x7: the app's network against Hard by number of simulations

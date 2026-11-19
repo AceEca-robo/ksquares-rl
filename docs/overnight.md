@@ -1412,3 +1412,5 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   ladder erred); part 1's table kept, gen 84's row added.
 - CLAUDE.md: best generation by matches between candidates; "Before publishing" checklist (user). Plan: same rule.
 - Series 11 (10x7: is dot2c gen 16 the strongest?) protocol committed (5d5bc84) and running.
+- Series 11 done (18:13): dot2c gen 16 vs dot2c 14 / 10 / 9 and dot2s 25 / 39, MCTS 200, 200 games: challengers 21.3 /
+  17.5 / 26.0 / 12.5 / 3.7 %, all intervals below 50 % -> gen 16 stays the app's 10x7 net.
