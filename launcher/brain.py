@@ -41,7 +41,7 @@ def evaluator(config: str, checkpoint: str, dev: str):
             rc = core.load_yaml(config)
             net = make_net(rc)
             net.load_state_dict(torch.load(checkpoint, map_location="cpu"))
-            _NETS[key] = (Evaluator(net, dev), rc)
+            _NETS[key] = (Evaluator(net, dev, compile=False), rc)   # no torch.compile wait in the app
         return _NETS[key]
 
 

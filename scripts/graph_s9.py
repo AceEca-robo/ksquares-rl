@@ -323,7 +323,11 @@ def cmd_report(cfg, quiet=False):
     b = run / "bridge.json"
     if b.exists():
         bj = json.loads(b.read_text())
-        L += ["## Bridge: 20 games against the real KSquares Hard", "", f"{json.dumps(bj.get('total', bj))}", ""]
+        L += ["## Bridge: games against the real KSquares Hard", "",
+              f"{bj['checkpoint']}, MCTS {bj['sims']} ({bj['leaves']} leaves per tree), game seed {bj['seed']}, first "
+              f"mover alternating: {bj['wins']} wins, {bj['losses']} losses, {bj['ties']} ties of {len(bj['games'])} "
+              f"(boxes {sum(g['net'] for g in bj['games'])}:{sum(g['hard'] for g in bj['games'])}). Dot (az5b gen 54): "
+              "18 of 20.", ""]
     L += ["## Rounds (accepted, evaluated generations)", "",
           "Ladder: win % with MCTS 200 / without thinking, 100 games per cell. Parity probe 5x5 (1000 positions): "
           "policy argmax correct %, V child (sign of V after every move, balanced) %, MCTS 200 correct %.", "",

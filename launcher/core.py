@@ -195,7 +195,7 @@ def download_best(cfg, progress, cancelled=lambda: False):
 
 def generations(cfg):
     """Every accepted generation on disk, in order: [{"run", "gen", "config",
-    "path", "label", "own", "size"}] (size: the run's board; own: a run of "Train your own Dot"): the project's runs, the best network too when its run
+    "path", "label", "own", "size", "note"?, "play"?}] (note / play: from a release_generations entry) (size: the run's board; own: a run of "Train your own Dot"): the project's runs, the best network too when its run
     is not on disk (a fresh clone with the downloaded one), then the app's
     own runs ("Train your own Dot", runs/<name>/train.yaml)."""
     from . import train
@@ -221,7 +221,13 @@ def generations(cfg):
     for g in cfg.get("release_generations") or []:
         p = os.path.join(ROOT, g["dir"], g["file"])
         if os.path.isfile(p):
-            extra.append({"run": g["download"]["run"], "gen": g["download"]["gen"], "config": g["config"], "path": p})
+            extra.append({"run": g["download"]["run"], "gen": g["download"]["gen"], "config": g["config"], "path": p,
+                          "note": g.get("note"), "play": bool(g.get("play"))})
+    # release networks with a caption ("note", per language) or offered in "play" / "vs KSquares" ("play")
+    for g in cfg.get("release_generations") or []:
+        for o in out + extra:
+            if o is not None and o["run"] == g["download"]["run"] and o["gen"] == g["download"]["gen"]:
+                o["note"], o["play"] = g.get("note"), bool(g.get("play"))
     k = sum(1 for g in out if g["config"] in cfg["generations"])
     for b in extra:
         if b is not None and not any(g["run"] == b["run"] and g["gen"] == b["gen"] for g in out):

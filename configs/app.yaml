@@ -30,12 +30,27 @@ release_generations:              # more release networks, fetched with the best
       size: 2083639
       run: dot2s
       gen: 39
+  - config: configs/g5.yaml       # series 9: the graph net Gc trained on 5x5 by AlphaZero, its best generation
+    dir: runs/release
+    file: g5_gen_0049.pt
+    play: true                    # also offered in "play" and "vs KSquares"
+    note:                         # shown under the menu when picked (docs/graph_s9.md)
+      en: "graph net (series 9); ladder MCTS Elo 2122 (Dot 2164), no search 1830 (Dot 1724); real Hard 20/20; vs Dot 40% (MCTS 200)"
+      ru: "графовая сеть (серия 9); лестница: Elo с MCTS 2122 (Dot 2164), без поиска 1830 (Dot 1724); Hard 20/20; против Dot 40% (MCTS 200)"
+      uk: "графова мережа (серія 9); драбина: Elo з MCTS 2122 (Dot 2164), без пошуку 1830 (Dot 1724); Hard 20/20; проти Dot 40% (MCTS 200)"
+    download:
+      url: https://github.com/AceEca-robo/ksquares-rl/releases/download/v0.4/g5_gen_0049.pt
+      sha256: e071d19d8cc6515a9b751e0e0bdb51a52cf276d9de94ab162f99e004a0f217c6
+      size: 2112095
+      run: g5
+      gen: 49
 generations:                      # pickable in "network vs itself" (the menu shows those of the board size)
   - configs/az5.yaml
   - configs/az5b.yaml
   - configs/dot2a.yaml            # Dot-2 on 5x5
   - configs/dot2c.yaml            # Dot-2 on 10x7: curriculum
   - configs/dot2s.yaml            # Dot-2 on 10x7: from scratch
+  - configs/g5.yaml               # series 9: the graph net on 5x5
 board_sizes: [[5, 5], [10, 7]]
 sims_choices: [0, 50, 200, 800]   # 0 = no search, the policy's argmax
 sims_default: 200

@@ -25,7 +25,7 @@ configs/app.yaml (without the pin, the last accepted generation;
 scripts/update_best.py keeps the link current); in a fresh clone, without
 runs/, the menu offers to download the release networks (best.download,
 best_sizes.*.download and release_generations in configs/app.yaml: az5b gen
-54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2). "network vs itself" can pick any accepted generation
+54 from v0.1, dot2c gen 16 and dot2s gen 39 from v0.2, g5 gen 49 from v0.4). "network vs itself" can pick any accepted generation
 of az5 and az5b on disk. Esc goes back to the menu
 from any mode (the game, its Xvfb and the worker are closed), Esc in the
 menu quits. English, Russian or Ukrainian (launcher/i18n.py), switched in
@@ -241,8 +241,8 @@ class App:
 
     def play_labels(self):
         """The networks of "vs KSquares" and "play": None (the released one,
-        runs/best) and the accepted rounds of the app's own runs."""
-        return [None] + [g["label"] for g in self.gens if g["own"] and g["size"] == self.board_size()]
+        runs/best), release networks marked ``play`` (g5) and the accepted rounds of the app's own runs."""
+        return [None] + [g["label"] for g in self.gens if (g["own"] or g.get("play")) and g["size"] == self.board_size()]
 
     # --- drawing helpers ---------------------------------------------------------
 
@@ -343,6 +343,15 @@ class App:
             self.text(self.L("network", label=f"{self.best['run']} gen {self.best['gen']}"), (160, 948), 22, DIM)
         else:
             self.text(self.L("network_none"), (160, 948), 22, DIM)
+        # honest captions of the picked release networks (release_generations[].note)
+        picked = [s["gen_play"]] if s["mode"] in ("ksquares", "play") else \
+            [s["gen_a"], s["gen_b"]] if s["mode"] == "self" else []
+        notes = []
+        for g in self.gens:
+            if g["label"] in picked and g.get("note") and g["label"] not in [n[0] for n in notes]:
+                notes.append((g["label"], g["note"].get(s["lang"]) or g["note"]["en"]))
+        for i, (label, note) in enumerate(notes):
+            self.text(f"{label}: {note}", (160, 984 + 28 * i), 18, DIM)
         self.text(self.L("esc_quit"), (40, H - 26), 26, FG, "bottomleft")
         self.text(self.L("menu_keys"), (W / 2, H - 30), 20, FAINT, "midbottom")
         if self.offer or self.download is not None:

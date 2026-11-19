@@ -1380,3 +1380,14 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   V sign 89.1 %, MCTS on the probe 95.6 %.
 - Diagnosis of the MCTS drop done 2026-11-18 23:09 (section in graph_s9.md): policy entropy 2.09 -> 1.90, gain from
   MCTS 50 to 800 vs strong smaller at gens 54/60, V sign better at later gens; rounds slowed by 9-13 % meanwhile.
+
+### 2026-11-19 16:27-16:45 — series 9: stop by the plateau rule, matches, bridge, app, release
+
+- g5 stopped after round 117 (plateau rule; 67 accepted, 50.8 h). Picks: best MCTS Elo gen 49 (300-games value),
+  best raw gen 112 (100-games 1865 vs gen 50's 300-games 1857: mixed estimates, as decided in the second amendment),
+  last accepted gen 114. Equal time: g5 58 sims = Dot 200 (34.8 vs 33.8 ms per move).
+- Matches vs Dot gen 54 (MCTS 200 / raw / equal time): gen 49 40 / 61.5 / 31 %; gen 112 74 / 78.5 / 65 %;
+  gen 114 68 / 84.5 / 61.5 %. The ladder ranks gen 49 first, Dot ranks the late generations far above it.
+- Bridge, gen 49 vs the real Hard: 20 / 20 (first run's JSON path was wrong; rerun gave the same 20 games).
+- App: g5 gen 49 as release network (v0.4) with a caption, in play / vs KSquares / net vs net; all g5 gens in net vs
+  net; app evaluator without torch.compile. Screenshot docs/app_g5_vs_dot.png.
