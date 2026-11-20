@@ -483,3 +483,17 @@ Details: docs/graph_s2.md. Recipe B + V-sign, 20000 steps, deterministic. Clicks
 | 2b Gc | 5x5 until 95%, then 10x7 | 10 | 7/10 | 7/10 |
 | 2c C | as 2b; never reached 95% on 5x5, no 10x7 phase | 5 | 0/5 | 0/5 |
 | 2c C+h | as 2b; hint plane 15 = target, not a test | 5 | 5/5 | 5/5 |
+
+## Part 4, series 12: the same judge answers, graph net against convolution (2026-11-20)
+
+Details: docs/graph_s12.md. Fine-tune on mid train + 56 mistakes (30 % of each batch) and dot2c replay (70 %), 4000
+steps, the same for every net. % correct moves without thinking on the 199 held-out decisive mid positions (split
+by game, no overlap). Dot-2 with MCTS 200 on the same positions: 98.0 %.
+
+| nets | before | (a) head only | (b) all, rest 0.1x lr |
+|---|---:|---:|---:|
+| Dot-G (Gc w8/101-103, mean of 3) | 84.4 | 84.8 | 86.8 |
+| Dot-2 (dot2c gen 16) | 86.9 | 88.9 | 93.0 |
+| C+h (series 3' s1-s3, mean of 3) | 73.7 | 80.2 | 87.1 |
+| D = Dot-G - Dot-2 after, 95 % interval | | -4.2 [-9.9, +1.5]: no difference seen | -6.2 [-10.6, -2.2]: worse |
+

@@ -3,6 +3,7 @@
 # Protocol by the user 2026-11-20, fixed before the run; a change = a new series.
 seed: 3031                 # = configs/mid_hand.yaml: the splits and the batch order of mid_hand r30
 device: cuda
+eval_device: cpu            # evaluation in fp32 on the CPU, as part 3 (near ties of the logits: GPU argmax can differ)
 out: runs/graph_s12
 report: docs/graph_s12.md
 limits: {gpu_memory_fraction: 0.4}   # one process, nice -n 10, in tmux

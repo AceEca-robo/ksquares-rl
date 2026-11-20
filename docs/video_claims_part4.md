@@ -10,6 +10,10 @@ Revision 2 (2026-11-19, after the user accepted every fix): the rows below are f
 docs/video_script_part4_ru.md; the quoted wording is the new one, the old wording is given where it changed.
 Every row is now **checked** or **observation**.
 
+Revision 3 (2026-11-20, after series 12): rows for scene 6 from the series 12 result added; the scene 6 sentence
+"до этого опыта мы не дошли" no longer matches and has to be replaced. Only scene 6 changes; the voice of scene 6 is
+not redone yet (user: not before the result; now it is in).
+
 Names: Dot-G = Gc (agents/graph_net.py, configs/graph_gc.yaml: 8 layers, width 50, segments) in every scene; the g5
 run uses the same net (configs/g5.yaml). Simple graph net = Ga (same code, `segments: false`). Convolution = C
 (AZNet2, as Dot-2). Dot = az5 / az5b; Dot-2 = dot2c gen 16.
@@ -81,7 +85,25 @@ equal-time calibration from runs/g5/match.json; exact test of jumps by weights (
 | Dot-2 without thinking: 84 | graph_s7.md | 83.6 % | checked |
 | the jump did not carry over | graph_s7.md | D = -2.4 points [-4.7, -0.1] | checked; no overlap with training data (0 of 1925) |
 | Dot-G learned to solve end-games, not to understand the game | interpretation of the above | — | observation (fine as a sentence of the narrator) |
-| "в прошлый раз мы обещали дать графовой сети те же восемьдесят ответов судьи. До этого опыта мы не дошли: сначала нужно было узнать, видит ли она середину вообще" | video_script_part3_ru.md scene 10; plan_part4.md (no series trains on the 80 mistakes) | — | checked (the reason is the order of the plan: series 7 before any such training) |
+| "в прошлый раз мы обещали дать графовой сети те же восемьдесят ответов судьи. До этого опыта мы не дошли: сначала нужно было узнать, видит ли она середину вообще" | video_script_part3_ru.md scene 10; plan_part4.md (no series trains on the 80 mistakes) | — | **does not match after series 12** (2026-11-20): the experiment is now done (docs/graph_s12.md); the sentence has to be replaced by the rows below; the scene 6 voice is to be rewritten from them |
+
+Series 12 (docs/graph_s12.md, runs/graph_s12/eval.json; recomputed by `scripts/graph_s12.py report` from the saved
+fine-tuned weights): the promised test, run 2026-11-20 under a protocol committed before the run (33ed4d3). Rows for
+the new scene 6 voice; numbers are % correct moves without thinking on the 199 held-out decisive mid positions.
+
+| claim (for the new voice) | source | value | status |
+|---|---|---|---|
+| we gave Dot-G the same judge answers (middle-game positions and the 80 mistakes) and fine-tuned Dot-2 and the convolution with the hint in exactly the same way | plan_part4.md series 12; graph_s12.md header | 1387 mid + 56 mistakes train, 4000 steps, the same batches for every net, hyperparameters of Dot-2's mid_hand | checked |
+| the test positions were never seen in training | graph_s12.md Overlap | split by game; 0 of 538 + 24 held-out positions shared with any training / selection set | checked |
+| "графовая сеть не научилась середине лучше свёрточной" (neither variant above Dot-2) | graph_s12.md primary | (a) D -4.2 [-9.9, +1.5]; (b) D -6.2 [-10.6, -2.2] | checked (no interval above 0) |
+| "хуже" (Dot-G learns worse than Dot-2) | graph_s12.md primary | only (b) excludes 0; (a) "no difference seen" | checked only with the variant: "when the whole net learns, worse; when only the move choice learns, no difference seen". Unqualified "хуже": does not match |
+| Dot-G after: 85 / 87, Dot-2 after: 89 / 93 | graph_s12.md primary | (a) 84.8 vs 88.9; (b) 86.8 vs 93.0 | checked |
+| before fine-tuning: Dot-G 84, Dot-2 87 | graph_s12.md gains table | 84.4 vs 86.9; difference -2.5 [-7.2, +2.0] | checked as numbers; "Dot-2 was ahead before" is not shown on these 199 positions (series 7 shows it on 721) |
+| Dot-G did not get better from the lesson | graph_s12.md gains | +0.3 [-5.0, +5.4] (a), +2.3 [-2.7, +7.0] (b) | checked as "no gain seen"; "learned nothing" is stronger than the data |
+| Dot-2 got better when the whole net learned | graph_s12.md gains | +6.0 [+2.5, +9.5] (b); (a) +2.0 [-2.5, +6.5] not shown | checked for (b) only |
+| the convolution with the hint gained the most and caught up with Dot-G | graph_s12.md gains, descriptive | C+h +6.5 [+0.3, +13.6] / +13.4 [+6.4, +21.1]; (b) Dot-G - C+h -0.3 [-4.5, +3.5] | gains: checked; "caught up" = no difference seen, observation |
+| with thinking Dot-2 is still far ahead: 98 | graph_s12.md reference | 98.0 % (MCTS 200, stored moves of part 3 (c), 199 of 199 found) | checked (reference, not a test) |
+| caveat to be spoken: the positions come from Dot-2's own games and 70 % of each lesson was Dot-2's own self-play targets, which favours Dot-2 | graph_s12.md Caveat; notes 4 | Dot-G's loss on that share 193-674 at the start vs Dot-2 2.4 | required with any "не научилась лучше"; that the mixture rather than the architecture held Dot-G back is not separated: observation, say "we cannot yet tell" |
 
 ## Scene 7. Then let it play
 
@@ -136,7 +158,8 @@ equal-time calibration from runs/g5/match.json; exact test of jumps by weights (
 
 A. Part 3 ended with a concrete promise: graph eyes for Dot-2 and the test "the same eighty judge answers, does it
    learn what the convolution did not". Part 4 did not run that test (series 7 evaluated the jump nets on the middle
-   game; nobody was trained on the 80 mistakes). Scene 6 now says so.
+   game; nobody was trained on the 80 mistakes). Scene 6 now says so. Series 12 (2026-11-20) ran the test: the scene 6
+   rows after "Series 12" replace that sentence; the voice of scene 6 is to be redone from them.
 B. Scene 9 counts are shares of 200 games (no ties on 5x5): 62.5 and 73.5 per hundred, said so in the voice.
 C. Equal time was calibrated on this machine (RTX 4060 Laptop, single-game search with 8 leaves per tree, as in the
    app). On another device the ratio can differ.

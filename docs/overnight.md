@@ -1433,3 +1433,27 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   call the 10-15 test set "middle of the game"; the map card marks the 10-15 band with a caption. Dot's rounds: the
   ladder chart counts az5 + az5b rounds (Dot ends at 114), the voice says "Dot, 84 rounds" (az5b gen 84, part 1
   naming).
+
+### 2026-11-20 10:30-12:30 — series 12: the same judge answers, graph net against convolution
+
+- Protocol (user's text, written into plan_part4.md series 12) committed before any run (33ed4d3): mid + the 80
+  mistakes in the existing splits (mid by game 1387 / 538, 199 decisive held out; mistakes 56 / 24), Dot-G = Gc w8 /
+  101-103, Dot-2, C+h s1-s3; fine-tune as Dot-2's mid_hand r30 (4000 steps, lr 5e-4, batch 384, 30 % judge, 70 %
+  dot2c replay), (a) head only, (b) all with the rest at 0.1x lr.
+- Decided in the protocol: (b) keeps no V loss (the nets' V heads have different targets); the plan's "heads within
+  10 %" does not hold (Gc 5101 vs AZNet2 7361 parameters), written, not changed; mid and mistakes pooled uniformly;
+  weights after the last step, no selection.
+- Code check: the trainer with Dot-2, (a), mid only reproduces runs/mid_hand/r30.pt bit for bit. Overlap: 0 shared
+  positions with every training / selection set, incl. 485896 dot2c replay positions. Frozen checks all pass.
+- Evaluation moved to CPU fp32 after the first (GPU) pass: one Dot-2 position has a logit near tie (10.6402 vs
+  10.6399) and flipped on the GPU (86.4 instead of part 3's 86.9 %); only that number changed.
+- Result: (a) D -4.2 [-9.9, +1.5] no difference seen; (b) D -6.2 [-10.6, -2.2] Dot-G worse. Dot-G gains not seen
+  (+0.3, +2.3); Dot-2 +6.0 in (b); C+h +6.5 / +13.4. One process, GPU memory < 1 GB of 8, nice -n 10, tmux; 63 min
+  training.
+- Unclear: Dot-G's replay policy loss is 193-674 at the start (Dot-2 2.4): the replay share is a large new objective
+  for Gc, not an anchor. The protocol fixed this mixture; its effect on the comparison is not separated.
+- Video: docs/video_claims_part4.md revision 3, scene 6 rows; the old sentence "до этого опыта мы не дошли" no longer
+  matches. Voice of scene 6 not redone.
+- Ideas for later: the same comparison with judge positions only (no replay share) for every net, to separate the
+  mixture from the architecture; a fresh held-out set (the 199 positions are small: (a)'s interval is 11 points wide).
+

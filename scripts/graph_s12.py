@@ -367,11 +367,10 @@ def correct_of(net, positions, dev):
 def cmd_eval(cfg):
     import torch
 
-    limit_gpu(cfg)
-    dev = cfg["device"]
-    D = data(cfg)
+    dev = cfg["eval_device"]     # CPU fp32, as part 3's accuracy (rout_mistakes.correct_vec): near ties of the
+    D = data(cfg)                # logits can make GPU and CPU argmax differ (one Dot-2 position, 10.6402 vs 10.6399)
     out = out_dir(cfg)
-    res = {"keys": {k: [p["moves"] for p in v] for k, v in D.items()}, "nets": {}}
+    res = {"eval_device": dev, "keys": {k: [p["moves"] for p in v] for k, v in D.items()}, "nets": {}}
     for g, name, kind, spec in net_list(cfg):
         r = {"group": g, "kind": kind, "weights": str(weights_path(spec).relative_to(ROOT)), "sha256": sha(weights_path(spec))}
         net = load_net(spec)
