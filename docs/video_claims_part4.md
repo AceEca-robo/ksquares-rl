@@ -118,7 +118,7 @@ the same, every lesson judge answers only, 1198 steps (as many judge answers as 
 | the result is the same: Dot-G is not better | graph_s12.md, 12b primary | (a) D -3.0 [-7.5, +1.3]; (b) D -6.0 [-11.4, -0.8] | checked (no interval above 0); "worse" only for (b), as in series 12 |
 | Dot-G after 87 / 84, Dot-2 after 90 / 90 | 12b primary | (a) 86.9 vs 89.9; (b) 83.9 vs 89.9 | checked |
 | every net learned the training answers by heart, but did not get better on new positions | 12b gains table | (b): all nets 100 % on the 1443 training answers; held-out gains Dot-G -0.5 [-4.4, +3.9], Dot-2 +3.0 [-1.5, +7.5] | checked for Dot-G and Dot-2 ("no gain seen"); C+h did gain (+10.7 [+2.2, +19.8]), so "no net got better" does not match |
-| **scene 6 sentence from both series**: «те же ответы судьи графовой сети помогли не больше, чем свёрточной» | graph_s12.md "Both series"; rule fixed before 12b | 12: -4.2 [-9.9, +1.5], -6.2 [-10.6, -2.2]; 12b: -3.0 [-7.5, +1.3], -6.0 [-11.4, -0.8] | checked (all four intervals have no part needed for "more": none above 0); with the spoken caveat about Dot-2's games |
+| **scene 6 sentence from both series**: «те же ответы судьи графовой сети помогли не больше, чем свёрточной» | graph_s12.md "Both series"; rule fixed before 12b | 12: -4.2 [-9.9, +1.5], -6.2 [-10.6, -2.2]; 12b: -3.0 [-7.5, +1.3], -6.0 [-11.4, -0.8] | checked (none of the four intervals is above 0); with the spoken caveat about Dot-2's games |
 
 ## Scene 7. Then let it play
 
