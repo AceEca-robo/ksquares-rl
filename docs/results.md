@@ -497,3 +497,14 @@ by game, no overlap). Dot-2 with MCTS 200 on the same positions: 98.0 %.
 | C+h (series 3' s1-s3, mean of 3) | 73.7 | 80.2 | 87.1 |
 | D = Dot-G - Dot-2 after, 95 % interval | | -4.2 [-9.9, +1.5]: no difference seen | -6.2 [-10.6, -2.2]: worse |
 
+Series 12b (judge answers only, no replay share, 1198 steps = the same judge positions seen):
+
+| nets | before | (a) head only | (b) all, rest 0.1x lr | training answers after (a) / (b) |
+|---|---:|---:|---:|---:|
+| Dot-G (mean of 3) | 84.4 | 86.9 | 83.9 | 94.1 / 100.0 |
+| Dot-2 | 86.9 | 89.9 | 89.9 | 98.0 / 100.0 |
+| C+h (mean of 3) | 73.7 | 82.4 | 84.4 | 91.9 / 100.0 |
+| D = Dot-G - Dot-2 after, 95 % interval | | -3.0 [-7.5, +1.3]: no difference seen | -6.0 [-11.4, -0.8]: worse | |
+
+Both series: «те же ответы судьи графовой сети помогли не больше, чем свёрточной».
+

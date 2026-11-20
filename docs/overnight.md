@@ -1457,3 +1457,13 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Ideas for later: the same comparison with judge positions only (no replay share) for every net, to separate the
   mixture from the architecture; a fresh held-out set (the 199 positions are small: (a)'s interval is 11 points wide).
 
+### 2026-11-20 12:20-13:00 — series 12b: judge answers only
+
+- Protocol committed before the run (6b43074): series 12 with every batch judge answers only, 1198 steps (= 4000 x 115
+  judge positions of series 12 / 384), the scene 6 sentence rule fixed beforehand.
+- Result: (a) D -3.0 [-7.5, +1.3] no difference seen; (b) D -6.0 [-11.4, -0.8] worse. Same rows as series 12, so
+  the replay share was not what held Dot-G back. In (b) every net learns all 1443 training answers (100 %) with no
+  held-out gain for Dot-G or Dot-2; only C+h gains. Before-rows recomputed equal to series 12's. Frozen checks pass.
+- Scene 6 sentence by the rule: «те же ответы судьи графовой сети помогли не больше, чем свёрточной». Video claims
+  revision 4. 25 min of training, one process, nice -n 10.
+

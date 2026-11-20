@@ -18,8 +18,8 @@
    (91.1 -> 89.8, 90.4 -> 90.4, 90.2 -> 89.7 %); in (b) it rises 1.3-3.4 points (Dot-2 9.5, C+h 8.6-11). So the test
    measured "the graph net fine-tuned on Dot-2's mixture", which is what the protocol fixed and the caveat names; it
    does not separate "the graph net cannot learn the middle game" from "the mixture pulls it towards Dot-2's
-   policy". A check that could tell them apart (a judge-only fine-tune, no replay share, for every net) was not run:
-   it would be a new series.
+   policy". A check that could tell them apart (a judge-only fine-tune, no replay share, for every net) was run as
+   series 12b (below): the same readings, so the mixture was not what held Dot-G back.
 5. The 24 held-out mistakes (descriptive): 8-33 % for every net and state; too few to read. Dot-G is right on more
    of all 80 mistakes before any fine-tuning (32.5-36.2 %) than Dot-2 (11.2 %) or C+h (8.8-11.2 %): the mistakes were Dot-2's own wrong moves,
    so Dot-2's raw policy is wrong there by selection.

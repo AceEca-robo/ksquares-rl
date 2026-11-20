@@ -14,6 +14,9 @@ Revision 3 (2026-11-20, after series 12): rows for scene 6 from the series 12 re
 "до этого опыта мы не дошли" no longer matches and has to be replaced. Only scene 6 changes; the voice of scene 6 is
 not redone yet (user: not before the result; now it is in).
 
+Revision 4 (2026-11-20, after series 12b): rows for series 12b and the one sentence for scene 6 from both series,
+by the rule fixed before 12b.
+
 Names: Dot-G = Gc (agents/graph_net.py, configs/graph_gc.yaml: 8 layers, width 50, segments) in every scene; the g5
 run uses the same net (configs/g5.yaml). Simple graph net = Ga (same code, `segments: false`). Convolution = C
 (AZNet2, as Dot-2). Dot = az5 / az5b; Dot-2 = dot2c gen 16.
@@ -103,7 +106,19 @@ the new scene 6 voice; numbers are % correct moves without thinking on the 199 h
 | Dot-2 got better when the whole net learned | graph_s12.md gains | +6.0 [+2.5, +9.5] (b); (a) +2.0 [-2.5, +6.5] not shown | checked for (b) only |
 | the convolution with the hint gained the most and caught up with Dot-G | graph_s12.md gains, descriptive | C+h +6.5 [+0.3, +13.6] / +13.4 [+6.4, +21.1]; (b) Dot-G - C+h -0.3 [-4.5, +3.5] | gains: checked; "caught up" = no difference seen, observation |
 | with thinking Dot-2 is still far ahead: 98 | graph_s12.md reference | 98.0 % (MCTS 200, stored moves of part 3 (c), 199 of 199 found) | checked (reference, not a test) |
-| caveat to be spoken: the positions come from Dot-2's own games and 70 % of each lesson was Dot-2's own self-play targets, which favours Dot-2 | graph_s12.md Caveat; notes 4 | Dot-G's loss on that share 193-674 at the start vs Dot-2 2.4 | required with any "не научилась лучше"; that the mixture rather than the architecture held Dot-G back is not separated: observation, say "we cannot yet tell" |
+| caveat to be spoken: the positions come from Dot-2's own games, which favours Dot-2 | graph_s12.md Caveat | — | required with the scene 6 sentence |
+| (series 12 only) 70 % of each lesson was Dot-2's own self-play targets | graph_s12.md notes 4 | Dot-G's loss on that share 193-674 at the start vs Dot-2 2.4 | no longer needed as a caveat: series 12b without that share gives the same readings (rows below) |
+
+Series 12b (graph_s12.md section "Series 12b", runs/graph_s12b/eval.json; protocol committed before the run, 6b43074):
+the same, every lesson judge answers only, 1198 steps (as many judge answers as in series 12).
+
+| claim (for the new voice) | source | value | status |
+|---|---|---|---|
+| we repeated it with the judge's answers alone, without Dot-2's games | plan_part4.md series 12b | 1198 steps x 384 judge positions, no replay | checked |
+| the result is the same: Dot-G is not better | graph_s12.md, 12b primary | (a) D -3.0 [-7.5, +1.3]; (b) D -6.0 [-11.4, -0.8] | checked (no interval above 0); "worse" only for (b), as in series 12 |
+| Dot-G after 87 / 84, Dot-2 after 90 / 90 | 12b primary | (a) 86.9 vs 89.9; (b) 83.9 vs 89.9 | checked |
+| every net learned the training answers by heart, but did not get better on new positions | 12b gains table | (b): all nets 100 % on the 1443 training answers; held-out gains Dot-G -0.5 [-4.4, +3.9], Dot-2 +3.0 [-1.5, +7.5] | checked for Dot-G and Dot-2 ("no gain seen"); C+h did gain (+10.7 [+2.2, +19.8]), so "no net got better" does not match |
+| **scene 6 sentence from both series**: «те же ответы судьи графовой сети помогли не больше, чем свёрточной» | graph_s12.md "Both series"; rule fixed before 12b | 12: -4.2 [-9.9, +1.5], -6.2 [-10.6, -2.2]; 12b: -3.0 [-7.5, +1.3], -6.0 [-11.4, -0.8] | checked (all four intervals have no part needed for "more": none above 0); with the spoken caveat about Dot-2's games |
 
 ## Scene 7. Then let it play
 
