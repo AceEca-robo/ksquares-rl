@@ -142,7 +142,8 @@ def train_one(cfg, net, kind, pool, bufs, variant, log_prefix=""):
     heads = head_names(cfg, kind)
     codec, X, M = ph.parity_arrays("10x7", pool, net.planes)
     bw = np.array([tc["selfplay_weights"][b] for b in bufs], dtype=float)
-    bw /= bw.sum()
+    bw = bw / bw.sum() if len(bw) else bw
+    assert nm < tc["batch"] or not bufs         # series 12b: judge positions only, no replay
     codecs = {b: Codec(*transfer.wh_of(b), planes=net.planes) for b in bufs}
     net.to(dev).eval()                       # BatchNorm statistics as trained
     hp = [p for n, p in net.named_parameters() if n.split(".")[0] in heads]
@@ -178,6 +179,17 @@ def train_one(cfg, net, kind, pool, bufs, variant, log_prefix=""):
         lm = -torch.logsumexp(lp.masked_fill(~torch.from_numpy(m).to(dev), -1e9), 1).mean()
         loss = loss + share * lm
         run["judge"] += lm.item()
+        if nm == tc["batch"]:                    # series 12b: no replay share
+            opt.zero_grad(set_to_none=True)
+            loss.backward()
+            opt.step()
+            if step % tc["log_every"] == 0:
+                rec = {"step": step, **{k: v / tc["log_every"] for k, v in run.items()}, "train_acc": acc(),
+                       "seconds": round(time.time() - t0)}
+                log.append(rec)
+                run = dict.fromkeys(run, 0.0)
+                print(f"[{time.strftime('%H:%M:%S')}] {log_prefix}{rec}", flush=True)
+            continue
         j = list(bufs)[int(rng.choice(len(bufs), p=bw))]
         s = bufs[j].sample(rng, tc["batch"] - nm)
         c = codecs[j]
@@ -591,15 +603,117 @@ def cmd_report(cfg):
     concl = ROOT / "docs/graph_s12_notes.md"
     if concl.exists():
         L += [concl.read_text().rstrip(), ""]
+    sb = cfg.get("series_b")
+    if sb and (ROOT / load_config(ROOT / sb)["out"] / "eval.json").exists():
+        L += section_b(load_config(ROOT / sb), prim, m)
     (ROOT / cfg["report"]).write_text("\n".join(L))
     print("\n".join(L))
+
+
+def scene6_phrase(prim12, prim12b):
+    """The one sentence for scene 6 from both series (rule of series 12b, fixed before its run).
+    prim*: {variant: (D, lo, hi)}."""
+    better = [v for v, (_, lo, _) in prim12b.items() if lo > 0]
+    if not better:
+        return "те же ответы судьи графовой сети помогли не больше, чем свёрточной", better
+    return "на одних ответах судьи графовая сеть учится лучше, а в смеси с чужими партиями хуже", better
+
+
+def section_b(cb, prim12, m):
+    """Series 12b section of docs/graph_s12.md; m: the primary position mask of series 12 (the same positions)."""
+    out = ROOT / cb["out"]
+    D = data(cb)
+    ev = json.loads((out / "eval.json").read_text())
+    for k, v in D.items():
+        assert [p["moves"] for p in v] == ev["keys"][k], "data changed since eval"
+    nets = ev["nets"]
+    grp = {g: [n for n in nets if nets[n]["group"] == g] for g in GROUPS}
+    variants = list(cb["train"]["variants"])
+    bc = cb["bootstrap"]
+    bs = (bc["resamples"], bc["seed"], bc["level"])
+    tc = cb["train"]
+
+    def A(g, s, k="mid_held"):
+        a = np.array([nets[n][s][k] for n in grp[g]])
+        return a[:, m] if k == "mid_held" else a
+
+    def T(g, s):                                   # the pooled training judge answers
+        return np.array([nets[n][s]["mid_train"] + nets[n][s]["mis_train"] for n in grp[g]])
+
+    L = ["## Series 12b: judge answers only (no Dot-2 self-play share)", "",
+         "Protocol: docs/plan_part4.md (series 12b, user 2026-11-20), configs/graph_s12b.yaml, committed before the run. "
+         f"As series 12, but every batch is {tc['batch']} judge positions ({len(D['mid_train'])} mid train + "
+         f"{len(D['mis_train'])} mistakes train, pooled), no replay share; {tc['steps']} steps = the judge positions a "
+         f"net saw in series 12 ({tc['steps'] * tc['batch']} of 4000 x 115). The same nets, splits, {int(m.sum())} "
+         "held-out decisive positions, variants, seed; weights after the last step; evaluation on the CPU in fp32.", "",
+         "### Primary and reading", "",
+         "| variant | Dot-G after % | Dot-2 after % | D, points | 95 % interval | reading |", "|---|---:|---:|---:|---:|---|"]
+    prim = {}
+    for v in variants:
+        d, lo, hi = interval(A("dotg", v), A("dot2", v), *bs)
+        prim[v] = (d, lo, hi)
+        L.append(f"| {VARIANTS[v]} | {pct(A('dotg', v))} | {pct(A('dot2', v))} | {d:+.1f} | [{lo:+.1f}, {hi:+.1f}] | "
+                 f"**{reading(lo, hi)}** |")
+    rs = {reading(*prim[v][1:]) for v in variants}
+    L += ["", "Both variants give the same row." if len(rs) == 1 else
+          "The variants give different rows; both are reported, no joint verdict (protocol).", "",
+          "### Gain against itself before, and the training answers", "",
+          "Gain: after - before on the held-out positions, paired, the same interval. Train: accuracy on the "
+          f"{len(D['mid_train']) + len(D['mis_train'])} training judge answers (pooled) before -> after.", "",
+          "| nets | n | before % | " + " | ".join(f"after {v} % | gain {v} | 95 % interval | train {v} %" for v in variants)
+          + " |", "|---|---:|---:|" + "---:|---:|---:|---:|" * len(variants)]
+    for g, lab in GROUPS.items():
+        row = f"| {lab} | {len(grp[g])} | {pct(A(g, 'before'))} |"
+        for v in variants:
+            d, lo, hi = gain(A(g, v), A(g, "before"), *bs)
+            row += f" {pct(A(g, v))} | {d:+.1f} | [{lo:+.1f}, {hi:+.1f}] | {pct(T(g, 'before'))} -> {pct(T(g, v))} |"
+        L.append(row)
+    L += ["", "### Table 1b. Nets", "",
+          "| net | state | mid held out, decisive | mid held out, all | mistakes held out | mistakes train | mid train | "
+          "weights sha256 |", "|---|---|---:|---:|---:|---:|---:|---|"]
+    for n, r in nets.items():
+        for s in variants:
+            L.append(f"| {n} | {VARIANTS[s]} | {pct(np.array(r[s]['mid_held'])[m])} | {pct(r[s]['mid_held'])} | "
+                     f"{pct(r[s]['mis_held'])} | {pct(r[s]['mis_train'])} | {pct(r[s]['mid_train'])} | {r[f'{s}_sha256']} |")
+    L += ["", "Before = the series 12 rows (recomputed here, equal: "
+          + str(all(nets[n]["before"] == json.loads((ROOT / "runs/graph_s12/eval.json").read_text())["nets"][n]["before"]
+                    for n in nets)) + ").", "", "### Training checks", ""]
+    fc = []
+    for g, name, kind, spec in net_list(cb):
+        for v in variants:
+            j = json.loads((out / f"{file_name(name, v)}.json").read_text())
+            lg = j["log"]
+            if "frozen_check" in j:
+                f = j["frozen_check"]
+                fc.append(f"{name}: {f['weights_unchanged']} / {f['v_bitwise_equal']}")
+            L.append(f"- {name} {v}: judge train accuracy {lg[0]['train_acc']:.1f} -> {lg[-1]['train_acc']:.1f} %, "
+                     f"judge loss {lg[1]['judge']:.3f} -> {lg[-1]['judge']:.3f}, {lg[-1]['seconds']} s")
+    L += ["", "Frozen check of (a) (non-head weights unchanged / V and score bitwise on the held-out positions): "
+          + "; ".join(fc) + ".", ""]
+    phrase, better = scene6_phrase(prim12, prim)
+    L += ["## Both series: the sentence for scene 6", "",
+          "Rule fixed before series 12b: no variant of 12b better -> the first sentence; a variant of 12b better -> the "
+          "second, with its numbers.", "",
+          "| series | variant | D, points | 95 % interval | reading |", "|---|---|---:|---:|---|"]
+    for ser, pr in (("12 (with replay)", prim12), ("12b (judge only)", prim)):
+        for v, (d, lo, hi) in pr.items():
+            L.append(f"| {ser} | {VARIANTS[v]} | {d:+.1f} | [{lo:+.1f}, {hi:+.1f}] | {reading(lo, hi)} |")
+    L += ["", f"Sentence: **«{phrase}»**" + (" — 12b " + ", ".join(
+        f"{VARIANTS[v]} D {prim[v][0]:+.1f} [{prim[v][1]:+.1f}, {prim[v][2]:+.1f}]" for v in better)
+        + f"; series 12 (b) D {prim12['lr01'][0]:+.1f} [{prim12['lr01'][1]:+.1f}, {prim12['lr01'][2]:+.1f}]" if better else "")
+          + ".", ""]
+    nb = ROOT / "docs/graph_s12b_notes.md"
+    if nb.exists():
+        L += [nb.read_text().rstrip(), ""]
+    return L
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("cmd", choices=["check", "train", "overlap", "eval", "report"])
+    ap.add_argument("--config", default="configs/graph_s12.yaml")   # series 12b: configs/graph_s12b.yaml (train, eval)
     a = ap.parse_args()
-    cfg = load_config(ROOT / "configs/graph_s12.yaml")
+    cfg = load_config(ROOT / a.config)
     {"check": cmd_check, "train": cmd_train, "overlap": cmd_overlap, "eval": cmd_eval, "report": cmd_report}[a.cmd](cfg)
 
 

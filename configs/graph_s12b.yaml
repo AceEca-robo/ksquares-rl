@@ -1,0 +1,38 @@
+# Part 4, series 12b of docs/plan_part4.md (scripts/graph_s12.py --config configs/graph_s12b.yaml): series 12 with
+# judge answers only in every batch (no dot2c self-play share). Protocol by the user 2026-11-20, fixed before the run.
+# Everything not listed under train is configs/graph_s12.yaml (tests/test_graph_s12.py compares the two files).
+seed: 3031
+device: cuda
+eval_device: cpu
+out: runs/graph_s12b
+report: docs/graph_s12.md          # a section of the series 12 report
+limits: {gpu_memory_fraction: 0.4}   # one process, nice -n 10, in tmux
+
+data:
+  mid_hand: configs/mid_hand.yaml
+  rout_mistakes: configs/rout_mistakes.yaml
+  stored_moves: runs/mid_judge/nets_mid.json
+
+nets:
+  dotg: {config: configs/graph_s6.yaml, arm: Gc, runs: [[8, 101], [8, 102], [8, 103]]}
+  dot2: {config: configs/dot2c.yaml, checkpoint: runs/dot2c/gen_0016.pt}
+  ch: {config: configs/graph_s3p.yaml, arm: Ch, seeds: [1, 2, 3]}
+
+heads:
+  dot2: [p_conv, g_conv, p_g, p_out]
+  graph: [p_out]
+
+train:
+  steps: 1198              # = series 12's judge positions seen: 4000 x round(0.3 x 384) = 460000, / 384 = 1197.9
+  batch: 384
+  lr: 0.0005
+  share: 1.0               # judge positions only; the loss is the judge loss alone
+  symmetries: true
+  log_every: 100
+  selfplay_buffers: {}
+  selfplay_weights: {}
+  variants:
+    frozen: {rest_lr: 0.0}
+    lr01: {rest_lr: 0.00005}
+
+bootstrap: {resamples: 10000, seed: 12, level: 0.95}

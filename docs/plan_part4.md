@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) done 2026-11-17 (docs/graph_s7.md: no transfer). Series 9 (Gc plays 5x5, run g5) protocol 2026-11-17, done 2026-11-19 (docs/graph_s9.md: stopped at round 117; ladder best gen 49, late gens beat Dot). Series 10 (matches only) done 2026-11-19 (docs/graph_s10.md: Dot gen 84 beats gen 54 -> part 1 note is a measurement error; g5 114 vs Dot 84 62.5 % with MCTS 200, 47.5 % at equal time). Series 11 (10x7, matches only) done 2026-11-19 (docs/graph_s11.md: dot2c gen 16 is the strongest of the candidates, kept). Series 12 (fine-tune on the middle game, Dot-G vs Dot-2 vs C+h) protocol 2026-11-20, done 2026-11-20 (docs/graph_s12.md: (a) no difference seen, (b) Dot-G worse; Dot-G no gain seen).
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) done 2026-11-17 (docs/graph_s7.md: no transfer). Series 9 (Gc plays 5x5, run g5) protocol 2026-11-17, done 2026-11-19 (docs/graph_s9.md: stopped at round 117; ladder best gen 49, late gens beat Dot). Series 10 (matches only) done 2026-11-19 (docs/graph_s10.md: Dot gen 84 beats gen 54 -> part 1 note is a measurement error; g5 114 vs Dot 84 62.5 % with MCTS 200, 47.5 % at equal time). Series 11 (10x7, matches only) done 2026-11-19 (docs/graph_s11.md: dot2c gen 16 is the strongest of the candidates, kept). Series 12 (fine-tune on the middle game, Dot-G vs Dot-2 vs C+h) protocol 2026-11-20, done 2026-11-20 (docs/graph_s12.md: (a) no difference seen, (b) Dot-G worse; Dot-G no gain seen). Series 12b (judge answers only) protocol 2026-11-20.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -689,6 +689,28 @@ of the part 4 video's scene 6 waits for the result.
   runs/mid_hand/r30.pt (same held-out moves; weights equal or within GPU nondeterminism, written).
 - Resources: one process, GPU memory <= 40 %, nice -n 10, in tmux. scripts/graph_s12.py, configs/graph_s12.yaml,
   tests/test_graph_s12.py; docs/graph_s12.md; rows for scene 6 in docs/video_claims_part4.md by the result.
+
+## Series 12b: the same, judge answers only (no Dot-2 self-play share)
+
+User, 2026-11-20, after series 12; the last series before the video. Protocol fixed here and committed before the
+run. Everything as series 12 (nets, splits, the 199 held-out decisive mid positions, variants (a) and (b), lr, batch
+384, symmetries, seed 3031, BatchNorm in eval mode, weights after the last step, evaluation on the CPU in fp32) with
+one change: every batch is judge positions only (mid train + mistakes train, 1443, pooled, uniform), no dot2c replay
+share; the loss is the judge loss alone (weight 1).
+- Steps, fixed now and the same for every net: as many judge positions as a net saw in series 12: 4000 steps x 115
+  judge positions (round(0.3 x 384)) = 460000 -> 460000 / 384 = **1198 steps** (460032 positions, about 319 passes
+  over the 1443 training answers). Log every 100 steps (train accuracy and loss only).
+- Reading, fixed now, the same rule as series 12 for each variant: D = mean of the 3 Dot-G after - Dot-2 after,
+  bootstrap over positions and nets, 10000 resamples, seed 12, two-sided 95 %: above 0 "better", contains 0 "no
+  difference seen", below 0 "worse"; and each group's gain against itself before (paired). Also reported: accuracy on
+  the training judge answers (the 1443 pooled, and mid train / mistakes train apart) after fine-tuning, to show
+  whether the net learned the examples themselves.
+- One sentence for scene 6 from both series together, rule fixed now: if no variant of 12b is "better" (no interval
+  above 0; series 12 had none) -> "те же ответы судьи графовой сети помогли не больше, чем свёрточной"; if a variant of
+  12b is "better" -> "на одних ответах судьи графовая сеть учится лучше, а в смеси с чужими партиями хуже", with the
+  numbers of that variant (and of series 12's (b)).
+- One process, GPU memory <= 40 %, nice -n 10, tmux. configs/graph_s12b.yaml, scripts/graph_s12.py --config, tests;
+  a series 12b section in docs/graph_s12.md; docs/video_claims_part4.md updated.
 
 ## Series 4: middle game (the former (ii))
 

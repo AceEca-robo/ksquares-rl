@@ -6,6 +6,7 @@ device: cuda
 eval_device: cpu            # evaluation in fp32 on the CPU, as part 3 (near ties of the logits: GPU argmax can differ)
 out: runs/graph_s12
 report: docs/graph_s12.md
+series_b: configs/graph_s12b.yaml   # series 12b (judge answers only): its section in the same report
 limits: {gpu_memory_fraction: 0.4}   # one process, nice -n 10, in tmux
 
 data:

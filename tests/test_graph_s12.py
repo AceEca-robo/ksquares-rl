@@ -102,3 +102,44 @@ def test_reading():
     assert s12.reading(0.5, 3.0) == "the graph net learns the middle game better"
     assert s12.reading(-0.5, 3.0) == "no difference seen"
     assert s12.reading(-3.0, -0.5) == "the graph net learns the middle game worse"
+
+
+def test_series_b_config():
+    b = load_config(ROOT / "configs/graph_s12b.yaml")
+    for k in ("seed", "eval_device", "limits", "data", "nets", "heads", "bootstrap"):
+        assert b[k] == CFG[k], k
+    tb, tc = b["train"], CFG["train"]
+    for k in ("batch", "lr", "symmetries", "variants"):
+        assert tb[k] == tc[k], k
+    assert tb["share"] == 1.0 and not tb["selfplay_buffers"]
+    seen = tc["steps"] * int(round(tc["share"] * tc["batch"]))
+    assert seen == 460000 and tb["steps"] == round(seen / tb["batch"]) == 1198
+    assert b["out"] != CFG["out"]
+
+
+def test_scene6_phrase():
+    p12 = {"frozen": (-4.2, -9.9, 1.5), "lr01": (-6.2, -10.6, -2.2)}
+    ph, better = s12.scene6_phrase(p12, {"frozen": (1.0, -2.0, 4.0), "lr01": (-1.0, -3.0, 1.0)})
+    assert ph.startswith("те же ответы судьи") and not better
+    ph, better = s12.scene6_phrase(p12, {"frozen": (5.0, 1.0, 9.0), "lr01": (-1.0, -3.0, 1.0)})
+    assert ph.startswith("на одних ответах") and better == ["frozen"]
+
+
+def test_judge_only_training_runs():
+    """A few steps of the judge-only trainer on a tiny pool: no replay needed, head-only keeps the rest."""
+    import copy
+
+    import torch
+    spec = CFG["nets"]["dot2"]
+    if not s12.weights_path(spec).exists():
+        pytest.skip("weights not present")
+    b = load_config(ROOT / "configs/graph_s12b.yaml")
+    b = {**b, "device": "cpu", "train": {**b["train"], "steps": 3, "log_every": 1, "batch": 8}}
+    net = s12.load_net(spec)
+    net0 = copy.deepcopy(net)
+    pool = [{"moves": [0, 1, 2], "correct": [5, 6]}, {"moves": [10], "correct": [3]}]
+    log = s12.train_one(b, net, "dot2", pool, {}, "frozen")
+    assert len(log) == 4 and log[-1]["policy"] == 0.0
+    sd, sd0 = net.state_dict(), net0.state_dict()
+    assert all(torch.equal(sd[k], sd0[k]) for k in sd0 if k.split(".")[0] not in CFG["heads"]["dot2"])
+    assert not torch.equal(sd["p_out.2.weight"], sd0["p_out.2.weight"])
