@@ -1,0 +1,45 @@
+# Part 4, series 12 of docs/plan_part4.md (scripts/graph_s12.py): the same judge answers, graph net against
+# convolution. Fine-tune on the middle game (set mid + the 80 rout mistakes), Dot-G vs Dot-2 vs C+h.
+# Protocol by the user 2026-11-20, fixed before the run; a change = a new series.
+seed: 3031                 # = configs/mid_hand.yaml: the splits and the batch order of mid_hand r30
+device: cuda
+out: runs/graph_s12
+report: docs/graph_s12.md
+limits: {gpu_memory_fraction: 0.4}   # one process, nice -n 10, in tmux
+
+data:
+  mid_hand: configs/mid_hand.yaml          # set mid, split by game 70/30 (scripts/mid_hand.py mistakes)
+  rout_mistakes: configs/rout_mistakes.yaml   # the 80 mistakes, split 56/24 (scripts/rout_mistakes.py mistakes)
+  stored_moves: runs/mid_judge/nets_mid.json  # Dot-2 MCTS 200 moves on set mid (part 3 (c)), the reference
+
+nets:                      # group -> nets; all 10x7-capable, evaluated without thinking (policy argmax)
+  dotg:                    # Dot-G: Gc of series 6, s8 weights, stage 2 seeds 101-103 (all jump)
+    config: configs/graph_s6.yaml
+    arm: Gc
+    runs: [[8, 101], [8, 102], [8, 103]]
+  dot2:                    # Dot-2, convolution
+    config: configs/dot2c.yaml
+    checkpoint: runs/dot2c/gen_0016.pt
+  ch:                      # C+h of series 3' s1-s3: the control "convolution with the hint"
+    config: configs/graph_s3p.yaml
+    arm: Ch
+    seeds: [1, 2, 3]
+
+heads:                     # the move-choice head per architecture (top-level module names)
+  dot2: [p_conv, g_conv, p_g, p_out]       # AZNet2 (Dot-2 and C+h); = parity_hand.HEAD without p_hint
+  graph: [p_out]
+
+train:                     # = configs/mid_hand.yaml train, variant r30 (Dot-2's), not tuned for Dot-G
+  steps: 4000
+  batch: 384
+  lr: 0.0005               # Adam, no schedule, no clip
+  share: 0.3               # judge positions (mid train + mistakes train, pooled, uniform) in the batch and the loss
+  symmetries: true
+  log_every: 250           # train accuracy and losses only; the held-out part is not looked at during training
+  selfplay_buffers: {5x5: runs/dot2c/buffer_5x5.npz, 7x7: runs/dot2c/buffer_7x7.npz, 10x7: runs/dot2c/buffer_10x7.npz}
+  selfplay_weights: {5x5: 0.1, 7x7: 0.3, 10x7: 0.6}
+  variants:
+    frozen: {rest_lr: 0.0}        # (a) policy head only; body, V, score frozen (bitwise check)
+    lr01: {rest_lr: 0.00005}      # (b) everything learns, body / V / score at 0.1x lr; no V loss
+
+bootstrap: {resamples: 10000, seed: 12, level: 0.95}   # positions and nets with replacement, two-sided percentile

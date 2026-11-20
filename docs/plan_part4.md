@@ -3,7 +3,7 @@ Goal of part 4: does a graph network generalise the middle game where the convol
 # Part 4 plan: a graph network for Dot, as a research plan
 
 Status: agreed 2026-11-08 (user); series 1 protocol fixed and run first. Rewritten after stage 0 and (i) of the first plan
-(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) done 2026-11-17 (docs/graph_s7.md: no transfer). Series 9 (Gc plays 5x5, run g5) protocol 2026-11-17, done 2026-11-19 (docs/graph_s9.md: stopped at round 117; ladder best gen 49, late gens beat Dot). Series 10 (matches only) done 2026-11-19 (docs/graph_s10.md: Dot gen 84 beats gen 54 -> part 1 note is a measurement error; g5 114 vs Dot 84 62.5 % with MCTS 200, 47.5 % at equal time). Series 11 (10x7, matches only) done 2026-11-19 (docs/graph_s11.md: dot2c gen 16 is the strongest of the candidates, kept).
+(docs/graph_hand.md). Series 1 done: docs/graph_s1.md. Series 2 done 2026-11-09: docs/graph_s2.md (2b 7/10, next series 2'). Series 2' done 2026-11-11 (docs/graph_s2p.md); series 3 protocol 2026-11-12.  Series 2'' done 2026-11-12 (docs/graph_s2pp.md; primary not passed). Series 3' approved and done 2026-11-13 (docs/graph_s3p.md): Gc <= C+h, Gc - C+h14 > 0 -> stop part 4. Series 3' accepted by the user 2026-11-14, verdict as in its table; series 5 (how often Gc jumps) protocol 2026-11-14. Series 5 done 2026-11-15 (docs/graph_s5.md): 5 of 20, reproducible by the protocol. Series 6 (stage 1 weights or stage 2 seed) protocol 2026-11-16, done 2026-11-17 (docs/graph_s6.md: 7 of 10 vs 2 of 10, neither row). Series 7 (middle game, evaluation only) done 2026-11-17 (docs/graph_s7.md: no transfer). Series 9 (Gc plays 5x5, run g5) protocol 2026-11-17, done 2026-11-19 (docs/graph_s9.md: stopped at round 117; ladder best gen 49, late gens beat Dot). Series 10 (matches only) done 2026-11-19 (docs/graph_s10.md: Dot gen 84 beats gen 54 -> part 1 note is a measurement error; g5 114 vs Dot 84 62.5 % with MCTS 200, 47.5 % at equal time). Series 11 (10x7, matches only) done 2026-11-19 (docs/graph_s11.md: dot2c gen 16 is the strongest of the candidates, kept). Series 12 (fine-tune on the middle game, Dot-G vs Dot-2 vs C+h) protocol 2026-11-20.
 Dot-2 = dot2c gen 16 (runs/dot2c/gen_0016.pt; AZNet2 6x64, 0.51M parameters).
 
 ## Rules for every series
@@ -636,6 +636,59 @@ Reading, fixed now: a challenger whose score against gen 16 has its 95 % Wilson 
 of several, the highest score. If one is stronger, it replaces gen 16 as the app's 10x7 network and README notes
 it; otherwise gen 16 stays. scripts/graph_s11.py, configs/graph_s11.yaml, tests/test_graph_s11.py;
 docs/graph_s11.md.
+
+## Series 12: the same judge answers, graph net against convolution (fine-tune on the middle game)
+
+User, 2026-11-20: the experiment promised in the part 3 video ("the same eighty judge answers: will the graph net learn
+what the convolution did not"). Protocol fixed here and committed before any run; a change = a new series. The voice
+of the part 4 video's scene 6 waits for the result.
+- Data, as mid_hand of part 3 plus the 80 mistakes: set mid (runs/mid_judge/labels_mid.jsonl, 1925 solved positions
+  at 10-15 safe lines) and the 80 mistakes of runs/rout_mistakes. Splits are the existing ones, unchanged and the same
+  for every net: mid by game, 70/30 (scripts/mid_hand.py `mistakes`, seed 3031: 1387 train / 538 held out, 199 of
+  them decisive); the mistakes 56 / 24 (scripts/rout_mistakes.py `mistakes`, seed 3031; one mistake per rout game, so
+  this split is by game too). The held-out part takes no part in training or in any choice (no early stopping, no
+  checkpoint selection: the weights after the last step are evaluated).
+- Overlap, checked and written in the report before the reading: held-out positions (mid and mistakes) against the
+  fine-tune train positions (mid train + mistakes train), the dot2c replay buffers mixed into the batches (10x7) and
+  the nets' own earlier training / selection sets (series 6 and 3' stage 0 and judge sets, as series 7); key = drawn
+  lines, minimum over the grid symmetries; game ids of held-out and train disjoint. If a held-out position is shared,
+  the reading is also given without the shared positions, and that version is the one read.
+- Nets, 10x7: **Dot-G** = Gc of series 6 from the s8 weights, stage 2 seeds 101, 102, 103 (runs/graph_s6/w8/
+  s2_Gc_s10{1,2,3}.pt, all three jump); **Dot-2** = dot2c gen 16; **C+h** = series 3' s1-s3 (runs/graph_s3p/
+  s2_Ch_s{1,2,3}.pt), the control "convolution with the hint".
+- Fine-tune, the same for every net, hyperparameters of Dot-2's mid_hand r30 (configs/mid_hand.yaml), not tuned for
+  Dot-G: 4000 steps, Adam lr 0.0005, batch 384, of it 30 % judge positions (mid train and mistakes train pooled, drawn
+  uniformly; loss -log policy mass on the judge's best moves) and 70 % dot2c replay positions (5x5 / 7x7 / 10x7 at
+  0.1 / 0.3 / 0.6, loss cross-entropy to their MCTS policy), grid symmetries on, no clip, no schedule. The same seed
+  for every net (3031), so every net sees the same batches in the same order; BatchNorm in eval mode (statistics as
+  trained). Two variants:
+  **(a) frozen**: only the move-choice (policy) head learns: AZNet2 (Dot-2, C+h) p_conv, g_conv, p_g, p_out (7361
+  parameters); Gc p_out (5101). Body, V and score frozen; checked after training: those tensors unchanged and V bit
+  for bit equal on the held-out positions. The plan's "heads within 10 % in parameter count" does not hold (Gc's
+  head is 69 % of AZNet2's); not changed, because the series fine-tunes the nets as they are; written in the report.
+  **(b) lr0.1**: every parameter learns, the policy head at lr 0.0005, the rest (body, V, score) at 0.00005. Decided
+  here, against series 4's plan: no V loss is kept, because the V heads have different targets (Dot-2: the game's
+  result from self-play; Gc and C+h: the stage 0 parity sign), so no V loss could be the same for all; the loss is
+  the one of (a).
+- Metric: share of correct moves without thinking (policy argmax over legal lines keeps the judge's best result) on
+  the **199 held-out decisive mid positions**, before and after. Descriptive: all 538 held-out mid positions, the 24
+  held-out mistakes, train accuracy.
+- Reading, fixed now, for each variant separately (two rows; if they differ, both are reported, no joint verdict):
+  1. Primary: D = mean of the 3 Dot-G after - Dot-2 after on the same 199 positions; bootstrap over positions (the
+     same draw for both) and over the Dot-G nets, 10000 resamples, seed 12, two-sided 95 % percentile interval.
+     Interval above 0: "the graph net learns the middle game better"; contains 0: "no difference seen"; below 0:
+     "worse".
+  2. Gain of each net group against itself before (Dot-G 3 nets, Dot-2, C+h 3 nets): after - before, positions and
+     nets resampled (paired), the same interval.
+  3. Reference on the same positions: Dot-2 with MCTS 200 (the stored moves of runs/mid_judge/nets_mid.json, part 3
+     (c)). Descriptive: C+h after against Dot-2 after and against Dot-G after, the same interval.
+- Caveat for the report: the positions come from Dot-2's own games (self-play, part 3 (c); the mistakes from its games
+  against Hard), and the 70 % replay share is Dot-2's own MCTS targets: for Dot-2 an anchor, for Dot-G and C+h new
+  data. Both favour Dot-2.
+- Code check before the run: the trainer with Dot-2, variant (a) and mid only (no mistakes) must reproduce
+  runs/mid_hand/r30.pt (same held-out moves; weights equal or within GPU nondeterminism, written).
+- Resources: one process, GPU memory <= 40 %, nice -n 10, in tmux. scripts/graph_s12.py, configs/graph_s12.yaml,
+  tests/test_graph_s12.py; docs/graph_s12.md; rows for scene 6 in docs/video_claims_part4.md by the result.
 
 ## Series 4: middle game (the former (ii))
 
