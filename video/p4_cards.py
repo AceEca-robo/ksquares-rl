@@ -428,13 +428,83 @@ def summary(stage=4):
 
 
 def promise():
-    """Scene 6, end: the part 3 promise (80 judge answers for the graph net), not run in part 4."""
-    img, d = page("Обещание из третьей части")
-    d.text((960, 380), "80", font=font(220), fill=YELLOW, anchor="mm")
-    d.text((960, 540), "ответов судьи для середины партии", font=font(48, LATO), fill=FG, anchor="mm")
-    d.text((960, 700), "дать их графовой сети — до этого опыта мы не дошли:", font=font(40, LATO), fill=DIM, anchor="mm")
-    d.text((960, 770), "сначала проверили, видит ли она середину вообще", font=font(40, LATO), fill=DIM, anchor="mm")
+    """Scene 6: the experiment promised in part 3 (series 12 / 12b): the same judge answers for both nets."""
+    S = P.s12()
+    img, d = page("Опыт, обещанный в третьей части")
+    box(d, (120, 380, 760, 640), f"одни и те же\nответы судьи\n{plural(S['n_train'], 'позиция', 'позиции', 'позиций')} середины партии", size=40,
+        outline=(90, 96, 115))
+    box(d, (1160, 300, 1680, 460), "Dot-G", size=56, colour=C_G, outline=C_G)
+    box(d, (1160, 560, 1680, 720), "Dot-2", size=56, colour=C_D, outline=C_D)
+    arrow(d, (780, 480), (1130, 390))
+    arrow(d, (780, 540), (1130, 630))
+    d.text((960, 880), f"проверка: {plural(S['n_held'], 'новая позиция', 'новые позиции', 'новых позиций')}, которых сети не видели", font=font(42, LATO),
+           fill=FG, anchor="mm")
+    d.text((960, 950), "позиции — из партий Dot-2", font=font(34, LATO), fill=DIM, anchor="mm")
     save(img, "card_promise")
+
+
+def plural(n, one, few, many):
+    w = one if n % 10 == 1 and n % 100 != 11 else few if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14 else many
+    return f"{n} {w}"
+
+
+def gain_text(g):
+    d, lo, hi = g
+    s = lambda v: f"{v:+.1f}".replace(".", ",").replace("-", "\u2212")
+    word = "прибавила" if lo > 0 else ("стала хуже" if hi < 0 else "прироста не видно")
+    return s(d), f"[{s(lo)}; {s(hi)}]", word
+
+
+def s12b(stage=1):
+    """Scene 6, end: series 12b variant (b) (judge answers only, the whole net learns): the training answers learned
+    by heart, no gain on the new positions; stage 2 adds the series 12 (b) row (with Dot-2's games)."""
+    S = P.s12()
+    img, d = page("Учится вся сеть, одни ответы судьи")
+    d.text((96, 150), "серия 12б, вариант (б)", font=font(36, LATO), fill=DIM)
+    nets = (("Dot-G", C_G), ("Dot-2", C_D))
+    # left: the training answers after fine-tuning
+    d.text((460, 250), "выученные ответы", font=font(48), fill=FG, anchor="mm")
+    y1, top, bw = 700, 340, 200
+    for i, (n, col) in enumerate(nets):
+        v = S["12b"][n]["train_lr01"]
+        x = 230 + i * 260
+        t = y1 - v / 100 * (y1 - top)
+        d.rounded_rectangle((x, t, x + bw, y1), 12, fill=col)
+        d.text((x + bw / 2, t - 12), pct(v, 0), font=font(56), fill=FG, anchor="mb")
+        d.text((x + bw / 2, y1 + 20), n, font=font(40, LATO), fill=col, anchor="mt")
+    d.text((460, 800), f"{plural(S['n_train'], 'ответ', 'ответа', 'ответов')} судьи, которые сеть видела", font=font(30, LATO), fill=DIM, anchor="mm")
+    # right: the gain on the new positions, with its 95 % interval around zero
+    d.text((1400, 250), "новые позиции", font=font(48), fill=FG, anchor="mm")
+    x0, x1, lim = 1080, 1720, 12.0
+    px = lambda v: x0 + (v + lim) / (2 * lim) * (x1 - x0)
+    d.text((px(0), 715), "0", font=font(30, LATO), fill=DIM, anchor="mt")
+    for i, (n, col) in enumerate(nets):
+        g = S["12b"][n]["lr01"]
+        big, iv, word = gain_text(g)
+        y = 410 + i * 190
+        d.text((x0 - 30, y), n, font=font(40, LATO), fill=col, anchor="rm")
+        d.line((px(0), y - 34, px(0), y + 34), fill=DIM, width=3)
+        d.line((px(g[1]), y, px(g[2]), y), fill=col, width=8)
+        for v in g[1:]:
+            d.line((px(v), y - 18, px(v), y + 18), fill=col, width=6)
+        d.ellipse((px(g[0]) - 14, y - 14, px(g[0]) + 14, y + 14), fill=col)
+        d.text((px(0), y - 44), f"{big}  {iv}", font=font(32, LATO), fill=FG, anchor="mb")
+        d.text((px(0), y + 44), word, font=font(34), fill=FG, anchor="mt")
+    d.text((1400, 800), f"прирост к себе до учёбы, {plural(S['n_held'], 'позиция', 'позиции', 'позиций')}, интервал 95 %", font=font(30, LATO), fill=DIM,
+           anchor="mm")
+    if stage == 2:
+        parts = []
+        for n in ("Dot-2", "Dot-G"):
+            big, iv, word = gain_text(S["12"][n]["lr01"])
+            parts.append(f"{n} {big} {iv} — {word}")
+        d.text((960, 900), "с партиями Dot-2 (серия 12, вариант (б)):", font=font(36, LATO), fill=YELLOW, anchor="mm")
+        d.text((960, 960), ";   ".join(parts), font=font(36, LATO), fill=FG, anchor="mm")
+    else:
+        assert all(S["12b"][n]["train_lr01"] == 100 and gain_text(S["12b"][n]["lr01"])[2] == "прироста не видно"
+                   for n, _ in nets)
+        d.text((960, 930), "все ответы выучены наизусть, на новых позициях прироста не видно ни у одной",
+               font=font(36), fill=YELLOW, anchor="mm")
+    save(img, "card_s12b" + ("" if stage == 1 else "2"))
 
 
 def end():
@@ -455,7 +525,7 @@ def main():
     rounds_chart("card_rounds", "Dot-G учится играть рядом с Dot", mark_hard=True)
     bridge_card()
     rounds_chart("card_peak", "Лестница: пик и спад", show_dot=False, mark_peak=True)
-    matches(); round_robin(); final_match(); cost(); summary(); promise(); end()
+    matches(); round_robin(); final_match(); cost(); summary(); promise(); s12b(1); s12b(2); end()
 
 
 if __name__ == "__main__":

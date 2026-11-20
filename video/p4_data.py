@@ -109,3 +109,29 @@ def bridge():
 
 def equal_time():
     return _j("runs/g5/match.json")["equal_time"]
+
+
+def s12():
+    """Scene 6, end: series 12 / 12b gain tables of docs/graph_s12.md (written by scripts/graph_s12.py report from
+    runs/graph_s12{,b}/eval.json). Returns {"12": rows, "12b": rows}, rows[net] = dict with "before", per variant
+    ("frozen", "lr01") the gain (d, lo, hi) and, for 12b, the train accuracy after (%)."""
+    t = open(os.path.join(ROOT, "docs/graph_s12.md"), encoding="utf-8").read()
+    i12, i12b = t.index("## Gain of each net"), t.index("### Gain against itself before, and the training answers")
+    num = r"([+-]?[\d.]+)"
+    iv = rf"\[{num}, {num}\]"
+    out = {"12": {}, "12b": {}}
+    for m in re.finditer(rf"^\| (Dot-G|Dot-2|C\+h) \| \d \| {num} \| {num} \| {num} \| {iv} \| {num} \| {num} \| {iv} \|$",
+                         t[i12:i12b], re.M):
+        g = [float(x) for x in m.groups()[1:]]
+        out["12"][m.group(1)] = {"before": g[0], "frozen": tuple(g[2:5]), "lr01": tuple(g[6:9])}
+    tr = rf"{num} -> {num}"
+    for m in re.finditer(rf"^\| (Dot-G|Dot-2|C\+h) \| \d \| {num} \| {num} \| {num} \| {iv} \| {tr} \| {num} \| {num} \| {iv} \| {tr} \|$",
+                         t[i12b:], re.M):
+        g = [float(x) for x in m.groups()[1:]]
+        out["12b"][m.group(1)] = {"before": g[0], "frozen": tuple(g[2:5]), "train_frozen": g[6],
+                                   "lr01": tuple(g[8:11]), "train_lr01": g[12]}
+    m = re.search(r"Fine-tune on .*?\((\d+) mid train \+ (\d+) mistakes train", t)
+    out["n_train"] = int(m.group(1)) + int(m.group(2))
+    out["n_held"] = int(re.search(r"\*\*(\d+) held-out decisive mid positions\*\*", t).group(1))
+    assert set(out["12"]) == set(out["12b"]) == {"Dot-G", "Dot-2", "C+h"}, out
+    return out

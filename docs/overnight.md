@@ -1467,3 +1467,18 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
 - Scene 6 sentence by the rule: «те же ответы судьи графовой сети помогли не больше, чем свёрточной». Video claims
   revision 4. 25 min of training, one process, nice -n 10.
 
+
+### 2026-11-20 14:30-15:40 — part 4 video (RU): final scene 6, rebuild
+
+- The user's final scene 6 text was checked against video_claims_part4.md revision 4 before the voice: "лучше не стала
+  ни та, ни другая" held for series 12b (b) only (series 12 (b): Dot-2 +6.0 [+2.5, +9.5]); "но вывод от этого не
+  меняется" was not checked. The user accepted the fixed text (revision 5 of the claims check, every row checked or
+  observation).
+- Cards from docs/graph_s12.md (video/p4_data.py s12): card_promise now shows the promised experiment (1443 judge
+  answers to both nets, 199 new positions, positions from Dot-2's games); card_s12b "выученные ответы 100 %" /
+  "новые позиции: прироста не видно" for Dot-G and Dot-2, signed "серия 12б, вариант (б)"; card_s12b2 adds the series
+  12 (b) row on the sentence about Dot-2's games. The card asserts its wording from the data.
+- Voice of scene 6 (edge-tts, whole scene; the service refused most requests for about 40 min, retried): 79.7 s,
+  178 words. Storyboard by video/p4_storyboard.py; cut 9:27, 137 subtitles. Copied to ~/YouTube/ksquares-rl/
+  (mp4, srt, description with new timecodes and one sentence on the promised experiment, thumbnails re-rendered,
+  unchanged).

@@ -17,6 +17,12 @@ not redone yet (user: not before the result; now it is in).
 Revision 4 (2026-11-20, after series 12b): rows for series 12b and the one sentence for scene 6 from both series,
 by the rule fixed before 12b.
 
+Revision 5 (2026-11-20, final scene 6 voice): the user's new scene 6 text was checked against revision 4 before the
+voice. One sentence did not match ("лучше не стала ни та, ни другая" as the result of the promised experiment:
+true for series 12b (b) only; in series 12 (b) Dot-2 gained +6.0 [+2.5, +9.5]) and one was not checked ("но вывод от
+этого не меняется": no test on positions from other games). The user accepted the fixed text; its rows are at the end
+of scene 6. The voice of scene 6 is redone from it, card video/p4/card_s12b{,2}.png.
+
 Names: Dot-G = Gc (agents/graph_net.py, configs/graph_gc.yaml: 8 layers, width 50, segments) in every scene; the g5
 run uses the same net (configs/g5.yaml). Simple graph net = Ga (same code, `segments: false`). Convolution = C
 (AZNet2, as Dot-2). Dot = az5 / az5b; Dot-2 = dot2c gen 16.
@@ -119,6 +125,20 @@ the same, every lesson judge answers only, 1198 steps (as many judge answers as 
 | Dot-G after 87 / 84, Dot-2 after 90 / 90 | 12b primary | (a) 86.9 vs 89.9; (b) 83.9 vs 89.9 | checked |
 | every net learned the training answers by heart, but did not get better on new positions | 12b gains table | (b): all nets 100 % on the 1443 training answers; held-out gains Dot-G -0.5 [-4.4, +3.9], Dot-2 +3.0 [-1.5, +7.5] | checked for Dot-G and Dot-2 ("no gain seen"); C+h did gain (+10.7 [+2.2, +19.8]), so "no net got better" does not match |
 | **scene 6 sentence from both series**: «те же ответы судьи графовой сети помогли не больше, чем свёрточной» | graph_s12.md "Both series"; rule fixed before 12b | 12: -4.2 [-9.9, +1.5], -6.2 [-10.6, -2.2]; 12b: -3.0 [-7.5, +1.3], -6.0 [-11.4, -0.8] | checked (none of the four intervals is above 0); with the spoken caveat about Dot-2's games |
+
+Final scene 6 voice (revision 5), from the sentence "Тогда мы провели опыт" on:
+
+| claim (final voice) | source | value | status |
+|---|---|---|---|
+| "мы взяли позиции из середины партии, на которых проверяли Dot-2" (without "в третьей части") | as the row "позиции из середины партии..." above | — | checked |
+| "дали обеим сетям одни и те же ответы судьи по середине партии и стали учить" | plan_part4.md series 12 / 12b; graph_s12.md | 1387 mid + 56 mistakes = 1443 training answers, the same batches for every net; test on 199 held-out decisive positions | checked |
+| "когда сеть училась целиком, обе выучили эти ответы наизусть, все до одного" | graph_s12.md 12b gains table (train lr01) | 12b (b): Dot-G 100.0 % (3 of 3 nets), Dot-2 100.0 % of the 1443 training answers | checked (12b (b) only; series 12 (b): Dot-2 99.7 %, Dot-G 91.7-93.6 %, not "all") |
+| "а на новых позициях ... прироста не видно ни у той, ни у другой" | 12b gains table | 12b (b): Dot-G -0.5 [-4.4, +3.9], Dot-2 +3.0 [-1.5, +7.5] | checked as "no gain seen" (the wording says exactly that) |
+| "когда к ответам судьи подмешивали партии самой Dot-2, она прибавила, а у Dot-G прироста не видно и там" | graph_s12.md series 12 gains table, variant (b) | Dot-2 +6.0 [+2.5, +9.5]; Dot-G +2.3 [-2.7, +7.0] | checked for (b) ("и там" = the same whole-net variant; in (a) Dot-2 +2.0 [-2.5, +6.5] is not shown either) |
+| "позиции, правда, были из партий Dot-2, ей они привычнее" | graph_s12.md Caveat | mid: Dot-2 self-play; mistakes: Dot-2 vs Hard | the caveat, required; "привычнее" = observation (spoken as a caveat) |
+| "так что вывод осторожный: графовой сети те же ответы судьи помогли не больше, чем свёрточной" | the scene 6 sentence row above | none of the four Dot-G - Dot-2 intervals above 0 | checked, with the caveat spoken just before |
+| "Dot-G научилась решать концовки, а в середине партии другие глаза преимущества не дали" | series 5-7 (jump on end-games), series 7, 12, 12b (no interval above 0 in the middle game) | — | observation (the narrator's summary of checked rows) |
+| card: "выученные ответы 100 %" / "новые позиции: прироста не видно" for both nets, signed "серия 12б, вариант (б)"; stage 2 adds the series 12 (b) row | video/p4_cards.py s12b, numbers from docs/graph_s12.md via video/p4_data.py s12 | as the rows above | checked (the card asserts the 100 % and the "no gain seen" from the data) |
 
 ## Scene 7. Then let it play
 

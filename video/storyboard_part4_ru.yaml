@@ -72,13 +72,17 @@ scenes:
   - file: p4/card_cloud.png
     seconds: 9.58
   - file: p3/card_blowouts.png
-    seconds: 6.54
+    seconds: 6.55
   - file: p4/card_map_g.png
-    seconds: 7.81
+    seconds: 7.1
   - file: p4/card_mid_bars.png
-    seconds: 20.17
+    seconds: 12.09
   - file: p4/card_promise.png
-    seconds: 14.48
+    seconds: 8.05
+  - file: p4/card_s12b.png
+    seconds: 11.59
+  - file: p4/card_s12b2.png
+    seconds: 26.46
 - n: 7
   title: Тогда пусть играет
   voice: p4/voice_ru_7.mp3
