@@ -7,6 +7,8 @@ window_graph: the part 3 scheme "window or graph" (video/p3_clips.window_vs_grap
 sentence "Это связи". click: the scene 3 curves (video/p4_cards.click data); the convolution's curves appear with
 "Первая", the simple graph net's with "Вторая", Dot-G's are drawn left to right from "И она в какой-то момент".
 The clip starts at the sentence "Первая" (the storyboard cut).
+P4_LANG=en: the same clips on the English voice (docs/video_script_part4_en.md, video/p4/voice_en_<N>.mp3),
+written as *_en.mp4.
 """
 import os
 import re
@@ -16,21 +18,22 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
+from p4_i18n import LANG, L, suffix  # noqa: E402  (first: sets P3_LANG)
 from video_anim import sentence_starts  # noqa: E402
 from video_voice import scenes  # noqa: E402
 
 OUT = os.path.join(HERE, "p4")
 FPS = 25
-SCRIPT = os.path.join(ROOT, "docs/video_script_part4_ru.md")
+SCRIPT = os.path.join(ROOT, f"docs/video_script_part4_{LANG}.md")
 
 
 def sentences(n):
-    text = next(t for k, _, _, t in scenes(SCRIPT, "ru") if str(k) == str(n))
+    text = next(t for k, _, _, t in scenes(SCRIPT, LANG) if str(k) == str(n))
     return [s for s in re.split(r"(?<=[.!?…])\s+", text.strip()) if s]
 
 
 def starts(n):
-    s, end = sentence_starts("ru", str(n), SCRIPT, os.path.join(OUT, f"voice_ru_{n}.mp3"))
+    s, end = sentence_starts(LANG, str(n), SCRIPT, os.path.join(OUT, f"voice_{LANG}_{n}.mp3"))
     assert len(s) == len(sentences(n)), (n, len(s), len(sentences(n)))
     return s, end
 
@@ -43,7 +46,7 @@ def at(n, prefix):
 def write(name, frames):
     p = subprocess.Popen(["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", "1920x1080",
                           "-r", str(FPS), "-i", "-", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-crf", "18",
-                          os.path.join(OUT, name)], stdin=subprocess.PIPE)
+                          os.path.join(OUT, name.replace(".mp4", suffix() + ".mp4"))], stdin=subprocess.PIPE)
     for im in frames:
         p.stdin.write(im.convert("RGB").tobytes())
     p.stdin.close()
@@ -85,10 +88,11 @@ def frame(C, page, cur, keys, prog):
 
 def main():
     from p3_clips import window_vs_graph
-    write("window_graph.mp4", window_vs_graph(seconds=40, at=at(1, "Это связи")))
+    write("window_graph.mp4", window_vs_graph(seconds=40, at=at(1, L("Это связи", "They are links"))))
     s, end = starts(3)
-    t0 = at(3, "Первая")
-    write("click.mp4", click_frames(t0, t0, at(3, "Вторая"), at(3, "И она в какой-то момент"), end - t0 + 3))
+    t0 = at(3, L("Первая", "The first"))
+    write("click.mp4", click_frames(t0, t0, at(3, L("Вторая", "The second")),
+                                    at(3, L("И она в какой-то момент", "And at some point")), end - t0 + 3))
 
 
 if __name__ == "__main__":

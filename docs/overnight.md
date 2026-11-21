@@ -1482,3 +1482,22 @@ training"; no 7x10; Dot-2 is 6x64; Dot level = MCTS ladder Elo >= 2100 and
   178 words. Storyboard by video/p4_storyboard.py; cut 9:27, 137 subtitles. Copied to ~/YouTube/ksquares-rl/
   (mp4, srt, description with new timecodes and one sentence on the promised experiment, thumbnails re-rendered,
   unchanged).
+
+### 2026-11-21 18:30-19:00 — part 4 video (EN): translation, cards, voice, cut
+
+- The user accepted the RU cut; the English cut follows it. docs/video_script_part4_en.md: all ten scenes translated in
+  the tone of parts 1-3 (Dot, Dot-2, Dot-G "she", the judge "it", thinking / without thinking, intuition, the built-in
+  opponent, round, school with three grades, the ladder / the ruler); the same number of sentences per scene as the RU
+  text. Checked against docs/video_claims_part4.md: new section "English cut", every number and strength word mapped
+  to its RU row with the same status (no new claim).
+- Screen texts: video/p4_i18n.py (P4_LANG=en, also sets P3_LANG for the reused part 3 map and window / graph clip);
+  video/p4_cards.py takes L(ru, en) per text. The RU cards re-rendered bit-identical after the change, the RU storyboard
+  unchanged. EN layout fixes: card_cost shows "34 ms" with a "time per move" caption, summary item 3 on two lines.
+- p4_clips.py and p4_storyboard.py follow P4_LANG (EN cut points on the starts of the same sentences of the English
+  voice; files *_en). App recording re-shot with the English UI (scripts/launcher.py --lang en --mode self, g5 gen 114
+  vs az5b gen 84, 200 sims, CPU, headless): the same game as the RU take (16:9), caption band as in the RU clip.
+- Voice edge-tts en-US-GuyNeural, 488.9 s (no refusals this time). Cut 8:35 (514.9 s), 144 subtitles; 0 of 105
+  sentence-opening subtitles more than 0.3 s from an audio onset. One process, nice -n 10, no GPU.
+- Copied to ~/YouTube/ksquares-rl/: ksquares_rl_part4_en.mp4 / .srt, description_part4_en.txt (chapters from the built
+  cut, links to the EN parts 1-3); thumbnail_part4_en.png from 2026-11-20 unchanged.
+- Not checked by ear: how Guy pronounces "Dot-G" (no speech recognizer here); worth a listen before upload.

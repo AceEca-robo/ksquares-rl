@@ -201,3 +201,58 @@ C. Equal time was calibrated on this machine (RTX 4060 Laptop, single-game searc
 D. Data overlap (rule 5): series 7 checked 0 of 1925 mid positions shared with any training / selection set; the
    judge 10x7 sets of series 3 / 3' / 5 / 6 are disjoint from the stage 0 data (graph_s3p.md data checks). Series 10
    and 9 use games, not position sets.
+
+## English cut (2026-11-21)
+
+docs/video_script_part4_en.md against the rows above, sentence for sentence (every scene has the same number of
+sentences as the Russian text: 8, 5, 11, 12, 13, 14, 7, 12, 12, 11). Only the wordings that carry a number or the
+strength of a claim are listed; each keeps the status of its Russian row. No new claim is added. Screen texts: the
+same cards from the same data (video/p4_cards.py with P4_LANG=en, numbers from video/p4_data.py; the Russian cards
+were re-rendered bit-identical after the change); the card_s12b assertion ("100 %", "no gain seen") is unchanged.
+
+| scene | Russian wording | English wording | status (as the Russian row) |
+|---|---|---|---|
+| 1 | обещание дать Dot другие глаза | a promise: to give Dot other eyes | checked |
+| 1 | нашли ошибку в собственном первом ролике | found a mistake in our own first video | checked |
+| 3 | осталась на уровне монетки, сколько мы её ни учили | stayed at the level of a coin toss, however long we trained it | checked |
+| 3 | простая графовая: результат тот же, монетка | the same result, a coin toss | checked |
+| 3 | от монетки до почти безошибочного ответа за несколько сотен шагов | from a coin toss to an almost error-free answer in a few hundred training steps | checked |
+| 3 | десять раз ... щелчок случился все десять | ten times ... the click happened all ten times | checked |
+| 4 | большая доска ей не далась; десять попыток, ни одной удачной | the big board didn't work out for her; ten tries, not one successful | checked |
+| 4 | освоили все десять из десяти | all ten out of ten mastered the big board | checked |
+| 4 | почти всегда забывает маленькую доску | almost always forgets the small board | checked |
+| 4 | каждую четвёртую задачу ... к концу учёбы помнит обе доски | every fourth task ... by the end of school she remembers both boards | observation (as Russian: "by the end", not "throughout") |
+| 5 | примерно так же, как обычная свёрточная сеть | about as well as an ordinary convolutional network does | checked (roughly) |
+| 5 | примерно каждая четвёртая ... в девяти концовках из десяти, сразу, без размышлений | roughly every fourth one ... in nine endgames out of ten, at once, without thinking | checked |
+| 5 | пять раз заново, меняя только порядок задач | five times over, changing only the order of the tasks | checked |
+| 5 | все пять раз / ни разу / по два раза из пяти | all five times / never / twice out of five | checked |
+| 5 | многое зависит ... от того, какой сеть вышла из школы | a lot depends ... on what kind of network came out of school | observation ("a lot", not "mostly") |
+| 5 | все без ошибок считают цепочки на большой доске | all of them count chains on the big board without mistakes | checked (10x7 only, as Russian) |
+| 6 | восемьдесят один процент; у Dot-2 без размышлений восемьдесят четыре | eighty-one percent right moves; Dot-2 without thinking gets eighty-four | checked |
+| 6 | скачок на середину не перенёсся | the jump did not carry over to the middle of the game | checked |
+| 6 | обе выучили эти ответы наизусть, все до одного (когда сеть училась целиком) | both learned these answers by heart, every single one (when the whole network learned) | checked (12b (b)) |
+| 6 | прироста не видно ни у той, ни у другой | we see no gain for either of them | checked as "no gain seen" |
+| 6 | она прибавила, а у Dot-G прироста не видно и там | she improved, while for Dot-G we see no gain there either | checked for (b) |
+| 6 | позиции были из партий Dot-2, ей они привычнее | the positions came from Dot-2's games, so they are more familiar to her | the required caveat; observation |
+| 6 | вывод осторожный: помогли не больше, чем свёрточной | the conclusion is a careful one: helped the graph network no more than the convolutional one | checked, caveat spoken just before |
+| 6 | в середине партии другие глаза преимущества не дали | in the middle of the game the other eyes gave no advantage | observation |
+| 7 | на тех же условиях ... первые раунды Dot шли на чуть других настройках | under the same conditions ... Dot's first rounds ran with slightly different settings | checked (caveat spoken) |
+| 7 | двое суток, сто семнадцать раундов | two days, one hundred and seventeen rounds | checked |
+| 7 | уверенно обыгрывать на шестом раунде; первой Dot понадобилось одиннадцать | beating ... confidently in round six; the first Dot needed eleven rounds | observation (as Russian; rounds only) |
+| 7 | на сложном уровне двадцать партий из двадцати | on the hard level, twenty games out of twenty | checked |
+| 8 | пик к сорок девятому раунду, а потом стала слабеть (по лестнице) | by the ladder, peaked by round forty-nine, then started getting weaker | checked |
+| 8 | девяносто три партии из ста | ninety-three games out of a hundred | checked |
+| 8 | спада в силе не было: он был только на лестнице | there was no decline in strength: it was only on the ladder | checked |
+| 8 | обыгрывает ту, пятьдесят четвёртую, в двух партиях из трёх | beats that round fifty-four Dot in two games out of three | checked |
+| 8 | лестница перестаёт различать, кто сильнее | the ladder can no longer tell who is stronger | checked (descriptive) |
+| 9 | шестьдесят две с половиной из ста | sixty-two and a half games out of a hundred | checked |
+| 9 | семьдесят три с половиной | seventy-three and a half | checked |
+| 9 | смотрит втрое дольше | looks three times longer | checked |
+| 9 | около шестидесяти | about sixty | checked (58) |
+| 9 | в этом матче разницы не видно | in this match we see no difference | checked (interval contains 50) |
+| 10 | учится играть за меньшее число раундов | learns to play in fewer rounds | observation (as Russian) |
+| 10 | каждый взгляд втрое дороже; при равном времени разницы мы не увидели | every look costs her three times as much; at equal time we saw no difference | checked |
+
+Card wordings in English with the same strength: "no gain seen" / "improved" / "got worse" are the same three readings
+of the 95 % interval as "прироста не видно" / "прибавила" / "стала хуже" (video/p4_cards.gain_word); "at equal time no
+difference is seen" = "при равном времени разницы не видно".

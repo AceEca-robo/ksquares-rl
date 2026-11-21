@@ -1,0 +1,139 @@
+# English cut of the part 4 video (docs/video_script_part4_en.md). Written by video/p4_storyboard.py:
+# cuts on the sentence starts of video/p4/voice_en_<N>.mp3. Materials: video/p4_cards.py, p4_clips.py,
+# p4/app_g5_vs_dot_en.mp4 (scripts/launcher.py --mode self, g5 gen 114 vs az5b gen 84, 200 sims, CPU).
+
+size:
+- 1920
+- 1080
+fps: 25
+crf: 18
+voice_at: 0.5
+min_tail: 0.7
+fade: 0.4
+caption_at: top
+title:
+  seconds: 3
+  image: p4/card_title_en.png
+end:
+  seconds: 6
+  lines:
+  - github.com/AceEca-robo/ksquares-rl
+  - ''
+  - KSquares 21.12.3 © Matt Williams et al., GPL-2+
+scenes:
+- n: 1
+  title: Other eyes
+  voice: p4/voice_en_1.mp3
+  fragments:
+  - file: p4/window_graph_en.mp4
+    seconds: 23.26
+  - file: p4/card_title_en.png
+    seconds: 11.23
+- n: 2
+  title: How Dot-G sees
+  voice: p4/voice_en_2.mp3
+  fragments:
+  - file: p4/card_sees_en.png
+    seconds: 24.36
+- n: 3
+  title: 'First lesson: counting'
+  voice: p4/voice_en_3.mp3
+  fragments:
+  - file: p4/card_three_en.png
+    seconds: 13.7
+  - file: p4/click_en.mp4
+    seconds: 40.32
+- n: 4
+  title: School
+  voice: p4/voice_en_4.mp3
+  fragments:
+  - file: p4/card_school_table1_en.png
+    seconds: 14.8
+  - file: p4/card_school_en.png
+    seconds: 16.84
+  - file: p4/card_school_table2_en.png
+    seconds: 4.06
+  - file: p4/card_school_table_en.png
+    seconds: 19.67
+- n: 5
+  title: From counting to the move
+  voice: p4/voice_en_5.mp3
+  fragments:
+  - file: p4/card_cloud0_en.png
+    seconds: 17.8
+  - file: p4/card_cloud_en.png
+    seconds: 11.1
+  - file: p4/card_four_en.png
+    seconds: 32.33
+- n: 6
+  title: The middle of the game
+  voice: p4/voice_en_6.mp3
+  fragments:
+  - file: p4/card_cloud_en.png
+    seconds: 8.29
+  - file: p3/card_blowouts_en.png
+    seconds: 5.89
+  - file: p4/card_map_g_en.png
+    seconds: 6.31
+  - file: p4/card_mid_bars_en.png
+    seconds: 10.81
+  - file: p4/card_promise_en.png
+    seconds: 8.26
+  - file: p4/card_s12b_en.png
+    seconds: 9.6
+  - file: p4/card_s12b2_en.png
+    seconds: 25.71
+- n: 7
+  title: Then let her play
+  voice: p4/voice_en_7.mp3
+  fragments:
+  - file: p4/card_rounds0_en.png
+    seconds: 21.99
+  - file: p4/card_rounds_en.png
+    seconds: 7.88
+  - file: p4/card_bridge_en.png
+    seconds: 6.39
+- n: 8
+  title: The broken ruler
+  voice: p4/voice_en_8.mp3
+  fragments:
+  - file: p4/card_peak_en.png
+    seconds: 19.84
+  - file: p4/card_matches1_en.png
+    seconds: 7.3
+  - file: p4/card_matches_en.png
+    seconds: 13.94
+  - file: p4/card_round_robin_en.png
+    seconds: 13.88
+- n: 9
+  title: The match
+  voice: p4/voice_en_9.mp3
+  fragments:
+  - file: p4/app_captioned_en.mp4
+    seconds: 12.08
+    speed: 2.5
+  - file: p4/card_final_match1_en.png
+    seconds: 7.19
+  - file: p4/card_final_match2_en.png
+    seconds: 4.49
+  - file: p4/card_cost_en.png
+    seconds: 21.42
+  - file: p4/card_final_match_en.png
+    seconds: 9.56
+- n: 10
+  title: Summary
+  voice: p4/voice_en_10.mp3
+  fragments:
+  - file: p4/card_summary1_en.png
+    seconds: 15.14
+  - file: p4/card_summary2_en.png
+    seconds: 7.46
+  - file: p4/card_summary3_en.png
+    seconds: 9.53
+  - file: p4/card_summary_en.png
+    seconds: 6.45
+  - file: p4/app_captioned_en.mp4
+    seconds: 5.0
+    from: 20
+  - file: p4/card_end_en.png
+    seconds: 12.03
